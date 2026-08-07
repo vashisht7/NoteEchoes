@@ -1,0 +1,62 @@
+name: 🚀 Deploy NoteEchoes to Apple TestFlight
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy_testflight:
+    name: 📱 Build & Upload to TestFlight
+    runs-on: macos-14
+    timeout-minutes: 60
+
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: ☕ Set up Java for Android tools (if needed)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: 🎯 Set up Flutter SDK
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.x'
+          channel: 'stable'
+          cache: true
+
+      - name: 📦 Install Flutter Dependencies
+        run: flutter pub get
+
+      - name: 💎 Set up Ruby & Fastlane
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+          working-directory: ios
+
+      - name: 🛠️ Set up App Store Connect API Key (if provided in GitHub Secrets)
+        if: env.APP_STORE_CONNECT_API_KEY_BASE64 != ''
+        env:
+          APP_STORE_CONNECT_API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: |
+          mkdir -p ~/.appstoreconnect/private_keys
+          echo "$APP_STORE_CONNECT_API_KEY_BASE64" | base64 --decode > ~/.appstoreconnect/private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8
+
+      - name: 🔨 Build iOS Release Archive
+        run: |
+          flutter build ipa --release --export-options-plist=ios/ExportOptions.plist || flutter build ios --release --no-codesign
+
+      - name: 📤 Upload Build Artifact to GitHub
+        uses: actions/upload-artifact@v4
+        with:
+          name: NoteEchoes-iOS-Release
+          path: |
+            build/ios/archive/*.xcarchive
+            build/ios/ipa/*.ipa
+            NoteEchoes.ipa
