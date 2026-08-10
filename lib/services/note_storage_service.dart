@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/note_model.dart';
 
@@ -40,6 +42,27 @@ class NoteStorageService {
     } catch (e) {
       debugPrint("Error saving notes to storage: $e");
     }
+  }
+
+  /// Reads and clears any background notes written by Shortcuts or external files
+  Future<List<String>> readAndClearPendingFileNotes() async {
+    final pendingNotes = <String>[];
+    try {
+      final docDir = await getApplicationDocumentsDirectory();
+      final file = File('${docDir.path}/notechoes_pending_notes.txt');
+      if (await file.exists()) {
+        final lines = await file.readAsLines();
+        for (final line in lines) {
+          if (line.trim().isNotEmpty) {
+            pendingNotes.add(line.trim());
+          }
+        }
+        await file.delete();
+      }
+    } catch (e) {
+      debugPrint("Error reading pending file notes: $e");
+    }
+    return pendingNotes;
   }
 
   /// Clears all local storage

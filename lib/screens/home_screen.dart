@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../models/note_model.dart';
 import '../models/note_node.dart';
 import '../services/note_service.dart';
+import '../services/note_storage_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/apple_music_media_card.dart';
 import '../widgets/auth_sign_in_sheet.dart';
@@ -88,6 +89,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Future<void> _fetchPendingVoiceNotes() async {
     try {
+      // 1. Check UserDefaults / MethodChannel queue
       final List<dynamic>? pending = await _actionChannel.invokeMethod('getPendingVoiceNotes');
       if (pending != null && pending.isNotEmpty) {
         for (final item in pending) {
@@ -96,8 +98,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             _noteService.createFromVoiceTranscription(text);
           }
         }
-        if (mounted) setState(() {});
       }
+
+      // 2. Check File-based background Shortcuts queue
+      final fileNotes = await NoteStorageService().readAndClearPendingFileNotes();
+      for (final text in fileNotes) {
+        if (text.trim().isNotEmpty) {
+          _noteService.createFromVoiceTranscription(text);
+        }
+      }
+
+      if (mounted) setState(() {});
     } catch (e) {
       debugPrint("Error fetching pending voice notes: $e");
     }
