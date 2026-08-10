@@ -55,13 +55,22 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
   bool _isSpeechAvailable = false;
   bool _isRecording = false;
   bool _isAnalyzing = false;
-  String _spokenText = "";
+  bool _isRestartingListening = false;
+  
+  String _accumulatedText = "";
+  String _currentSessionText = "";
   double _soundLevel = 0.5;
 
   int _recordingSeconds = 0;
   Timer? _durationTimer;
+  Timer? _watchdogTimer;
   NoteAnalysisResult? _completedAnalysis;
   String _statusMessage = "";
+
+  String get _spokenText {
+    final combined = "$_accumulatedText $_currentSessionText".trim();
+    return combined;
+  }
 
   @override
   void initState() {
@@ -80,14 +89,14 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
       _isSpeechAvailable = await _speech.initialize(
         onStatus: (status) {
           debugPrint("SpeechToText Status: $status");
-          if ((status == 'done' || status == 'notListening') && _isRecording && mounted) {
-            _restartListeningSession();
+          if (_isRecording && (status == 'done' || status == 'notListening') && mounted) {
+            _handleSessionEndAndRestart();
           }
         },
         onError: (error) {
           debugPrint("Speech recognition error: ${error.errorMsg}");
           if (_isRecording && mounted) {
-            _restartListeningSession();
+            _handleSessionEndAndRestart();
           }
         },
       );
@@ -103,6 +112,25 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
     }
   }
 
+  void _handleSessionEndAndRestart() {
+    if (!_isRecording || _isRestartingListening) return;
+    _isRestartingListening = true;
+
+    // Flush current session text to master accumulator
+    if (_currentSessionText.trim().isNotEmpty) {
+      _accumulatedText = "$_accumulatedText $_currentSessionText".trim();
+      _currentSessionText = "";
+    }
+
+    // Brief delay to allow iOS SFSpeechRecognizer audio hardware to release before re-subscribing
+    Future.delayed(const Duration(milliseconds: 150), () {
+      if (mounted && _isRecording) {
+        _restartListeningSession();
+      }
+      _isRestartingListening = false;
+    });
+  }
+
   void _restartListeningSession() {
     if (!_isRecording || !_isSpeechAvailable) return;
     try {
@@ -110,8 +138,10 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
         onResult: (result) {
           if (mounted) {
             setState(() {
-              if (result.recognizedWords.isNotEmpty) {
-                _spokenText = result.recognizedWords;
+              _currentSessionText = result.recognizedWords;
+              if (result.finalResult && _currentSessionText.trim().isNotEmpty) {
+                _accumulatedText = "$_accumulatedText $_currentSessionText".trim();
+                _currentSessionText = "";
               }
             });
           }
@@ -140,7 +170,8 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
     setState(() {
       _isRecording = true;
       _isAnalyzing = false;
-      _spokenText = "";
+      _accumulatedText = "";
+      _currentSessionText = "";
       _recordingSeconds = 0;
       _completedAnalysis = null;
       _statusMessage = "";
@@ -150,6 +181,17 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
     _durationTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (mounted) {
         setState(() => _recordingSeconds++);
+      }
+    });
+
+    // 1-second Watchdog Timer: Guarantees continuous recording for hours
+    _watchdogTimer?.cancel();
+    _watchdogTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_isRecording && _isSpeechAvailable && mounted) {
+        if (!_speech.isListening && !_isRestartingListening) {
+          debugPrint("Watchdog: Speech engine stopped while recording. Re-triggering listen...");
+          _handleSessionEndAndRestart();
+        }
       }
     });
 
@@ -167,6 +209,7 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
 
     HapticFeedback.mediumImpact();
     _durationTimer?.cancel();
+    _watchdogTimer?.cancel();
     if (_isSpeechAvailable) {
       await _speech.stop();
     }
@@ -216,6 +259,7 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
   @override
   void dispose() {
     _durationTimer?.cancel();
+    _watchdogTimer?.cancel();
     _auraController.dispose();
     if (_isSpeechAvailable) {
       _speech.stop();
