@@ -21,17 +21,25 @@ import UIKit
   }
 
   private func handleIncomingUrl(_ url: URL) {
-    guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return }
-
     let controller = window?.rootViewController as? FlutterViewController
     guard let messenger = controller?.binaryMessenger else { return }
     let channel = FlutterMethodChannel(name: "com.vashisht.notechoes/action_button", binaryMessenger: messenger)
 
-    if components.host == "save" || url.absoluteString.contains("save") {
-      let queryItem = components.queryItems?.first(where: { $0.name == "text" })
-      let text = queryItem?.value ?? ""
-      channel.invokeMethod("onSaveVoiceNote", arguments: ["text": text])
-    } else if components.host == "record-overlay" || url.absoluteString.contains("record") {
+    let urlString = url.absoluteString
+
+    if urlString.contains("save") {
+      var extractedText = ""
+      if let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+         let queryItem = components.queryItems?.first(where: { $0.name == "text" }),
+         let val = queryItem.value {
+        extractedText = val
+      } else if let range = urlString.range(of: "text=") {
+        let rawParam = String(urlString[range.upperBound...])
+        extractedText = rawParam.removingPercentEncoding ?? rawParam
+      }
+
+      channel.invokeMethod("onSaveVoiceNote", arguments: ["text": extractedText])
+    } else if urlString.contains("record") {
       channel.invokeMethod("onTriggerSiriOverlay", arguments: nil)
     }
   }
