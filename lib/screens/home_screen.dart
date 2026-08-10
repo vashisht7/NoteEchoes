@@ -126,59 +126,74 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // 1. Header Section
   Widget _buildHeader() {
-    return MacOSWindowHeader(
-      title: "NoteEchoes",
-      onLogoTap: _openSignInSheet,
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // User Sign-In Profile Badge
-          GestureDetector(
-            onTap: _openSignInSheet,
-            child: Container(
-              margin: const EdgeInsets.only(right: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: AppColors.elevation2,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.glassBorder),
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 250),
+      child: _isSearchExpanded
+          ? Container(
+              key: const ValueKey("expanded_search_header"),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: ExpandingSearchBar(
+                isExpanded: true,
+                onChanged: (query) => _noteService.setSearchQuery(query),
+                onToggleExpand: () {},
+                onClose: () {
+                  setState(() {
+                    _isSearchExpanded = false;
+                    _noteService.setSearchQuery('');
+                  });
+                },
               ),
-              child: Row(
+            )
+          : MacOSWindowHeader(
+              key: const ValueKey("standard_header"),
+              title: "NoteEchoes",
+              onLogoTap: _openSignInSheet,
+              trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
-                    _noteService.isSignedIn ? Icons.account_circle_rounded : Icons.login_rounded,
-                    size: 15,
-                    color: _noteService.isSignedIn ? AppColors.accentGreen : AppColors.secondaryText,
+                  // User Sign-In Profile Badge
+                  GestureDetector(
+                    onTap: _openSignInSheet,
+                    child: Container(
+                      margin: const EdgeInsets.only(right: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AppColors.elevation2,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppColors.glassBorder),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _noteService.isSignedIn ? Icons.account_circle_rounded : Icons.login_rounded,
+                            size: 15,
+                            color: _noteService.isSignedIn ? AppColors.accentGreen : AppColors.secondaryText,
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            _noteService.isSignedIn ? "Signed In" : "Sign In",
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                  const SizedBox(width: 5),
-                  Text(
-                    _noteService.isSignedIn ? "Signed In" : "Sign In",
-                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white),
+
+                  // Search Icon Button
+                  ExpandingSearchBar(
+                    isExpanded: false,
+                    onChanged: (query) => _noteService.setSearchQuery(query),
+                    onToggleExpand: () {
+                      setState(() {
+                        _isSearchExpanded = true;
+                      });
+                    },
+                    onClose: () {},
                   ),
                 ],
               ),
             ),
-          ),
-
-          // Expanding Search Bar
-          ExpandingSearchBar(
-            isExpanded: _isSearchExpanded,
-            onChanged: (query) => _noteService.setSearchQuery(query),
-            onToggleExpand: () {
-              setState(() {
-                _isSearchExpanded = !_isSearchExpanded;
-              });
-            },
-            onClose: () {
-              setState(() {
-                _isSearchExpanded = false;
-                _noteService.setSearchQuery('');
-              });
-            },
-          ),
-        ],
-      ),
     );
   }
 
