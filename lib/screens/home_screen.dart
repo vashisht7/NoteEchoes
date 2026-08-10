@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
@@ -144,6 +145,249 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   void _openSignInSheet() {
     AuthSignInSheet.show(context);
+  }
+
+  void _showNoteContextMenu(NoteModel note) {
+    HapticFeedback.heavyImpact();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              decoration: BoxDecoration(
+                color: AppColors.elevation2.withValues(alpha: 0.94),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                border: const Border(
+                  top: BorderSide(color: AppColors.glassBorderBright, width: 1.2),
+                ),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Handle pill
+                  Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Note Header
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: AppColors.dropletRed.withValues(alpha: 0.15),
+                        ),
+                        child: const Icon(Icons.note_alt_rounded, size: 18, color: AppColors.dropletRed),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          note.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.outfit(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // 1. Rename / Edit Title
+                  _buildContextMenuItem(
+                    icon: Icons.drive_file_rename_outline_rounded,
+                    label: "Rename Title",
+                    color: Colors.white,
+                    onTap: () {
+                      Navigator.pop(context);
+                      _showRenameDialog(note);
+                    },
+                  ),
+
+                  // 2. Pin / Unpin
+                  _buildContextMenuItem(
+                    icon: note.isPinned ? Icons.push_pin_outlined : Icons.push_pin_rounded,
+                    label: note.isPinned ? "Unpin Note" : "Pin Note to Top",
+                    color: note.isPinned ? AppColors.dropletRed : Colors.white,
+                    onTap: () {
+                      Navigator.pop(context);
+                      _noteService.togglePin(note.noteId);
+                      HapticFeedback.mediumImpact();
+                    },
+                  ),
+
+                  // 3. Copy Text Content
+                  _buildContextMenuItem(
+                    icon: Icons.copy_rounded,
+                    label: "Copy Text",
+                    color: Colors.white,
+                    onTap: () {
+                      Navigator.pop(context);
+                      final contentToCopy = note.textContent.isNotEmpty ? note.textContent : note.summarySnippet;
+                      Clipboard.setData(ClipboardData(text: "${note.title}\n\n$contentToCopy"));
+                      HapticFeedback.lightImpact();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          backgroundColor: AppColors.elevation2,
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          content: const Text("Copied note to clipboard!"),
+                        ),
+                      );
+                    },
+                  ),
+
+                  // 4. Open Full Editor
+                  _buildContextMenuItem(
+                    icon: Icons.edit_note_rounded,
+                    label: "Open Full Editor",
+                    color: Colors.white,
+                    onTap: () {
+                      Navigator.pop(context);
+                      _openNoteEditor(note);
+                    },
+                  ),
+
+                  const Divider(color: AppColors.glassBorder, height: 16),
+
+                  // 5. Delete Note (Destructive Red)
+                  _buildContextMenuItem(
+                    icon: Icons.delete_outline_rounded,
+                    label: "Delete Note",
+                    color: const Color(0xFFFF453A),
+                    onTap: () {
+                      Navigator.pop(context);
+                      HapticFeedback.heavyImpact();
+                      _noteService.deleteNote(note.noteId);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          backgroundColor: AppColors.elevation2,
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          content: Text("Deleted '${note.title}'"),
+                          action: SnackBarAction(
+                            label: "UNDO",
+                            textColor: AppColors.dropletRed,
+                            onPressed: () {
+                              _noteService.addNote(note);
+                            },
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildContextMenuItem({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
+            children: [
+              Icon(icon, size: 20, color: color),
+              const SizedBox(width: 14),
+              Text(
+                label,
+                style: GoogleFonts.inter(
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w600,
+                  color: color,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showRenameDialog(NoteModel note) {
+    final controller = TextEditingController(text: note.title);
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: AppColors.elevation2,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text(
+            "Rename Note",
+            style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              hintText: "Enter note title...",
+              hintStyle: const TextStyle(color: AppColors.secondaryText),
+              filled: true,
+              fillColor: AppColors.elevation1,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.glassBorder),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.dropletRed),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel", style: TextStyle(color: AppColors.secondaryText)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.dropletRed,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: () {
+                final newTitle = controller.text.trim();
+                if (newTitle.isNotEmpty) {
+                  final updated = note.copyWith(title: newTitle);
+                  _noteService.updateNote(updated);
+                }
+                Navigator.pop(context);
+              },
+              child: const Text("Save", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -492,6 +736,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   return AppleMusicMediaCard(
                     note: note,
                     onTap: () => _openNoteEditor(note),
+                    onLongPress: () => _showNoteContextMenu(note),
                   );
                 },
                 childCount: richNotes.length,
@@ -533,6 +778,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 return KeepTextNoteCard(
                   note: note,
                   onTap: () => _openNoteEditor(note),
+                  onLongPress: () => _showNoteContextMenu(note),
                   onToggleCheckItem: (itemId) => _noteService.toggleCheckItem(note.noteId, itemId),
                 );
               },

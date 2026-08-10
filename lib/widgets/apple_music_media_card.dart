@@ -7,6 +7,7 @@ import '../theme/app_colors.dart';
 class AppleMusicMediaCard extends StatelessWidget {
   final NoteModel note;
   final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
   final VoidCallback? onPinTap;
   final VoidCallback? onDeleteTap;
 
@@ -14,6 +15,7 @@ class AppleMusicMediaCard extends StatelessWidget {
     super.key,
     required this.note,
     this.onTap,
+    this.onLongPress,
     this.onPinTap,
     this.onDeleteTap,
   });
@@ -25,6 +27,7 @@ class AppleMusicMediaCard extends StatelessWidget {
 
     return GestureDetector(
       onTap: onTap,
+      onLongPress: onLongPress,
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
         decoration: BoxDecoration(

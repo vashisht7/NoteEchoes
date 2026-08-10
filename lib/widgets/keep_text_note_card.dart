@@ -6,12 +6,14 @@ import '../theme/app_colors.dart';
 class KeepTextNoteCard extends StatelessWidget {
   final NoteModel note;
   final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
   final Function(String itemId)? onToggleCheckItem;
 
   const KeepTextNoteCard({
     super.key,
     required this.note,
     this.onTap,
+    this.onLongPress,
     this.onToggleCheckItem,
   });
 
@@ -19,6 +21,7 @@ class KeepTextNoteCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
+      onLongPress: onLongPress,
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
