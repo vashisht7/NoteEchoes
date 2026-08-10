@@ -32,6 +32,49 @@ class NoteStorageService {
     }
   }
 
+  /// Inserts or replaces one note by noteId.
+  /// Throws if decoding or durable persistence fails.
+  Future<void> upsertNote(NoteModel note) async {
+    final prefs = await SharedPreferences.getInstance();
+    final jsonString = prefs.getString(_storageKey);
+
+    final List<dynamic> decodedList;
+    if (jsonString == null || jsonString.isEmpty) {
+      decodedList = <dynamic>[];
+    } else {
+      decodedList = jsonDecode(jsonString) as List<dynamic>;
+    }
+
+    final notes = decodedList
+        .map(
+          (item) => NoteModel.fromJson(
+            Map<String, dynamic>.from(item as Map),
+          ),
+        )
+        .toList();
+
+    final existingIndex = notes.indexWhere(
+      (existing) => existing.noteId == note.noteId,
+    );
+
+    if (existingIndex >= 0) {
+      notes[existingIndex] = note;
+    } else {
+      // Newest voice notes appear first.
+      notes.insert(0, note);
+    }
+
+    final serialized = notes.map((item) => item.toJson()).toList();
+    final didPersist = await prefs.setString(
+      _storageKey,
+      jsonEncode(serialized),
+    );
+
+    if (!didPersist) {
+      throw StateError('Failed to persist note ${note.noteId}');
+    }
+  }
+
   /// Persists all notes to local device storage
   Future<void> saveNotes(List<NoteModel> notes) async {
     try {
