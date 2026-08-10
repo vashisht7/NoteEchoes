@@ -24,7 +24,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final NoteService _noteService = NoteService();
   bool _isSearchExpanded = false;
 
@@ -33,8 +33,16 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _noteService.addListener(_onServiceChange);
     _setupActionChannel();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _fetchPendingVoiceNotes();
+    }
   }
 
   void _setupActionChannel() {
@@ -47,6 +55,7 @@ class _HomeScreenState extends State<HomeScreen> {
         if (text.trim().isNotEmpty) {
           final note = _noteService.createFromVoiceTranscription(text);
           if (mounted) {
+            setState(() {});
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 backgroundColor: AppColors.elevation2,
@@ -99,6 +108,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _noteService.removeListener(_onServiceChange);
     super.dispose();
   }

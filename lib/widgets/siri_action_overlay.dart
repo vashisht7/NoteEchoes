@@ -58,18 +58,10 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
   String _spokenText = "";
   double _soundLevel = 0.5;
 
-  Timer? _simulatedVoiceTimer;
   int _recordingSeconds = 0;
   Timer? _durationTimer;
   NoteAnalysisResult? _completedAnalysis;
-
-  final List<String> _simulatedPhrases = [
-    "Need to buy almond milk, ground coffee, and fresh sourdough bread from the store",
-    "Sprint deliverable due next Tuesday: finish the Stage UI system tokens and glassmorphism specs",
-    "Formula for Gaussian integral is integral from minus infinity to plus infinity e to the minus x squared dx equals square root of pi",
-    "Client sync meeting notes: follow up on latency benchmark targets and mobile deployment pipeline",
-    "New product idea: spatial voice canvas that categorizes thoughts instantly with zero cloud lag",
-  ];
+  String _statusMessage = "";
 
   @override
   void initState() {
@@ -80,28 +72,34 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
       duration: const Duration(milliseconds: 3000),
     )..repeat();
 
-    _initSpeechRecognition();
-
-    if (widget.autoStartRecording) {
-      _startRecording();
-    }
+    _initSpeechAndStart();
   }
 
-  Future<void> _initSpeechRecognition() async {
+  Future<void> _initSpeechAndStart() async {
     try {
       _isSpeechAvailable = await _speech.initialize(
         onStatus: (status) {
           if (status == 'done' || status == 'notListening') {
-            if (_isRecording) {
-              // auto stop or keep listening
+            if (_isRecording && mounted) {
+              // speech completed
             }
           }
         },
         onError: (error) {
-          debugPrint("SpeechToText Error: $error");
+          debugPrint("Speech recognition error: ${error.errorMsg}");
+          if (mounted) {
+            setState(() {
+              _statusMessage = "Microphone error: ${error.errorMsg}";
+            });
+          }
         },
       );
-      if (mounted) setState(() {});
+      if (mounted) {
+        setState(() {});
+        if (widget.autoStartRecording) {
+          _startRecording();
+        }
+      }
     } catch (e) {
       debugPrint("Speech recognition init exception: $e");
       _isSpeechAvailable = false;
@@ -116,6 +114,7 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
       _spokenText = "";
       _recordingSeconds = 0;
       _completedAnalysis = null;
+      _statusMessage = "";
     });
 
     _durationTimer?.cancel();
@@ -143,27 +142,14 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
         },
         listenOptions: stt.SpeechListenOptions(
           listenMode: stt.ListenMode.dictation,
-          pauseFor: const Duration(seconds: 5),
+          pauseFor: const Duration(seconds: 4),
+          partialResults: true,
           onDevice: true,
         ),
       );
     } else {
-      // Natural voice speech stream simulation if mic permission is pending
-      final phrase = _simulatedPhrases[Random().nextInt(_simulatedPhrases.length)];
-      final words = phrase.split(' ');
-      int wordIndex = 0;
-
-      _simulatedVoiceTimer?.cancel();
-      _simulatedVoiceTimer = Timer.periodic(const Duration(milliseconds: 280), (timer) {
-        if (wordIndex < words.length && _isRecording && mounted) {
-          setState(() {
-            _spokenText = words.sublist(0, wordIndex + 1).join(' ');
-            _soundLevel = 0.4 + (sin(wordIndex * 0.8) * 0.4).abs();
-          });
-          wordIndex++;
-        } else {
-          timer.cancel();
-        }
+      setState(() {
+        _statusMessage = "Microphone permission required for speech dictation.";
       });
     }
   }
@@ -173,9 +159,21 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
 
     HapticFeedback.mediumImpact();
     _durationTimer?.cancel();
-    _simulatedVoiceTimer?.cancel();
     if (_isSpeechAvailable) {
       await _speech.stop();
+    }
+
+    final cleanText = _spokenText.trim();
+    if (cleanText.isEmpty) {
+      setState(() {
+        _isRecording = false;
+        _isAnalyzing = false;
+        _statusMessage = "No speech detected.";
+      });
+      Future.delayed(const Duration(milliseconds: 1000), () {
+        if (mounted) Navigator.of(context).pop();
+      });
+      return;
     }
 
     setState(() {
@@ -183,18 +181,14 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
       _isAnalyzing = true;
     });
 
-    // Deep semantic categorization using on-device AI Engine
-    final textToProcess = _spokenText.trim().isNotEmpty
-        ? _spokenText.trim()
-        : "Quick voice recorded thought memo.";
+    // Deep semantic categorization on user's real spoken words
+    final analysis = AiCategorizationEngine().analyzeNote(cleanText);
 
-    final analysis = AiCategorizationEngine().analyzeNote(textToProcess);
-
-    await Future.delayed(const Duration(milliseconds: 350));
+    await Future.delayed(const Duration(milliseconds: 300));
 
     if (!mounted) return;
 
-    final note = NoteService().createFromVoiceTranscription(textToProcess);
+    final note = NoteService().createFromVoiceTranscription(cleanText);
 
     setState(() {
       _isAnalyzing = false;
@@ -214,7 +208,6 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
   @override
   void dispose() {
     _durationTimer?.cancel();
-    _simulatedVoiceTimer?.cancel();
     _auraController.dispose();
     if (_isSpeechAvailable) {
       _speech.stop();
@@ -430,9 +423,11 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
                   ],
                 )
               : Text(
-                  _spokenText.isNotEmpty
-                      ? _spokenText
-                      : "Listening to your thoughts... Release button to auto-categorize & save.",
+                  _statusMessage.isNotEmpty
+                      ? _statusMessage
+                      : _spokenText.isNotEmpty
+                          ? _spokenText
+                          : "Listening to your voice...\nSpeak your note now.",
                   textAlign: TextAlign.center,
                   style: GoogleFonts.outfit(
                     fontSize: _spokenText.isNotEmpty ? 20 : 15,
