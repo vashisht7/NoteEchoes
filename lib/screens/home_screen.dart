@@ -38,6 +38,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _setupActionChannel() {
+    _fetchPendingVoiceNotes();
+
     _actionChannel.setMethodCallHandler((call) async {
       if (call.method == 'onSaveVoiceNote') {
         final args = call.arguments as Map?;
@@ -72,6 +74,23 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       }
     });
+  }
+
+  Future<void> _fetchPendingVoiceNotes() async {
+    try {
+      final List<dynamic>? pending = await _actionChannel.invokeMethod('getPendingVoiceNotes');
+      if (pending != null && pending.isNotEmpty) {
+        for (final item in pending) {
+          final text = item.toString();
+          if (text.trim().isNotEmpty) {
+            _noteService.createFromVoiceTranscription(text);
+          }
+        }
+        if (mounted) setState(() {});
+      }
+    } catch (e) {
+      debugPrint("Error fetching pending voice notes: $e");
+    }
   }
 
   void _onServiceChange() {
@@ -153,15 +172,20 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
 
-            // Bottom Floating Glass Navigation Bar
+            // Bottom Floating Glass Navigation Bar (5 Controls: Add, Search, Transcribe Mic, Discuss AI, Settings)
             Positioned(
               left: 0,
               right: 0,
               bottom: 0,
               child: FloatingGlassNavBar(
                 onAddNote: () => _openNoteEditor(),
-                onVoiceAssistant: _openVoiceAssistant,
-                onLongPressVoiceAction: _openSiriActionOverlay,
+                onSearch: () {
+                  setState(() {
+                    _isSearchExpanded = !_isSearchExpanded;
+                  });
+                },
+                onTranscribeVoice: _openSiriActionOverlay,
+                onDiscuss: _openVoiceAssistant,
                 onSettings: _openSettings,
               ),
             ),

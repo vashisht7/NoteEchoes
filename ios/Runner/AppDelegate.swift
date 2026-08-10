@@ -3,11 +3,35 @@ import UIKit
 
 @main
 @objc class AppDelegate: FlutterAppDelegate {
+  private let actionChannelName = "com.vashisht.notechoes/action_button"
+  private let pendingNotesKey = "notechoes_pending_voice_notes"
+
   override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
     GeneratedPluginRegistrant.register(with: self)
+
+    let controller = window?.rootViewController as? FlutterViewController
+    if let messenger = controller?.binaryMessenger {
+      let channel = FlutterMethodChannel(name: actionChannelName, binaryMessenger: messenger)
+      channel.setMethodCallHandler { [weak self] (call, result) in
+        guard let self = self else { return }
+        if call.method == "getPendingVoiceNotes" {
+          let notes = UserDefaults.standard.stringArray(forKey: self.pendingNotesKey) ?? []
+          UserDefaults.standard.removeObject(forKey: self.pendingNotesKey)
+          result(notes)
+        } else {
+          result(FlutterMethodNotImplemented)
+        }
+      }
+    }
+
+    // Check if launched with URL
+    if let url = launchOptions?[.url] as? URL {
+      handleIncomingUrl(url)
+    }
+
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 
@@ -21,10 +45,6 @@ import UIKit
   }
 
   private func handleIncomingUrl(_ url: URL) {
-    let controller = window?.rootViewController as? FlutterViewController
-    guard let messenger = controller?.binaryMessenger else { return }
-    let channel = FlutterMethodChannel(name: "com.vashisht.notechoes/action_button", binaryMessenger: messenger)
-
     let urlString = url.absoluteString
 
     if urlString.contains("save") {
@@ -38,9 +58,23 @@ import UIKit
         extractedText = rawParam.removingPercentEncoding ?? rawParam
       }
 
-      channel.invokeMethod("onSaveVoiceNote", arguments: ["text": extractedText])
+      if !extractedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+        // 1. Always queue into UserDefaults so it's guaranteed to be read even on cold start
+        var current = UserDefaults.standard.stringArray(forKey: pendingNotesKey) ?? []
+        current.append(extractedText)
+        UserDefaults.standard.set(current, forKey: pendingNotesKey)
+
+        // 2. Also notify MethodChannel if app is active
+        if let controller = window?.rootViewController as? FlutterViewController {
+          let channel = FlutterMethodChannel(name: actionChannelName, binaryMessenger: controller.binaryMessenger)
+          channel.invokeMethod("onSaveVoiceNote", arguments: ["text": extractedText])
+        }
+      }
     } else if urlString.contains("record") {
-      channel.invokeMethod("onTriggerSiriOverlay", arguments: nil)
+      if let controller = window?.rootViewController as? FlutterViewController {
+        let channel = FlutterMethodChannel(name: actionChannelName, binaryMessenger: controller.binaryMessenger)
+        channel.invokeMethod("onTriggerSiriOverlay", arguments: nil)
+      }
     }
   }
 }

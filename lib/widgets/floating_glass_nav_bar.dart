@@ -5,17 +5,19 @@ import '../theme/app_colors.dart';
 
 class FloatingGlassNavBar extends StatelessWidget {
   final VoidCallback onAddNote;
-  final VoidCallback onVoiceAssistant;
+  final VoidCallback onSearch;
+  final VoidCallback onTranscribeVoice;
+  final VoidCallback onDiscuss;
   final VoidCallback onSettings;
-  final VoidCallback? onLongPressVoiceAction;
   final int selectedIndex;
 
   const FloatingGlassNavBar({
     super.key,
     required this.onAddNote,
-    required this.onVoiceAssistant,
+    required this.onSearch,
+    required this.onTranscribeVoice,
+    required this.onDiscuss,
     required this.onSettings,
-    this.onLongPressVoiceAction,
     this.selectedIndex = 0,
   });
 
@@ -30,7 +32,7 @@ class FloatingGlassNavBar extends StatelessWidget {
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
                 color: AppColors.elevation2.withValues(alpha: 0.85),
                 borderRadius: BorderRadius.circular(32),
@@ -64,17 +66,25 @@ class FloatingGlassNavBar extends StatelessWidget {
                     },
                   ),
 
-                  const SizedBox(width: 14),
+                  const SizedBox(width: 8),
 
-                  // 2. [ 🎙️ Voice Mode / Action Button ] (Tap: Full screen voice, Long-Press: Siri Overlay)
+                  // 2. [ 🔍 Search ] Button
+                  _buildNavIconButton(
+                    icon: Icons.search_rounded,
+                    tooltip: "Search Notes",
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      onSearch();
+                    },
+                  ),
+
+                  const SizedBox(width: 10),
+
+                  // 3. [ 🎙️ Live Transcribe Voice Note ] (Primary Accent Button)
                   GestureDetector(
                     onTap: () {
                       HapticFeedback.heavyImpact();
-                      onVoiceAssistant();
-                    },
-                    onLongPress: () {
-                      HapticFeedback.heavyImpact();
-                      onLongPressVoiceAction?.call();
+                      onTranscribeVoice();
                     },
                     child: Container(
                       width: 50,
@@ -109,9 +119,21 @@ class FloatingGlassNavBar extends StatelessWidget {
                     ),
                   ),
 
-                  const SizedBox(width: 14),
+                  const SizedBox(width: 10),
 
-                  // 3. [ ⚙️ Settings ] Button
+                  // 4. [ 💬 Discuss / Voice AI Chat ] Button
+                  _buildNavIconButton(
+                    icon: Icons.forum_rounded,
+                    tooltip: "Discuss Notes",
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      onDiscuss();
+                    },
+                  ),
+
+                  const SizedBox(width: 8),
+
+                  // 5. [ ⚙️ Settings ] Button
                   _buildNavIconButton(
                     icon: Icons.settings_rounded,
                     tooltip: "Settings",
@@ -140,8 +162,8 @@ class FloatingGlassNavBar extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(20),
         child: Container(
-          width: 44,
-          height: 44,
+          width: 40,
+          height: 40,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: AppColors.glassmorphicTint,
@@ -150,7 +172,7 @@ class FloatingGlassNavBar extends StatelessWidget {
             child: Icon(
               icon,
               color: AppColors.primaryText,
-              size: 22,
+              size: 20,
             ),
           ),
         ),
