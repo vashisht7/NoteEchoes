@@ -11,7 +11,7 @@ class MacOSWindowHeader extends StatelessWidget {
 
   const MacOSWindowHeader({
     super.key,
-    this.title = "NoteEchoes",
+    this.title = "notechoes",
     this.trailing,
     this.onLogoTap,
   });

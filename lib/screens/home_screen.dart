@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/note_model.dart';
@@ -27,10 +28,50 @@ class _HomeScreenState extends State<HomeScreen> {
   final NoteService _noteService = NoteService();
   bool _isSearchExpanded = false;
 
+  static const MethodChannel _actionChannel = MethodChannel('com.vashisht.notechoes/action_button');
+
   @override
   void initState() {
     super.initState();
     _noteService.addListener(_onServiceChange);
+    _setupActionChannel();
+  }
+
+  void _setupActionChannel() {
+    _actionChannel.setMethodCallHandler((call) async {
+      if (call.method == 'onSaveVoiceNote') {
+        final args = call.arguments as Map?;
+        final text = (args?['text'] as String?) ?? '';
+        if (text.trim().isNotEmpty) {
+          final note = _noteService.createFromVoiceTranscription(text);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                backgroundColor: AppColors.elevation2,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                content: Row(
+                  children: [
+                    const Icon(Icons.auto_awesome, size: 16, color: Color(0xFF00F2FE)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        "Saved note #${note.tags.join(', #')}",
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+        }
+      } else if (call.method == 'onTriggerSiriOverlay') {
+        if (mounted) {
+          _openSiriActionOverlay();
+        }
+      }
+    });
   }
 
   void _onServiceChange() {
@@ -152,7 +193,7 @@ class _HomeScreenState extends State<HomeScreen> {
             )
           : MacOSWindowHeader(
               key: const ValueKey("standard_header"),
-              title: "NoteEchoes",
+              title: "notechoes",
               onLogoTap: _openSignInSheet,
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,

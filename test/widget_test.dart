@@ -62,7 +62,7 @@ void main() {
       await tester.pumpWidget(const NoteEchoesApp());
       await tester.pumpAndSettle();
 
-      expect(find.text('NoteEchoes'), findsWidgets);
+      expect(find.text('notechoes'), findsWidgets);
       expect(find.text('Action Button Siri Note'), findsOneWidget);
       expect(find.text('Voice Mode'), findsOneWidget);
       expect(find.text('Write Note'), findsOneWidget);
