@@ -15,7 +15,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   double _voicePitch = 1.0;
   String _selectedLanguage = "English (US)";
   double _contextMemoryThreshold = 0.75;
-  String _aiModel = "Gemini 2.5 Pro (Stage Optimized)";
 
   // 2. Storage & Cloud Sync
   bool _googleDriveSync = true;
@@ -55,16 +54,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
           // Section 1: AI & Voice Configuration
           _buildSectionHeader("AI & VOICE INTELLIGENCE", Icons.auto_awesome_rounded, AppColors.nebulaCyan),
           _buildCardGroup([
-            _buildDropdownTile(
-              title: "AI Model Engine",
-              subtitle: "Powering voice conversational context",
-              value: _aiModel,
-              items: const [
-                "Gemini 2.5 Pro (Stage Optimized)",
-                "Gemini 2.5 Flash (Ultra-Low Latency 120ms)",
-                "Gemini Ultra 2.5 (Deep Reasoning)",
-              ],
-              onChanged: (v) => setState(() => _aiModel = v!),
+            _buildActionTile(
+              icon: Icons.psychology_rounded,
+              title: "On-Device AI Engine",
+              subtitle: "100% private semantic analysis running locally on phone",
+              onTap: () {},
             ),
             _buildDivider(),
             _buildDropdownTile(

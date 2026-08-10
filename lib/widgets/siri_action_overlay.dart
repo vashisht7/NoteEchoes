@@ -79,18 +79,15 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
     try {
       _isSpeechAvailable = await _speech.initialize(
         onStatus: (status) {
-          if (status == 'done' || status == 'notListening') {
-            if (_isRecording && mounted) {
-              // speech completed
-            }
+          debugPrint("SpeechToText Status: $status");
+          if ((status == 'done' || status == 'notListening') && _isRecording && mounted) {
+            _restartListeningSession();
           }
         },
         onError: (error) {
           debugPrint("Speech recognition error: ${error.errorMsg}");
-          if (mounted) {
-            setState(() {
-              _statusMessage = "Microphone error: ${error.errorMsg}";
-            });
+          if (_isRecording && mounted) {
+            _restartListeningSession();
           }
         },
       );
@@ -103,6 +100,38 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
     } catch (e) {
       debugPrint("Speech recognition init exception: $e");
       _isSpeechAvailable = false;
+    }
+  }
+
+  void _restartListeningSession() {
+    if (!_isRecording || !_isSpeechAvailable) return;
+    try {
+      _speech.listen(
+        onResult: (result) {
+          if (mounted) {
+            setState(() {
+              if (result.recognizedWords.isNotEmpty) {
+                _spokenText = result.recognizedWords;
+              }
+            });
+          }
+        },
+        onSoundLevelChange: (level) {
+          if (mounted) {
+            setState(() {
+              _soundLevel = (level.abs() / 10.0).clamp(0.2, 1.0);
+            });
+          }
+        },
+        listenOptions: stt.SpeechListenOptions(
+          listenMode: stt.ListenMode.dictation,
+          pauseFor: const Duration(hours: 2),
+          partialResults: true,
+          onDevice: false,
+        ),
+      );
+    } catch (e) {
+      debugPrint("Error restarting listening session: $e");
     }
   }
 
@@ -125,28 +154,7 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
     });
 
     if (_isSpeechAvailable) {
-      _speech.listen(
-        onResult: (result) {
-          if (mounted) {
-            setState(() {
-              _spokenText = result.recognizedWords;
-            });
-          }
-        },
-        onSoundLevelChange: (level) {
-          if (mounted) {
-            setState(() {
-              _soundLevel = (level.abs() / 10.0).clamp(0.2, 1.0);
-            });
-          }
-        },
-        listenOptions: stt.SpeechListenOptions(
-          listenMode: stt.ListenMode.dictation,
-          pauseFor: const Duration(seconds: 4),
-          partialResults: true,
-          onDevice: true,
-        ),
-      );
+      _restartListeningSession();
     } else {
       setState(() {
         _statusMessage = "Microphone permission required for speech dictation.";
@@ -486,7 +494,7 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
             ),
             const SizedBox(width: 10),
             Text(
-              _isRecording ? "Release to Save & Categorize" : "Hold or Tap to Record",
+              _isRecording ? "Listening..." : "Tap to Record",
               style: GoogleFonts.inter(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
