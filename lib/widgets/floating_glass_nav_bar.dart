@@ -7,6 +7,7 @@ class FloatingGlassNavBar extends StatelessWidget {
   final VoidCallback onAddNote;
   final VoidCallback onVoiceAssistant;
   final VoidCallback onSettings;
+  final VoidCallback? onLongPressVoiceAction;
   final int selectedIndex;
 
   const FloatingGlassNavBar({
@@ -14,6 +15,7 @@ class FloatingGlassNavBar extends StatelessWidget {
     required this.onAddNote,
     required this.onVoiceAssistant,
     required this.onSettings,
+    this.onLongPressVoiceAction,
     this.selectedIndex = 0,
   });
 
@@ -64,11 +66,15 @@ class FloatingGlassNavBar extends StatelessWidget {
 
                   const SizedBox(width: 14),
 
-                  // 2. [ 🎙️ Voice Mode ] Button (Primary Accent Trigger)
+                  // 2. [ 🎙️ Voice Mode / Action Button ] (Tap: Full screen voice, Long-Press: Siri Overlay)
                   GestureDetector(
                     onTap: () {
                       HapticFeedback.heavyImpact();
                       onVoiceAssistant();
+                    },
+                    onLongPress: () {
+                      HapticFeedback.heavyImpact();
+                      onLongPressVoiceAction?.call();
                     },
                     child: Container(
                       width: 50,

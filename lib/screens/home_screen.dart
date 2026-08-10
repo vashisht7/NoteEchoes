@@ -11,6 +11,7 @@ import '../widgets/expanding_search_bar.dart';
 import '../widgets/floating_glass_nav_bar.dart';
 import '../widgets/keep_text_note_card.dart';
 import '../widgets/macos_window_header.dart';
+import '../widgets/siri_action_overlay.dart';
 import 'note_detail_sheet.dart';
 import 'settings_screen.dart';
 import 'voice_assistant_screen.dart';
@@ -59,6 +60,10 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     );
+  }
+
+  void _openSiriActionOverlay() {
+    SiriActionOverlay.show(context);
   }
 
   void _openSettings() {
@@ -115,6 +120,7 @@ class _HomeScreenState extends State<HomeScreen> {
               child: FloatingGlassNavBar(
                 onAddNote: () => _openNoteEditor(),
                 onVoiceAssistant: _openVoiceAssistant,
+                onLongPressVoiceAction: _openSiriActionOverlay,
                 onSettings: _openSettings,
               ),
             ),
@@ -308,8 +314,10 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 28),
 
             // Quick Actions to start
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              alignment: WrapAlignment.center,
               children: [
                 _buildQuickStartButton(
                   icon: Icons.add_rounded,
@@ -317,12 +325,17 @@ class _HomeScreenState extends State<HomeScreen> {
                   color: AppColors.elevation2,
                   onTap: () => _openNoteEditor(),
                 ),
-                const SizedBox(width: 12),
                 _buildQuickStartButton(
                   icon: Icons.mic_rounded,
                   label: "Voice Mode",
                   color: AppColors.dropletRed,
                   onTap: _openVoiceAssistant,
+                ),
+                _buildQuickStartButton(
+                  icon: Icons.bolt_rounded,
+                  label: "Action Button Siri Note",
+                  color: const Color(0xFF7D2AE8),
+                  onTap: _openSiriActionOverlay,
                 ),
               ],
             ),

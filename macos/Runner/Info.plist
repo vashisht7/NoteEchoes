@@ -13,7 +13,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>$(PRODUCT_NAME)</string>
+	<string>NoteEchoes</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -28,5 +28,9 @@
 	<string>MainMenu</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>NoteEchoes uses your microphone to capture real-time voice notes.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>NoteEchoes uses speech recognition to convert your speech into structured notes and smart categories.</string>
 </dict>
 </plist>

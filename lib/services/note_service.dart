@@ -1,23 +1,37 @@
 import 'package:flutter/foundation.dart';
 import '../models/note_model.dart';
+import 'ai_categorization_engine.dart';
+import 'note_storage_service.dart';
 
 class NoteService extends ChangeNotifier {
   static final NoteService _instance = NoteService._internal();
   factory NoteService() => _instance;
 
-  NoteService._internal();
+  NoteService._internal() {
+    _initStorage();
+  }
 
-  // Clean starting state: empty by default
+  // Clean starting state: empty by default, loaded from local storage
   final List<NoteModel> _notes = [];
   String _searchQuery = '';
   String _selectedTag = 'All';
   bool _isSignedIn = false;
   String? _userEmail;
   String? _authProvider; // "apple" or "google"
+  bool _isInitialized = false;
 
   bool get isSignedIn => _isSignedIn;
   String? get userEmail => _userEmail;
   String? get authProvider => _authProvider;
+  bool get isInitialized => _isInitialized;
+
+  Future<void> _initStorage() async {
+    final loaded = await NoteStorageService().loadNotes();
+    _notes.clear();
+    _notes.addAll(loaded);
+    _isInitialized = true;
+    notifyListeners();
+  }
 
   void signIn({required String email, required String provider}) {
     _isSignedIn = true;
@@ -31,6 +45,13 @@ class NoteService extends ChangeNotifier {
     _userEmail = null;
     _authProvider = null;
     notifyListeners();
+  }
+
+  @visibleForTesting
+  void clearNotesForTesting() {
+    _notes.clear();
+    _searchQuery = '';
+    _selectedTag = 'All';
   }
 
   List<NoteModel> get notes {
@@ -79,19 +100,43 @@ class NoteService extends ChangeNotifier {
 
   void addNote(NoteModel note) {
     _notes.insert(0, note);
+    NoteStorageService().saveNotes(_notes);
     notifyListeners();
+  }
+
+  /// Creates and saves a note directly from voice transcription or speech
+  /// using the on-device AI categorization engine.
+  NoteModel createFromVoiceTranscription(String spokenText) {
+    final analysis = AiCategorizationEngine().analyzeNote(spokenText);
+
+    final note = NoteModel(
+      noteId: "echo_${DateTime.now().millisecondsSinceEpoch}",
+      title: analysis.title,
+      contentType: NoteContentType.textOnly,
+      summarySnippet: analysis.summarySnippet,
+      textContent: spokenText.trim(),
+      createdAt: DateTime.now(),
+      tags: analysis.categories,
+      checklist: analysis.extractedChecklist,
+      isPinned: false,
+    );
+
+    addNote(note);
+    return note;
   }
 
   void updateNote(NoteModel note) {
     final index = _notes.indexWhere((n) => n.noteId == note.noteId);
     if (index != -1) {
       _notes[index] = note;
+      NoteStorageService().saveNotes(_notes);
       notifyListeners();
     }
   }
 
   void deleteNote(String noteId) {
     _notes.removeWhere((n) => n.noteId == noteId);
+    NoteStorageService().saveNotes(_notes);
     notifyListeners();
   }
 
@@ -100,6 +145,7 @@ class NoteService extends ChangeNotifier {
     if (index != -1) {
       final current = _notes[index];
       _notes[index] = current.copyWith(isPinned: !current.isPinned);
+      NoteStorageService().saveNotes(_notes);
       notifyListeners();
     }
   }
@@ -111,39 +157,15 @@ class NoteService extends ChangeNotifier {
       final itemIndex = note.checklist.indexWhere((i) => i.id == itemId);
       if (itemIndex != -1) {
         note.checklist[itemIndex].isCompleted = !note.checklist[itemIndex].isCompleted;
+        NoteStorageService().saveNotes(_notes);
         notifyListeners();
       }
     }
   }
 
-  // Automatic semantic tagging on-device
+  // Automatic semantic tagging on-device using AI engine
   List<String> autoDetectTags(String content) {
-    final lower = content.toLowerCase();
-    final detected = <String>{};
-
-    if (lower.contains("math") || lower.contains("equation") || lower.contains("formula") || lower.contains(r"$$") || lower.contains(r"\int")) {
-      detected.add("math");
-    }
-    if (lower.contains("pdf") || lower.contains("document") || lower.contains("table") || lower.contains("spec")) {
-      detected.add("pdf-doc");
-    }
-    if (lower.contains("milk") || lower.contains("grocery") || lower.contains("coffee") || lower.contains("buy") || lower.contains("pantry")) {
-      detected.add("grocery");
-    }
-    if (lower.contains("todo") || lower.contains("task") || lower.contains("sprint") || lower.contains("fix") || lower.contains("due")) {
-      detected.add("tasks");
-    }
-    if (lower.contains("design") || lower.contains("ui") || lower.contains("layout") || lower.contains("color") || lower.contains("token")) {
-      detected.add("design");
-    }
-    if (lower.contains("voice") || lower.contains("audio") || lower.contains("speak") || lower.contains("memo")) {
-      detected.add("voice-memo");
-    }
-
-    if (detected.isEmpty) {
-      detected.add("notes");
-    }
-    return detected.toList();
+    return AiCategorizationEngine().analyzeNote(content).categories;
   }
 
   // Ingest Uploaded PDF Document with math, tables & structural Markdown
@@ -154,8 +176,9 @@ class NoteService extends ChangeNotifier {
     List<MediaAsset> mediaAssets = const [],
   }) {
     final title = fileName.replaceAll(RegExp(r'\.[a-zA-Z0-9]+$'), '');
-    final tags = autoDetectTags(extractedText);
-    tags.add("document");
+    final analysis = AiCategorizationEngine().analyzeNote(extractedText);
+    final tags = List<String>.from(analysis.categories);
+    if (!tags.contains("document")) tags.add("document");
 
     final snippet = extractedText.length > 140
         ? "${extractedText.substring(0, 140)}..."
