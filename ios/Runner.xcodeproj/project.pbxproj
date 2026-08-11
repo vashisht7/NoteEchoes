@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		B87DE432F07D241E9ACD1B94 /* SaveDictatedNoteIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCC98FE1E3680450CB46AFD6 /* SaveDictatedNoteIntent.swift */; };
+		A1B2C3D4E5F6078900112233 /* NotechoesShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6078900112234 /* NotechoesShortcuts.swift */; };
 		BBC47EA9C13714B26A97BDC7 /* PendingVoiceNoteStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE0C7A4A2642545CF8EA7BCC /* PendingVoiceNoteStore.swift */; };
 		1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */ = {isa = PBXBuildFile; fileRef = 1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */; };
 		331C808B294A63AB00263BE5 /* RunnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 331C807B294A618700263BE5 /* RunnerTests.swift */; };
@@ -45,6 +46,7 @@
 
 /* Begin PBXFileReference section */
 		FCC98FE1E3680450CB46AFD6 /* SaveDictatedNoteIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SaveDictatedNoteIntent.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F6078900112234 /* NotechoesShortcuts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotechoesShortcuts.swift; sourceTree = "<group>"; };
 		FE0C7A4A2642545CF8EA7BCC /* PendingVoiceNoteStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingVoiceNoteStore.swift; sourceTree = "<group>"; };
 		1498D2321E8E86230040F4C2 /* GeneratedPluginRegistrant.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GeneratedPluginRegistrant.h; sourceTree = "<group>"; };
 		1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GeneratedPluginRegistrant.m; sourceTree = "<group>"; };
@@ -120,6 +122,7 @@
 			isa = PBXGroup;
 			children = (
 				FCC98FE1E3680450CB46AFD6 /* SaveDictatedNoteIntent.swift */,
+				A1B2C3D4E5F6078900112234 /* NotechoesShortcuts.swift */,
 				FE0C7A4A2642545CF8EA7BCC /* PendingVoiceNoteStore.swift */,
 				97C146FA1CF9000F007C117D /* Main.storyboard */,
 				97C146FD1CF9000F007C117D /* Assets.xcassets */,
@@ -292,6 +295,7 @@
 				7884E8682EC3CC0700C636F2 /* SceneDelegate.swift in Sources */,
 				BBC47EA9C13714B26A97BDC7 /* PendingVoiceNoteStore.swift in Sources */,
 				B87DE432F07D241E9ACD1B94 /* SaveDictatedNoteIntent.swift in Sources */,
+				A1B2C3D4E5F6078900112233 /* NotechoesShortcuts.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

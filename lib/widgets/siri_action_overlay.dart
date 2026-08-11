@@ -271,9 +271,8 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        if (_isRecording) {
-          _stopRecordingAndSave();
-        } else {
+        // Only dismiss on background tap when NOT actively recording
+        if (!_isRecording && !_isAnalyzing) {
           Navigator.of(context).pop();
         }
       },
@@ -501,15 +500,16 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
   }
 
   // ==========================================================
-  // BOTTOM ACTION BUTTON / HOLD-TO-TALK CONTROLLER
+  // BOTTOM ACTION BUTTON — TOGGLE: TAP TO START / TAP TO STOP
   // ==========================================================
   Widget _buildBottomActionControl() {
     return GestureDetector(
-      onTapDown: (_) {
-        if (!_isRecording) _startRecording();
-      },
-      onTapUp: (_) {
-        if (_isRecording) _stopRecordingAndSave();
+      onTap: () {
+        if (_isRecording) {
+          _stopRecordingAndSave();
+        } else if (!_isAnalyzing) {
+          _startRecording();
+        }
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),

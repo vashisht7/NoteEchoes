@@ -147,6 +147,11 @@ class SceneDelegate: FlutterSceneDelegate {
         }
     }
 
+    /// Only handles `notechoes://save?text=...` URLs for direct note
+    /// saving.  The `notechoes://record` URL that previously opened
+    /// the in-app recorder has been removed — the Action Button now
+    /// uses the headless SaveDictatedNoteIntent Shortcut instead,
+    /// which never opens the app.
     private func handleIncomingURL(_ url: URL) {
         let urlString = url.absoluteString
 
@@ -170,12 +175,10 @@ class SceneDelegate: FlutterSceneDelegate {
                 "onSaveVoiceNote",
                 arguments: ["text": extractedText]
             )
-        } else if url.host == "record" || urlString.contains("record") {
-            actionChannel?.invokeMethod(
-                "onTriggerSiriOverlay",
-                arguments: nil
-            )
         }
+        // NOTE: `notechoes://record` URL handling has been intentionally
+        // removed. The Action Button should use the Shortcuts-based
+        // SaveDictatedNoteIntent flow which never opens the app.
     }
 
     private func extractText(from url: URL) -> String {
