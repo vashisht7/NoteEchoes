@@ -99,6 +99,7 @@ class NoteService extends ChangeNotifier {
   }
 
   void addNote(NoteModel note) {
+    _notes.removeWhere((n) => n.noteId == note.noteId);
     _notes.insert(0, note);
     NoteStorageService().saveNotes(_notes);
     notifyListeners();
@@ -108,6 +109,8 @@ class NoteService extends ChangeNotifier {
   /// using the on-device AI categorization engine.
   NoteModel createFromVoiceTranscription(String spokenText) {
     final analysis = AiCategorizationEngine().analyzeNote(spokenText);
+    final tagsSet = <String>{'voice-memos', 'voice-memo'};
+    tagsSet.addAll(analysis.categories);
 
     final note = NoteModel(
       noteId: "echo_${DateTime.now().millisecondsSinceEpoch}",
@@ -116,7 +119,7 @@ class NoteService extends ChangeNotifier {
       summarySnippet: analysis.summarySnippet,
       textContent: spokenText.trim(),
       createdAt: DateTime.now(),
-      tags: analysis.categories,
+      tags: tagsSet.toList(),
       checklist: analysis.extractedChecklist,
       isPinned: false,
     );

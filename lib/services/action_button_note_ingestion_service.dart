@@ -5,7 +5,7 @@ import 'package:flutter/widgets.dart';
 
 import '../models/note_model.dart';
 import 'ai_categorization_engine.dart';
-import 'note_storage_service.dart';
+import 'note_service.dart';
 
 final class ActionButtonNoteIngestionService
     with WidgetsBindingObserver {
@@ -18,7 +18,6 @@ final class ActionButtonNoteIngestionService
     'com.vashisht.notechoes/action_button',
   );
 
-  final NoteStorageService _noteStorage = NoteStorageService();
   final AiCategorizationEngine _categorizationEngine =
       AiCategorizationEngine();
 
@@ -67,6 +66,10 @@ final class ActionButtonNoteIngestionService
 
         final analysis = _categorizationEngine.analyzeNote(text);
 
+        // Ensure both 'voice-memos' and 'voice-memo' tags are present for filter tabs
+        final tagsSet = <String>{'voice-memos', 'voice-memo'};
+        tagsSet.addAll(analysis.categories);
+
         final note = NoteModel(
           noteId: id,
           title: analysis.title,
@@ -75,12 +78,13 @@ final class ActionButtonNoteIngestionService
           summarySnippet: analysis.summarySnippet,
           textContent: text,
           createdAt: createdAt,
-          tags: analysis.categories,
+          tags: tagsSet.toList(),
           isPinned: false,
           checklist: analysis.extractedChecklist,
         );
 
-        await _noteStorage.upsertNote(note);
+        // Add to NoteService so in-memory list updates and notifyListeners() fires to update UI immediately
+        NoteService().addNote(note);
         await _acknowledge(id);
       }
     } on PlatformException catch (error, stackTrace) {
