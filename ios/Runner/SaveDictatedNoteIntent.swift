@@ -1,16 +1,8 @@
 import AppIntents
 
 /// Headless AppIntent that saves dictated text to the native pending
-/// note queue WITHOUT opening the notechoes app.
-///
-/// Usage via Shortcuts:
-///   1. "Dictate Text" action  →  output variable
-///   2. "Save Dictated Note" action  →  pass output as Note Text
-///
-/// The user assigns this Shortcut to their iPhone Action Button.
-/// On the next notechoes app launch or resume,
-/// `ActionButtonNoteIngestionService` drains the queue, categorises
-/// each note with `AiCategorizationEngine`, and persists it.
+/// note queue WITHOUT opening the notechoes app and WITHOUT requiring
+/// any button taps.
 @available(iOS 16.0, *)
 struct SaveDictatedNoteIntent: AppIntent {
     static var title: LocalizedStringResource {
@@ -34,22 +26,16 @@ struct SaveDictatedNoteIntent: AppIntent {
         Summary("Save \(\.$noteText) to notechoes")
     }
 
-    func perform() async throws -> some IntentResult & ProvidesDialog {
+    func perform() async throws -> some IntentResult {
         let trimmed = noteText
             .trimmingCharacters(in: .whitespacesAndNewlines)
 
-        guard !trimmed.isEmpty else {
-            return .result(
-                dialog: "No text to save."
+        if !trimmed.isEmpty {
+            _ = try await PendingVoiceNoteStore.shared.append(
+                text: trimmed
             )
         }
 
-        _ = try await PendingVoiceNoteStore.shared.append(
-            text: trimmed
-        )
-
-        return .result(
-            dialog: "✓ Saved to notechoes"
-        )
+        return .result()
     }
 }

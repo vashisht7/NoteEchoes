@@ -1,16 +1,9 @@
 import AppIntents
 import Speech
 
-/// Headless AppIntent that receives a recorded audio file from the
-/// Shortcuts "Record Audio" action, transcribes it entirely on-device
-/// using SFSpeechRecognizer, and saves the transcript as a pending
-/// note — all WITHOUT opening the notechoes app.
-///
-/// Shortcut flow:
-///   1. "Record Audio" → user speaks as long as they want, taps Stop
-///   2. "Transcribe & Save Voice Note" → receives audio, transcribes, saves
-///
-/// The user controls when recording ends.  No 10-second timeout.
+/// Headless AppIntent that receives a recorded audio file from Shortcuts
+/// and transcribes it on-device using SFSpeechRecognizer without opening
+/// the app or requiring any taps.
 @available(iOS 16.0, *)
 struct TranscribeAudioNoteIntent: AppIntent {
     static var title: LocalizedStringResource {
@@ -26,7 +19,7 @@ struct TranscribeAudioNoteIntent: AppIntent {
 
     @Parameter(
         title: "Audio Recording",
-        description: "The audio file to transcribe (from Record Audio)"
+        description: "The audio file to transcribe"
     )
     var audioFile: IntentFile
 
@@ -34,10 +27,7 @@ struct TranscribeAudioNoteIntent: AppIntent {
         Summary("Transcribe \(\.$audioFile) and save to notechoes")
     }
 
-    func perform() async throws -> some IntentResult & ProvidesDialog {
-
-        // 1. Write IntentFile data to a temporary URL that
-        //    SFSpeechURLRecognitionRequest can read
+    func perform() async throws -> some IntentResult {
         let tempDir = FileManager.default.temporaryDirectory
         let fileName = audioFile.filename ?? "recording.m4a"
         let tempURL = tempDir.appendingPathComponent(
@@ -47,23 +37,11 @@ struct TranscribeAudioNoteIntent: AppIntent {
         try audioFile.data.write(to: tempURL)
         defer { try? FileManager.default.removeItem(at: tempURL) }
 
-        // 2. Verify speech recognition permission
         let authStatus = SFSpeechRecognizer.authorizationStatus()
-        guard authStatus == .authorized else {
-            _ = try? await PendingVoiceNoteStore.shared.append(
-                text: "[Voice recording — speech recognition not yet authorized. Open notechoes to grant permission.]"
-            )
-            return .result(
-                dialog: "Speech recognition not authorized. Open notechoes once to grant permission."
-            )
+        guard authStatus == .authorized, let recognizer = SFSpeechRecognizer() else {
+            return .result()
         }
 
-        guard let recognizer = SFSpeechRecognizer() else {
-            return .result(dialog: "Speech recognizer is unavailable on this device.")
-        }
-
-        // 3. Build recognition request — prefer on-device for privacy
-        //    and to avoid the 1-minute server-side session cap
         let request = SFSpeechURLRecognitionRequest(url: tempURL)
         request.shouldReportPartialResults = false
 
@@ -71,8 +49,7 @@ struct TranscribeAudioNoteIntent: AppIntent {
             request.requiresOnDeviceRecognition = true
         }
 
-        // 4. Transcribe (async bridge from delegate callback)
-        let transcription: String = try await withCheckedThrowingContinuation {
+        let transcription: String? = try? await withCheckedThrowingContinuation {
             (continuation: CheckedContinuation<String, Error>) in
 
             var hasResumed = false
@@ -95,21 +72,10 @@ struct TranscribeAudioNoteIntent: AppIntent {
             }
         }
 
-        let trimmed = transcription
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-
-        guard !trimmed.isEmpty else {
-            return .result(dialog: "No speech detected in the recording.")
+        if let text = transcription?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty {
+            _ = try await PendingVoiceNoteStore.shared.append(text: text)
         }
 
-        // 5. Save to the durable native pending-note queue
-        _ = try await PendingVoiceNoteStore.shared.append(text: trimmed)
-
-        let wordCount = trimmed.components(separatedBy: .whitespaces)
-            .filter { !$0.isEmpty }.count
-
-        return .result(
-            dialog: "✓ Saved to notechoes (\(wordCount) words)"
-        )
+        return .result()
     }
 }
