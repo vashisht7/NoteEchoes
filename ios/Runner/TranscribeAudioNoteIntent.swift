@@ -2,39 +2,49 @@ import AppIntents
 import Speech
 
 /// Headless AppIntent that receives a recorded audio file from Shortcuts
-/// and transcribes it on-device using SFSpeechRecognizer without opening
-/// the app or requiring any taps.
+/// (e.g. "Record Audio" action), transcribes it on-device using SFSpeechRecognizer,
+/// and saves it as a note in notechoes — without opening the app.
+///
+/// `inputConnectionBehavior: .connectToPreviousIntentResult` allows Shortcuts
+/// to automatically pipe the output of "Record Audio" directly into `audioFile`!
 @available(iOS 16.0, *)
 struct TranscribeAudioNoteIntent: AppIntent {
-    static var title: LocalizedStringResource {
-        "Transcribe & Save Voice Note"
-    }
+    static var title: LocalizedStringResource = "Transcribe & Save Voice Note"
 
     static var description = IntentDescription(
         "Transcribes a voice recording on-device and saves it as a note in notechoes — without opening the app."
     )
 
-    // ── CRITICAL: never open the app ──
     static var openAppWhenRun: Bool = false
 
     @Parameter(
         title: "Audio Recording",
-        description: "The audio file to transcribe"
+        description: "The audio file to transcribe",
+        inputConnectionBehavior: .connectToPreviousIntentResult
     )
-    var audioFile: IntentFile
+    var audioFile: IntentFile?
 
     static var parameterSummary: some ParameterSummary {
         Summary("Transcribe \(\.$audioFile) and save to notechoes")
     }
 
     func perform() async throws -> some IntentResult {
+        guard let file = audioFile else {
+            return .result()
+        }
+
         let tempDir = FileManager.default.temporaryDirectory
-        let fileName = audioFile.filename ?? "recording.m4a"
+        let fileName = file.filename ?? "recording.m4a"
         let tempURL = tempDir.appendingPathComponent(
             "notechoes_\(UUID().uuidString)_\(fileName)"
         )
 
-        try audioFile.data.write(to: tempURL)
+        do {
+            try file.data.write(to: tempURL)
+        } catch {
+            return .result()
+        }
+
         defer { try? FileManager.default.removeItem(at: tempURL) }
 
         let authStatus = SFSpeechRecognizer.authorizationStatus()
