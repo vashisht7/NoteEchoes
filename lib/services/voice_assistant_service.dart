@@ -40,7 +40,7 @@ class VoiceAssistantService extends ChangeNotifier {
   final List<String> _userTranscriptLines = [];
   List<String> get userTranscriptLines => List.unmodifiable(_userTranscriptLines);
 
-  String _currentActiveUserSentence = "Summarize my notes about the Gemini API integration...";
+  String _currentActiveUserSentence = "Discuss and summarize my notes...";
   String get currentActiveUserSentence => _currentActiveUserSentence;
 
   // Context Notes for Thinking State
@@ -64,7 +64,7 @@ class VoiceAssistantService extends ChangeNotifier {
   bool _isPlayingAudio = false;
   bool get isPlayingAudio => _isPlayingAudio;
 
-  String _summaryTitle = "Gemini API Summary & Specs";
+  String _summaryTitle = "Notes Summary & Action Items";
   String get summaryTitle => _summaryTitle;
 
   String _fullGeneratedResponse = "";
@@ -81,17 +81,26 @@ class VoiceAssistantService extends ChangeNotifier {
   void startVoiceSession({String? initialPrompt}) {
     _state = VoiceAssistantState.listening;
     _userTranscriptLines.clear();
-    _currentActiveUserSentence = initialPrompt ?? "Summarize my notes about the Gemini API integration...";
+
+    final allNotes = NoteService().allNotes;
+    if (initialPrompt != null && initialPrompt.isNotEmpty) {
+      _currentActiveUserSentence = initialPrompt;
+    } else if (allNotes.isNotEmpty) {
+      _currentActiveUserSentence = "Summarize my notes: ${allNotes.first.title}...";
+    } else {
+      _currentActiveUserSentence = "Discuss and summarize my notes...";
+    }
+
     _activeOrbitNoteIndex = 0;
     _orbitalAngleDegrees = 0.0;
     _activeLyricIndex = 0;
     _isPlayingAudio = false;
 
-    // Load initial context notes from repository
+    // Load actual context notes from repository
     _contextualNotes = NoteService().getContextualNotesForQuery(_currentActiveUserSentence);
 
     _startSimulatedMicInput();
-    _startSimulatedTranscriptStream();
+    _startDynamicTranscriptStream();
 
     notifyListeners();
   }
@@ -127,9 +136,9 @@ class VoiceAssistantService extends ChangeNotifier {
     // Start 1-second step orbital rotation
     _startOrbitalStepScanner();
 
-    // Auto progress to speaking state after 3.2 seconds of scanning
+    // Auto progress to speaking state after 2.4 seconds of on-device note scanning
     _stateProgressionTimer?.cancel();
-    _stateProgressionTimer = Timer(const Duration(milliseconds: 3200), () {
+    _stateProgressionTimer = Timer(const Duration(milliseconds: 2400), () {
       transitionToSpeakingState();
     });
   }
@@ -177,7 +186,6 @@ class VoiceAssistantService extends ChangeNotifier {
     _amplitudeTimer?.cancel();
     _amplitudeTimer = Timer.periodic(const Duration(milliseconds: 60), (timer) {
       if (_state == VoiceAssistantState.listening) {
-        // Natural voice modulation with peaks and valleys
         final base = 0.3 + 0.5 * sin(timer.tick * 0.25).abs();
         final noise = (_random.nextDouble() - 0.5) * 0.2;
         _micAmplitude = (base + noise).clamp(0.15, 0.95);
@@ -186,27 +194,26 @@ class VoiceAssistantService extends ChangeNotifier {
     });
   }
 
-  void _startSimulatedTranscriptStream() {
+  void _startDynamicTranscriptStream() {
     _transcriptStreamTimer?.cancel();
-    final phrases = [
+    final allNotes = NoteService().allNotes;
+
+    final phrases = <String>[
       "Listening to your voice...",
-      "Analyzing notes about Stage architecture...",
-      "Summarize my notes about",
-      "Summarize my notes about the Gemini API integration...",
+      allNotes.isNotEmpty
+          ? "Analyzing ${allNotes.length} saved notes on-device..."
+          : "Ready to capture your thoughts...",
+      _currentActiveUserSentence,
     ];
 
     int step = 0;
-    _transcriptStreamTimer = Timer.periodic(const Duration(milliseconds: 700), (timer) {
+    _transcriptStreamTimer = Timer.periodic(const Duration(milliseconds: 650), (timer) {
       if (_state == VoiceAssistantState.listening) {
         if (step < phrases.length) {
           _currentActiveUserSentence = phrases[step];
-          if (step == 2) {
-            _userTranscriptLines.add("Find system architecture specs");
-          }
           step++;
           notifyListeners();
         } else {
-          // Auto advance or wait for user tap
           timer.cancel();
         }
       }
@@ -218,7 +225,7 @@ class VoiceAssistantService extends ChangeNotifier {
     final n = max(_contextualNotes.length, 1);
     final stepAngle = 360.0 / n;
 
-    _orbitalStepTimer = Timer.periodic(const Duration(milliseconds: 1000), (timer) {
+    _orbitalStepTimer = Timer.periodic(const Duration(milliseconds: 800), (timer) {
       if (_state == VoiceAssistantState.thinking) {
         _activeOrbitNoteIndex = (_activeOrbitNoteIndex + 1) % n;
         _orbitalAngleDegrees += stepAngle;
@@ -228,41 +235,83 @@ class VoiceAssistantService extends ChangeNotifier {
   }
 
   void _setupResponseLyrics() {
-    _aiLyricLines = [
-      const SpokenLyricLine(
-        text: "I found 2 notes matching your query about the Gemini API integration.",
-        startTime: Duration.zero,
-        duration: Duration(milliseconds: 1600),
-      ),
-      const SpokenLyricLine(
-        text: "Here is the summary of the Gemini API specifications and data structures:",
-        startTime: Duration(milliseconds: 1600),
-        duration: Duration(milliseconds: 1800),
-      ),
-      const SpokenLyricLine(
-        text: "1. Stage UI architecture leverages low-latency streaming WebSocket transport at 120ms.",
-        startTime: Duration(milliseconds: 3400),
-        duration: Duration(milliseconds: 2200),
-      ),
-      const SpokenLyricLine(
-        text: "2. The multi-modal pipeline streams raw PCM16 audio directly into context memory embeddings.",
-        startTime: Duration(milliseconds: 5600),
-        duration: Duration(milliseconds: 2400),
-      ),
-      const SpokenLyricLine(
-        text: "3. Apple Music-style lyrics synchronize with ±50ms real-time audio timestamp cues.",
-        startTime: Duration(milliseconds: 8000),
-        duration: Duration(milliseconds: 2200),
-      ),
-      const SpokenLyricLine(
-        text: "Would you like me to create a new task list or update the architecture doc?",
-        startTime: Duration(milliseconds: 10200),
-        duration: Duration(milliseconds: 2000),
-      ),
-    ];
+    final allNotes = NoteService().allNotes;
+    final matching = NoteService().getContextualNotesForQuery(_currentActiveUserSentence);
 
+    final List<SpokenLyricLine> lines = [];
+    var elapsed = Duration.zero;
+
+    if (allNotes.isEmpty) {
+      // 0 notes in app
+      lines.add(SpokenLyricLine(
+        text: "You do not have any saved notes in notechoes yet.",
+        startTime: elapsed,
+        duration: const Duration(milliseconds: 2000),
+      ));
+      elapsed += const Duration(milliseconds: 2000);
+
+      lines.add(SpokenLyricLine(
+        text: "Tap the microphone button or use your Action Button to capture your first thought!",
+        startTime: elapsed,
+        duration: const Duration(milliseconds: 2500),
+      ));
+
+      _summaryTitle = "No Notes Found";
+    } else {
+      final relevantNotes = matching.isNotEmpty ? matching : allNotes.take(3).toList();
+
+      lines.add(SpokenLyricLine(
+        text: "I analyzed your saved notes using the on-device AI engine.",
+        startTime: elapsed,
+        duration: const Duration(milliseconds: 2000),
+      ));
+      elapsed += const Duration(milliseconds: 2000);
+
+      lines.add(SpokenLyricLine(
+        text: "Here is what I found in your notes:",
+        startTime: elapsed,
+        duration: const Duration(milliseconds: 1600),
+      ));
+      elapsed += const Duration(milliseconds: 1600);
+
+      for (int i = 0; i < min(relevantNotes.length, 3); i++) {
+        final note = relevantNotes[i];
+        final snippet = note.summarySnippet.isNotEmpty ? note.summarySnippet : note.textContent;
+        final cleanSnippet = snippet.length > 90 ? "${snippet.substring(0, 90)}..." : snippet;
+
+        lines.add(SpokenLyricLine(
+          text: "${i + 1}. ${note.title}: $cleanSnippet",
+          startTime: elapsed,
+          duration: const Duration(milliseconds: 2500),
+        ));
+        elapsed += const Duration(milliseconds: 2500);
+      }
+
+      // Check for pending checklist items
+      int totalChecklist = 0;
+      for (final n in relevantNotes) {
+        totalChecklist += n.checklist.where((c) => !c.isCompleted).length;
+      }
+      if (totalChecklist > 0) {
+        lines.add(SpokenLyricLine(
+          text: "You have $totalChecklist pending checklist action items across these notes.",
+          startTime: elapsed,
+          duration: const Duration(milliseconds: 2200),
+        ));
+        elapsed += const Duration(milliseconds: 2200);
+      }
+
+      lines.add(SpokenLyricLine(
+        text: "Would you like to open any of these notes or create a new one?",
+        startTime: elapsed,
+        duration: const Duration(milliseconds: 2000),
+      ));
+
+      _summaryTitle = relevantNotes.first.title;
+    }
+
+    _aiLyricLines = lines;
     _fullGeneratedResponse = _aiLyricLines.map((e) => e.text).join("\n\n");
-    _summaryTitle = "Gemini API Architecture Summary";
   }
 
   void _startKaraokePlayback() {
@@ -282,7 +331,6 @@ class VoiceAssistantService extends ChangeNotifier {
           scheduleNext();
         });
       } else {
-        // Finished speaking
         _isPlayingAudio = false;
         notifyListeners();
       }

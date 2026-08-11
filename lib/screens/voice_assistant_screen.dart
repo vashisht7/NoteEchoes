@@ -35,15 +35,31 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
   Timer? _orbScanTimer;
   bool _isCopied = false;
 
-  // Thoughts revolving loop at the bottom (Wheel / Cylindrical Loop)
-  final List<String> _thoughtSuggestions = [
-    "Summarize my notes on Gemini API",
-    "Check weekly grocery & pantry list",
-    "Stage UI system tokens & architecture",
-    "Show tasks due for current sprint",
-    "macOS Glassmorphism blur specifications",
-    "Extract meeting action items & prompts",
-  ];
+  // Thoughts revolving loop dynamically generated from real user notes
+  List<String> get _thoughtSuggestions {
+    final allNotes = NoteService().allNotes;
+    if (allNotes.isEmpty) {
+      return [
+        "Summarize my recent thoughts",
+        "Check my checklist tasks",
+        "Review today's notes",
+        "Find voice notes with action items",
+      ];
+    }
+    final suggestions = <String>[];
+    for (final note in allNotes.take(4)) {
+      suggestions.add("Summarize: ${note.title}");
+    }
+    final allTags = NoteService().allTags.where((t) => t != 'All').toList();
+    for (final tag in allTags.take(3)) {
+      suggestions.add("Show all notes in #$tag");
+    }
+    if (suggestions.length < 4) {
+      suggestions.add("Summarize all my notes");
+      suggestions.add("Find pending checklist tasks");
+    }
+    return suggestions;
+  }
 
   late final FixedExtentScrollController _wheelScrollController;
 
@@ -54,7 +70,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
     _voiceService = VoiceAssistantService();
     _voiceService.addListener(_onServiceUpdate);
 
-    _wheelScrollController = FixedExtentScrollController(initialItem: 1000); // For infinite loop feel
+    _wheelScrollController = FixedExtentScrollController(initialItem: 1000);
 
     _animationController = AnimationController(
       vsync: this,
@@ -73,22 +89,13 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
 
   void _loadCandidateNodes() {
     final notes = NoteService().allNotes;
-    if (notes.isNotEmpty) {
-      _candidateNodes = notes.map((n) {
-        return NoteNode(
-          id: n.noteId,
-          title: n.title,
-          snippet: n.summarySnippet.isNotEmpty ? n.summarySnippet : n.textContent,
-        );
-      }).toList();
-    } else {
-      _candidateNodes = [
-        const NoteNode(id: "n1", title: "Stage UI Specs", snippet: "Tokens and system architecture"),
-        const NoteNode(id: "n2", title: "Gemini 2.5 Multi-Modal", snippet: "Audio speech streaming"),
-        const NoteNode(id: "n3", title: "Weekly Grocery", snippet: "Almond milk and coffee"),
-        const NoteNode(id: "n4", title: "Glassmorphism Blur", snippet: "Backdrop filter specifications"),
-      ];
-    }
+    _candidateNodes = notes.map((n) {
+      return NoteNode(
+        id: n.noteId,
+        title: n.title,
+        snippet: n.summarySnippet.isNotEmpty ? n.summarySnippet : n.textContent,
+      );
+    }).toList();
   }
 
   void _onServiceUpdate() {
@@ -116,7 +123,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
     }
   }
 
-  // Inside the Orb note scanner (notes appear one after the other inside the Dream Bubble)
+  // Inside the Orb note scanner
   void _startInsideOrbScanning() {
     _orbScanTimer?.cancel();
     _currentInsideOrbIndex = 0;
@@ -133,7 +140,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
   void _copySpokenTranscript() {
     final text = _voiceService.fullGeneratedResponse.isNotEmpty
         ? _voiceService.fullGeneratedResponse
-        : "Gemini API Summary:\n1. Stage UI architecture leverages low-latency streaming.\n2. Multi-modal pipeline streams raw PCM16 audio directly into context memory embeddings.";
+        : "No transcript available.";
     Clipboard.setData(ClipboardData(text: text));
     HapticFeedback.mediumImpact();
     setState(() => _isCopied = true);
@@ -145,7 +152,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
   void _saveAiResponseAsNote() {
     final text = _voiceService.fullGeneratedResponse.isNotEmpty
         ? _voiceService.fullGeneratedResponse
-        : "Summary of Gemini API specifications...";
+        : "Voice Assistant Summary";
     final newNote = NoteModel(
       noteId: "echo_${DateTime.now().millisecondsSinceEpoch}",
       title: _voiceService.summaryTitle,
@@ -153,7 +160,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
       summarySnippet: text.split("\n\n").first,
       textContent: text,
       createdAt: DateTime.now(),
-      tags: ["voice-memo", "google-ai", "stage"],
+      tags: ["voice-memo", "ai-summary"],
     );
     NoteService().addNote(newNote);
 

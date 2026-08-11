@@ -130,6 +130,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
+      enableDrag: true,
+      isDismissible: true,
       builder: (context) => NoteDetailSheet(existingNote: note),
     );
   }

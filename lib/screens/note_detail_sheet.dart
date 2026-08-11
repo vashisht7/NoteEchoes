@@ -156,35 +156,56 @@ class _NoteDetailSheetState extends State<NoteDetailSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.92,
-      decoration: const BoxDecoration(
-        color: AppColors.elevation1,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        border: Border(
-          top: BorderSide(color: AppColors.glassBorderBright, width: 1.2),
+    return GestureDetector(
+      onVerticalDragEnd: (details) {
+        if (details.primaryVelocity != null && details.primaryVelocity! > 200) {
+          Navigator.of(context).pop();
+        }
+      },
+      child: Container(
+        height: MediaQuery.of(context).size.height * 0.75,
+        decoration: const BoxDecoration(
+          color: AppColors.elevation1,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          border: Border(
+            top: BorderSide(color: AppColors.glassBorderBright, width: 1.2),
+          ),
         ),
-      ),
-      child: ClipRRect(
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-          child: Scaffold(
-            backgroundColor: Colors.transparent,
-            appBar: AppBar(
+        child: ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+            child: Scaffold(
               backgroundColor: Colors.transparent,
-              leading: IconButton(
-                icon: const Icon(Icons.close_rounded, color: AppColors.primaryText),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-              title: Text(
-                widget.existingNote != null ? "Edit Note" : "New Note",
-                style: GoogleFonts.outfit(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primaryText,
+              appBar: AppBar(
+                backgroundColor: Colors.transparent,
+                centerTitle: true,
+                leading: IconButton(
+                  icon: const Icon(Icons.close_rounded, color: AppColors.primaryText),
+                  onPressed: () => Navigator.of(context).pop(),
                 ),
-              ),
+                title: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 4,
+                      margin: const EdgeInsets.only(bottom: 6),
+                      decoration: BoxDecoration(
+                        color: AppColors.secondaryText.withValues(alpha: 0.4),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    Text(
+                      widget.existingNote != null ? "Edit Note" : "New Note",
+                      style: GoogleFonts.outfit(
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primaryText,
+                      ),
+                    ),
+                  ],
+                ),
               actions: [
                 // Live Markdown & LaTeX Math Preview Toggle
                 IconButton(
@@ -495,6 +516,7 @@ class _NoteDetailSheetState extends State<NoteDetailSheet> {
                 ),
                 const SizedBox(height: 40),
               ],
+            ),
             ),
           ),
         ),
