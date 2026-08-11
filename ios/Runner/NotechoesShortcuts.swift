@@ -1,20 +1,29 @@
 import AppIntents
 
-/// Registers the "Save Dictated Note" intent as an auto-discovered
-/// App Shortcut so users can assign it to their Action Button in one tap.
+/// Registers notechoes App Shortcuts so they auto-appear in the
+/// Shortcuts app and can be assigned to the Action Button in one tap.
 @available(iOS 16.0, *)
 struct NotechoesShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
         AppShortcut(
+            intent: TranscribeAudioNoteIntent(),
+            phrases: [
+                "Record a voice note in \(.applicationName)",
+                "Voice note to \(.applicationName)",
+                "Save a recording to \(.applicationName)",
+            ],
+            shortTitle: "Record & Save Voice Note",
+            systemImageName: "mic.badge.plus"
+        )
+
+        AppShortcut(
             intent: SaveDictatedNoteIntent(),
             phrases: [
-                "Save a note in \(.applicationName)",
                 "Quick note in \(.applicationName)",
-                "Voice note to \(.applicationName)",
-                "New note in \(.applicationName)",
+                "Dictate a note to \(.applicationName)",
             ],
-            shortTitle: "Save Dictated Note",
-            systemImageName: "mic.badge.plus"
+            shortTitle: "Quick Dictated Note",
+            systemImageName: "text.badge.plus"
         )
     }
 }
