@@ -1,15 +1,15 @@
 import AppIntents
 import Speech
 
-/// Headless AppIntent that receives a recorded audio file from Shortcuts
-/// (e.g. "Record Audio" action), transcribes it on-device using SFSpeechRecognizer,
-/// and saves it as a note in notechoes — guaranteed to save even if speech recognition fails.
+/// Headless AppIntent that receives a recorded audio file from Shortcuts,
+/// transcribes the spoken text using SFSpeechRecognizer (with automatic fallbacks),
+/// and saves the full transcribed text as a note in notechoes.
 @available(iOS 16.0, *)
 struct TranscribeAudioNoteIntent: AppIntent {
     static var title: LocalizedStringResource = "Transcribe & Save Voice Note"
 
     static var description = IntentDescription(
-        "Transcribes a voice recording on-device and saves it as a note in notechoes — without opening the app."
+        "Transcribes a voice recording and saves it as a note in notechoes — without opening the app."
     )
 
     static var openAppWhenRun: Bool = false
@@ -39,53 +39,97 @@ struct TranscribeAudioNoteIntent: AppIntent {
         do {
             try file.data.write(to: tempURL)
         } catch {
-            _ = try? await PendingVoiceNoteStore.shared.append(
-                text: "Voice Note (\(Date().formatted()))"
-            )
             return .result()
         }
 
         defer { try? FileManager.default.removeItem(at: tempURL) }
 
-        // Attempt transcription via SFSpeechRecognizer
-        let authStatus = SFSpeechRecognizer.authorizationStatus()
-        var transcribedText: String? = nil
+        // Perform speech recognition with robust fallbacks
+        let transcribedText = await transcribeAudioFile(at: tempURL)
 
-        if authStatus == .authorized, let recognizer = SFSpeechRecognizer() {
-            let request = SFSpeechURLRecognitionRequest(url: tempURL)
-            request.shouldReportPartialResults = false
-            if recognizer.supportsOnDeviceRecognition {
-                request.requiresOnDeviceRecognition = true
-            }
+        if let text = transcribedText?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty {
+            _ = try await PendingVoiceNoteStore.shared.append(text: text)
+        }
 
-            transcribedText = try? await withCheckedThrowingContinuation { continuation in
-                var hasResumed = false
-                recognizer.recognitionTask(with: request) { result, error in
-                    guard !hasResumed else { return }
-                    if let error = error {
-                        hasResumed = true
-                        continuation.resume(throwing: error)
-                        return
-                    }
-                    if let result = result, result.isFinal {
-                        hasResumed = true
-                        continuation.resume(returning: result.bestTranscription.formattedString)
-                    }
+        return .result()
+    }
+
+    /// Transcribes audio from file URL using SFSpeechRecognizer.
+    /// Tries on-device first, falls back to standard recognition if on-device model is unavailable.
+    private func transcribeAudioFile(at url: URL) async -> String? {
+        // Ensure speech authorization status
+        var authStatus = SFSpeechRecognizer.authorizationStatus()
+        if authStatus == .notDetermined {
+            authStatus = await withCheckedContinuation { continuation in
+                SFSpeechRecognizer.requestAuthorization { status in
+                    continuation.resume(returning: status)
                 }
             }
         }
 
-        let finalText: String
-        if let text = transcribedText?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty {
-            finalText = text
-        } else {
-            let nowStr = DateFormatter.localizedString(from: Date(), dateStyle: .medium, timeStyle: .short)
-            finalText = "Voice Memo Recording (\(nowStr))"
+        guard authStatus == .authorized || authStatus == .notDetermined else {
+            return nil
         }
 
-        // Guaranteed persistence to pending queue
-        _ = try await PendingVoiceNoteStore.shared.append(text: finalText)
+        guard let recognizer = SFSpeechRecognizer(locale: Locale(identifier: "en-US")) ?? SFSpeechRecognizer() else {
+            return nil
+        }
 
-        return .result()
+        // Attempt 1: Try on-device recognition
+        if let text = await performRecognition(recognizer: recognizer, url: url, requireOnDevice: true), !text.isEmpty {
+            return text
+        }
+
+        // Attempt 2: Try standard recognition (fallback if local model not downloaded)
+        if let text = await performRecognition(recognizer: recognizer, url: url, requireOnDevice: false), !text.isEmpty {
+            return text
+        }
+
+        return nil
+    }
+
+    private func performRecognition(recognizer: SFSpeechRecognizer, url: URL, requireOnDevice: Bool) async -> String? {
+        let request = SFSpeechURLRecognitionRequest(url: url)
+        request.shouldReportPartialResults = true
+
+        if requireOnDevice && recognizer.supportsOnDeviceRecognition {
+            request.requiresOnDeviceRecognition = true
+        } else {
+            request.requiresOnDeviceRecognition = false
+        }
+
+        return await withCheckedContinuation { continuation in
+            var bestText: String? = nil
+            var hasResumed = false
+
+            let task = recognizer.recognitionTask(with: request) { result, error in
+                if let result = result {
+                    let text = result.bestTranscription.formattedString.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !text.isEmpty {
+                        bestText = text
+                    }
+                    if result.isFinal && !hasResumed {
+                        hasResumed = true
+                        continuation.resume(returning: bestText)
+                        return
+                    }
+                }
+
+                if error != nil && !hasResumed {
+                    hasResumed = true
+                    continuation.resume(returning: bestText)
+                    return
+                }
+            }
+
+            // Safety timeout after 10 seconds of processing
+            DispatchQueue.global().asyncAfter(deadline: .now() + 10.0) {
+                if !hasResumed {
+                    hasResumed = true
+                    task.cancel()
+                    continuation.resume(returning: bestText)
+                }
+            }
+        }
     }
 }

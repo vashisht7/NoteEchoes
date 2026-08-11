@@ -214,24 +214,37 @@ class AiCategorizationEngine {
   }
 
   String _generateTitle(String text, Set<String> categories) {
-    final firstLine = text.split('\n').first.trim().replaceAll(RegExp(r'^[#\-•\d\.\s]+'), '');
-    if (firstLine.isNotEmpty && firstLine.length <= 45) {
-      return _capitalize(firstLine);
-    } else if (firstLine.length > 45) {
-      final truncated = firstLine.substring(0, 42);
-      final lastSpace = truncated.lastIndexOf(' ');
-      return "${lastSpace > 20 ? truncated.substring(0, lastSpace) : truncated}...";
+    // 1. Clean leading punctuation, checkboxes, bullet points
+    var cleanText = text.split('\n').first.trim().replaceAll(RegExp(r'^[#\-•\d\.\s]+'), '');
+
+    // 2. Strip common conversational filler prefixes for a clean minimal highlight
+    cleanText = cleanText.replaceFirst(
+      RegExp(r"^(remember to|need to|make sure to|don't forget to|hey can you|please|i want to|so i was thinking that|note to self|voice memo|recording|just wanted to)\s+", caseSensitive: false),
+      '',
+    ).trim();
+
+    if (cleanText.isEmpty) {
+      cleanText = text.trim();
     }
 
-    // Category fallback title
-    if (categories.contains("grocery")) return "Grocery & Pantry List";
-    if (categories.contains("math")) return "Math & Formula Notes";
-    if (categories.contains("meeting")) return "Meeting Action Items";
-    if (categories.contains("tasks")) return "Action Items & Tasks";
-    if (categories.contains("design")) return "Design System Specifications";
-    if (categories.contains("ideas")) return "Brainstorming & Thoughts";
-    if (categories.contains("study")) return "Research & Study Notes";
-    return "Voice Memo - ${DateTime.now().month}/${DateTime.now().day}";
+    if (cleanText.isEmpty) {
+      return "Voice Note";
+    }
+
+    // 3. Keep title minimal (max 5 words / 32 chars)
+    final words = cleanText.split(RegExp(r'\s+'));
+    if (words.length > 5) {
+      final shortTitle = words.take(5).join(' ');
+      return _capitalize(shortTitle.length > 32 ? "${shortTitle.substring(0, 30)}..." : shortTitle);
+    }
+
+    if (cleanText.length <= 35) {
+      return _capitalize(cleanText);
+    }
+
+    final truncated = cleanText.substring(0, 32);
+    final lastSpace = truncated.lastIndexOf(' ');
+    return _capitalize("${lastSpace > 12 ? truncated.substring(0, lastSpace) : truncated}...");
   }
 
   String _generateSummarySnippet(String text) {
