@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_colors.dart';
 
+import '../ai/presentation/ai_model_settings_page.dart';
+
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
@@ -56,10 +58,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _buildCardGroup([
             _buildActionTile(
               icon: Icons.psychology_rounded,
-              title: "On-Device AI Engine",
-              subtitle: "100% private semantic analysis running locally on phone",
-              onTap: () {},
+              title: "Local AI Models & Downloads",
+              subtitle: "Manage offline Dolphin STT (Telugu/Hindi/En) & Qwen 3.5 LLM",
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const AiModelSettingsPage()),
+                );
+              },
             ),
+
             _buildDivider(),
             _buildDropdownTile(
               title: "Speech Recognition Language",

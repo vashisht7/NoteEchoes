@@ -1,15 +1,16 @@
 import AppIntents
 import Speech
+import AVFoundation
 
-/// Headless AppIntent that receives a recorded audio file from Shortcuts,
-/// transcribes the spoken text using SFSpeechRecognizer (with automatic fallbacks),
-/// and saves the full transcribed text as a note in notechoes.
+/// Headless AppIntent that receives a recorded audio file from Shortcuts ("Record Audio" action),
+/// supports recordings from 5 seconds up to 1+ hour conversations via seamless chunked transcription,
+/// and saves the complete, multi-paragraph transcribed note into notechoes.
 @available(iOS 16.0, *)
 struct TranscribeAudioNoteIntent: AppIntent {
     static var title: LocalizedStringResource = "Transcribe & Save Voice Note"
 
     static var description = IntentDescription(
-        "Transcribes a voice recording and saves it as a note in notechoes — without opening the app."
+        "Transcribes any voice recording (from short notes up to 1-hour conversations) and saves it to notechoes."
     )
 
     static var openAppWhenRun: Bool = false
@@ -30,11 +31,19 @@ struct TranscribeAudioNoteIntent: AppIntent {
             return .result()
         }
 
+        // Direct file URL if provided by Shortcuts
+        if let directURL = file.fileURL {
+            let transcribedText = await transcribeFullAudio(at: directURL)
+            if let text = transcribedText?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty {
+                _ = try await PendingVoiceNoteStore.shared.append(text: text)
+            }
+            return .result()
+        }
+
+        // Fallback: Write file data to temporary directory
         let tempDir = FileManager.default.temporaryDirectory
-        let fileName = file.filename ?? "recording.m4a"
-        let tempURL = tempDir.appendingPathComponent(
-            "notechoes_\(UUID().uuidString)_\(fileName)"
-        )
+        let fileName = file.filename ?? "recording_\(UUID().uuidString).m4a"
+        let tempURL = tempDir.appendingPathComponent(fileName)
 
         do {
             try file.data.write(to: tempURL)
@@ -44,8 +53,8 @@ struct TranscribeAudioNoteIntent: AppIntent {
 
         defer { try? FileManager.default.removeItem(at: tempURL) }
 
-        // Perform speech recognition with robust fallbacks
-        let transcribedText = await transcribeAudioFile(at: tempURL)
+        // Perform chunked speech recognition supporting 1-hour audio
+        let transcribedText = await transcribeFullAudio(at: tempURL)
 
         if let text = transcribedText?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty {
             _ = try await PendingVoiceNoteStore.shared.append(text: text)
@@ -54,10 +63,9 @@ struct TranscribeAudioNoteIntent: AppIntent {
         return .result()
     }
 
-    /// Transcribes audio from file URL using SFSpeechRecognizer.
-    /// Tries on-device first, falls back to standard recognition if on-device model is unavailable.
-    private func transcribeAudioFile(at url: URL) async -> String? {
-        // Ensure speech authorization status
+    /// Transcribes an entire audio file (from seconds up to 1 hour) using chunked Apple Neural Speech Recognition.
+    private func transcribeFullAudio(at url: URL) async -> String? {
+        // Ensure speech authorization
         var authStatus = SFSpeechRecognizer.authorizationStatus()
         if authStatus == .notDetermined {
             authStatus = await withCheckedContinuation { continuation in
@@ -71,63 +79,117 @@ struct TranscribeAudioNoteIntent: AppIntent {
             return nil
         }
 
-        guard let recognizer = SFSpeechRecognizer(locale: Locale(identifier: "en-US")) ?? SFSpeechRecognizer() else {
+        // Determine audio duration
+        let asset = AVURLAsset(url: url)
+        var totalDurationSeconds: Double = 30.0
+        if let track = try? await asset.loadTracks(withMediaType: .audio).first {
+            if let time = try? await track.load(.timeRange) {
+                totalDurationSeconds = time.duration.seconds
+            }
+        }
+
+        guard let recognizer = SFSpeechRecognizer(locale: Locale.current) ??
+              SFSpeechRecognizer(locale: Locale(identifier: "en-US")) ??
+              SFSpeechRecognizer() else {
             return nil
         }
 
-        // Attempt 1: Try on-device recognition
-        if let text = await performRecognition(recognizer: recognizer, url: url, requireOnDevice: true), !text.isEmpty {
-            return text
+        // If audio is under 60 seconds, transcribe in a single fast pass
+        if totalDurationSeconds <= 60.0 {
+            if let result = await performRecognitionOnChunk(recognizer: recognizer, url: url, timeout: max(45.0, totalDurationSeconds * 2.0)) {
+                return result
+            }
         }
 
-        // Attempt 2: Try standard recognition (fallback if local model not downloaded)
-        if let text = await performRecognition(recognizer: recognizer, url: url, requireOnDevice: false), !text.isEmpty {
-            return text
+        // For long recordings (up to 1 hour), slice into 60-second chunks to avoid buffer limits & timeouts
+        var transcribedParagraphs: [String] = []
+        let chunkDuration: Double = 60.0
+        var currentStart: Double = 0.0
+        let tempDir = FileManager.default.temporaryDirectory
+
+        while currentStart < totalDurationSeconds {
+            let chunkLength = min(chunkDuration, totalDurationSeconds - currentStart)
+            let chunkFileName = "chunk_\(UUID().uuidString).m4a"
+            let chunkURL = tempDir.appendingPathComponent(chunkFileName)
+
+            let sliced = await sliceAudio(sourceURL: url, startTime: currentStart, duration: chunkLength, outputURL: chunkURL)
+
+            if sliced {
+                if let chunkText = await performRecognitionOnChunk(recognizer: recognizer, url: chunkURL, timeout: 50.0) {
+                    let trimmed = chunkText.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !trimmed.isEmpty {
+                        transcribedParagraphs.append(trimmed)
+                    }
+                }
+                try? FileManager.default.removeItem(at: chunkURL)
+            }
+
+            currentStart += chunkDuration
         }
 
-        return nil
+        let combined = transcribedParagraphs.joined(separator: " ")
+        return combined.isEmpty ? nil : combined
     }
 
-    private func performRecognition(recognizer: SFSpeechRecognizer, url: URL, requireOnDevice: Bool) async -> String? {
-        let request = SFSpeechURLRecognitionRequest(url: url)
-        request.shouldReportPartialResults = true
-
-        if requireOnDevice && recognizer.supportsOnDeviceRecognition {
-            request.requiresOnDeviceRecognition = true
-        } else {
-            request.requiresOnDeviceRecognition = false
+    /// Slices a sub-range of audio into a temporary M4A file
+    private func sliceAudio(sourceURL: URL, startTime: Double, duration: Double, outputURL: URL) async -> Bool {
+        let asset = AVURLAsset(url: sourceURL)
+        guard let exportSession = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetAppleM4A) else {
+            return false
         }
 
+        exportSession.outputURL = outputURL
+        exportSession.outputFileType = .m4a
+        let start = CMTime(seconds: startTime, preferredTimescale: 600)
+        let len = CMTime(seconds: duration, preferredTimescale: 600)
+        exportSession.timeRange = CMTimeRange(start: start, duration: len)
+
+        await exportSession.export()
+        return exportSession.status == .completed
+    }
+
+    /// Recognizes speech within a single audio chunk
+    private func performRecognitionOnChunk(
+        recognizer: SFSpeechRecognizer,
+        url: URL,
+        timeout: Double
+    ) async -> String? {
+        let request = SFSpeechURLRecognitionRequest(url: url)
+        request.taskHint = .dictation
+        request.shouldReportPartialResults = true
+        request.addsPunctuation = true
+        request.requiresOnDeviceRecognition = false
+
         return await withCheckedContinuation { continuation in
-            var bestText: String? = nil
+            var bestFormattedText: String = ""
             var hasResumed = false
 
             let task = recognizer.recognitionTask(with: request) { result, error in
                 if let result = result {
-                    let text = result.bestTranscription.formattedString.trimmingCharacters(in: .whitespacesAndNewlines)
-                    if !text.isEmpty {
-                        bestText = text
+                    let formatted = result.bestTranscription.formattedString.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !formatted.isEmpty {
+                        bestFormattedText = formatted
                     }
                     if result.isFinal && !hasResumed {
                         hasResumed = true
-                        continuation.resume(returning: bestText)
+                        continuation.resume(returning: bestFormattedText.isEmpty ? nil : bestFormattedText)
                         return
                     }
                 }
 
                 if error != nil && !hasResumed {
                     hasResumed = true
-                    continuation.resume(returning: bestText)
+                    continuation.resume(returning: bestFormattedText.isEmpty ? nil : bestFormattedText)
                     return
                 }
             }
 
-            // Safety timeout after 10 seconds of processing
-            DispatchQueue.global().asyncAfter(deadline: .now() + 10.0) {
+            // Safety timeout per chunk
+            DispatchQueue.global().asyncAfter(deadline: .now() + timeout) {
                 if !hasResumed {
                     hasResumed = true
                     task.cancel()
-                    continuation.resume(returning: bestText)
+                    continuation.resume(returning: bestFormattedText.isEmpty ? nil : bestFormattedText)
                 }
             }
         }

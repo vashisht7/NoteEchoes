@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 
 import 'screens/home_screen.dart';
 import 'services/action_button_note_ingestion_service.dart';
+import 'ai/config/ai_feature_flags.dart';
+import 'ai/config/ai_runtime_config.dart';
 import 'theme/app_theme.dart';
 
 Future<void> main() async {
@@ -16,6 +18,10 @@ Future<void> main() async {
       systemNavigationBarIconBrightness: Brightness.light,
     ),
   );
+
+  // Initialize AI configuration & feature flags
+  await AiFeatureFlags.instance.load();
+  await AiRuntimeConfig.instance.detect();
 
   // Import before HomeScreen loads its initial note list.
   await ActionButtonNoteIngestionService.instance.initialize();
