@@ -39,6 +39,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     _noteService.addListener(_onServiceChange);
     _setupActionChannel();
+    // Import pending notes on the first frame — MethodChannels are only
+    // live after the first frame, so this is the earliest safe moment.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ActionButtonNoteIngestionService.instance.initialize();
+    });
   }
 
   @override
@@ -408,8 +413,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     final notes = _noteService.notes;
     final tags = _noteService.allTags;
-    final richMediaNotes = notes.where((n) => n.contentType == NoteContentType.richMedia).toList();
-    final textOnlyNotes = notes.where((n) => n.contentType == NoteContentType.textOnly).toList();
 
     return Scaffold(
       backgroundColor: AppColors.deepMatteBlack,
@@ -434,7 +437,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     opacity: _isSearchExpanded && _noteService.searchQuery.isEmpty ? 0.20 : 1.0,
                     child: notes.isEmpty
                         ? _buildEmptyState()
-                        : _buildHybridGrid(richMediaNotes, textOnlyNotes),
+                        : _buildHybridGrid(notes),
                   ),
                 ),
               ],
@@ -714,92 +717,41 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  // 4. Main Hybrid Grid Layout (Apple Music Album Tiles + Keep Dual-Column Masonry)
-  Widget _buildHybridGrid(List<NoteModel> richNotes, List<NoteModel> textNotes) {
+  // 4. Main Unified Feed (Chronological Masonry Grid with Pinned on Top)
+  Widget _buildHybridGrid(List<NoteModel> notes) {
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
       slivers: [
-        // Section A: Rich Media Notes (Apple Music Album Tiles)
-        if (richNotes.isNotEmpty) ...[
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.only(left: 18, right: 16, bottom: 10, top: 8),
-              child: Row(
-                children: [
-                  const Icon(Icons.auto_awesome_mosaic_rounded, size: 14, color: AppColors.dropletRed),
-                  const SizedBox(width: 6),
-                  Text(
-                    "FEATURED & RICH DOCUMENTS",
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 1.0,
-                      color: AppColors.secondaryText,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            sliver: SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  final note = richNotes[index];
-                  return AppleMusicMediaCard(
-                    note: note,
-                    onTap: () => _openNoteEditor(note),
-                    onLongPress: () => _showNoteContextMenu(note),
-                  );
-                },
-                childCount: richNotes.length,
-              ),
-            ),
-          ),
-        ],
-
-        // Section B: Standard Text Note Tiles (Google Keep Dual-Column Masonry)
-        if (textNotes.isNotEmpty) ...[
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.only(left: 18, right: 16, bottom: 12, top: 16),
-              child: Row(
-                children: [
-                  const Icon(Icons.grid_view_rounded, size: 14, color: AppColors.accentBlue),
-                  const SizedBox(width: 6),
-                  Text(
-                    "NOTES & CHECKLISTS",
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 1.0,
-                      color: AppColors.secondaryText,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            sliver: SliverMasonryGrid.count(
-              crossAxisCount: 2,
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
-              itemBuilder: (context, index) {
-                final note = textNotes[index];
-                return KeepTextNoteCard(
+        const SliverToBoxAdapter(
+          child: SizedBox(height: 8),
+        ),
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          sliver: SliverMasonryGrid.count(
+            crossAxisCount: 2,
+            mainAxisSpacing: 12,
+            crossAxisSpacing: 12,
+            itemBuilder: (context, index) {
+              final note = notes[index];
+              if (note.contentType == NoteContentType.richMedia &&
+                  note.mediaAssets.isNotEmpty) {
+                return AppleMusicMediaCard(
                   note: note,
                   onTap: () => _openNoteEditor(note),
                   onLongPress: () => _showNoteContextMenu(note),
-                  onToggleCheckItem: (itemId) => _noteService.toggleCheckItem(note.noteId, itemId),
                 );
-              },
-              childCount: textNotes.length,
-            ),
+              }
+              return KeepTextNoteCard(
+                note: note,
+                onTap: () => _openNoteEditor(note),
+                onLongPress: () => _showNoteContextMenu(note),
+                onToggleCheckItem: (itemId) =>
+                    _noteService.toggleCheckItem(note.noteId, itemId),
+              );
+            },
+            childCount: notes.length,
           ),
-        ],
+        ),
 
         // Bottom space for floating navigation bar
         const SliverToBoxAdapter(

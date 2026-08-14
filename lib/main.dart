@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 
 import 'screens/home_screen.dart';
 import 'services/note_service.dart';
-import 'services/action_button_note_ingestion_service.dart';
 import 'ai/config/ai_feature_flags.dart';
 import 'ai/config/ai_runtime_config.dart';
 import 'theme/app_theme.dart';
@@ -20,13 +19,18 @@ Future<void> main() async {
     ),
   );
 
-  // Initialize storage, AI configuration & feature flags
+  // Step 1: Initialize storage so notes are loaded from disk first
   await NoteService().initStorage();
+
+  // Step 2: AI flags
   await AiFeatureFlags.instance.load();
   await AiRuntimeConfig.instance.detect();
 
-  // Import before HomeScreen loads its initial note list.
-  await ActionButtonNoteIngestionService.instance.initialize();
+  // NOTE: ActionButtonNoteIngestionService.initialize() is intentionally
+  // NOT called here. MethodChannels require a live FlutterViewController
+  // which is only registered AFTER runApp(). Calling it before runApp()
+  // makes every peekPendingActionButtonNote call return null silently.
+  // HomeScreen.initState() handles the first import on its first frame.
 
   runApp(const NoteEchoesApp());
 }

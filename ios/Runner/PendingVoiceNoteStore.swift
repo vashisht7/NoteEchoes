@@ -8,18 +8,22 @@ enum SharedDefaults {
     static let appGroup = "group.com.vashisht.notechoes"
 
     static var suite: UserDefaults {
-        // Falls back to standard if the App Group hasn't been provisioned yet
         UserDefaults(suiteName: appGroup) ?? .standard
+    }
+
+    static var sharedContainerURL: URL? {
+        FileManager.default.containerURL(
+            forSecurityApplicationGroupIdentifier: appGroup
+        )
     }
 }
 
 actor PendingVoiceNoteStore {
     static let shared = PendingVoiceNoteStore()
 
-    // Use the shared App Group container — accessible from both the
-    // main app process and App Intent extension processes.
     private var defaults: UserDefaults { SharedDefaults.suite }
     private let queueKey = "notechoes_pending_action_button_notes_v1"
+    private let fallbackFile = "pending_voice_notes_v1.json"
 
     struct PendingNote: Codable, Sendable {
         let id: String
@@ -44,11 +48,11 @@ actor PendingVoiceNoteStore {
         )
 
         var queue = try loadQueue()
-        queue.append(pendingNote)
+        // Deduplicate
+        if !queue.contains(where: { $0.id == pendingNote.id }) {
+            queue.append(pendingNote)
+        }
         try persist(queue)
-
-        // Force-sync so the main app picks it up immediately on resume
-        defaults.synchronize()
 
         return pendingNote
     }
@@ -61,23 +65,52 @@ actor PendingVoiceNoteStore {
         var queue = try loadQueue()
         queue.removeAll { $0.id == id }
         try persist(queue)
-        defaults.synchronize()
     }
 
     private func loadQueue() throws -> [PendingNote] {
-        guard let data = defaults.data(forKey: queueKey) else {
-            return []
+        // Tier 1: Try App Group shared file container
+        if let containerURL = SharedDefaults.sharedContainerURL {
+            let fileURL = containerURL.appendingPathComponent(fallbackFile)
+            if let data = try? Data(contentsOf: fileURL),
+               let items = try? JSONDecoder().decode([PendingNote].self, from: data),
+               !items.isEmpty {
+                return items
+            }
         }
 
-        return try JSONDecoder().decode(
-            [PendingNote].self,
-            from: data
-        )
+        // Tier 2: App Group suite UserDefaults
+        if let data = defaults.data(forKey: queueKey),
+           let items = try? JSONDecoder().decode([PendingNote].self, from: data),
+           !items.isEmpty {
+            return items
+        }
+
+        // Tier 3: Standard UserDefaults
+        if let data = UserDefaults.standard.data(forKey: queueKey),
+           let items = try? JSONDecoder().decode([PendingNote].self, from: data),
+           !items.isEmpty {
+            return items
+        }
+
+        return []
     }
 
     private func persist(_ queue: [PendingNote]) throws {
         let data = try JSONEncoder().encode(queue)
+
+        // Tier 1: Write to App Group suite
         defaults.set(data, forKey: queueKey)
+        defaults.synchronize()
+
+        // Tier 2: Write to standard defaults as fallback
+        UserDefaults.standard.set(data, forKey: queueKey)
+        UserDefaults.standard.synchronize()
+
+        // Tier 3: Write to shared App Group file if available
+        if let containerURL = SharedDefaults.sharedContainerURL {
+            let fileURL = containerURL.appendingPathComponent(fallbackFile)
+            try? data.write(to: fileURL, options: .atomic)
+        }
     }
 }
 

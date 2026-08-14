@@ -21,9 +21,24 @@ class NoteDetailScreen extends StatefulWidget {
   State<NoteDetailScreen> createState() => _NoteDetailScreenState();
 }
 
+class _TextBlock {
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  _TextBlock({String text = ''})
+      : controller = TextEditingController(text: text),
+        focusNode = FocusNode();
+  void dispose() {
+    controller.dispose();
+    focusNode.dispose();
+  }
+}
+
+class _TableBlock {
+  final Key key = UniqueKey();
+}
+
 class _NoteDetailScreenState extends State<NoteDetailScreen> {
   late TextEditingController _titleController;
-  late TextEditingController _contentController;
   late TextEditingController _tagInputController;
   late List<String> _tags;
   late bool _isPinned;
@@ -32,17 +47,37 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
   late List<CheckListItem> _checklist;
   late DateTime _createdAt;
   bool _isPreviewMode = false;
-  bool _showTable = false;
 
-  final FocusNode _contentFocusNode = FocusNode();
+  // Block-editor model: a sequence of text blocks and table blocks
+  // Text blocks hold TextEditingControllers; table blocks are interactive inline tables
+  late List<dynamic> _blocks; // List<_TextBlock | _TableBlock>
+
+  // The "active" text block that receives cursor focus (used for toolbar insertions)
+  _TextBlock? get _activeTextBlock {
+    for (final block in _blocks) {
+      if (block is _TextBlock && block.focusNode.hasFocus) return block;
+    }
+    // Default to last text block
+    for (final block in _blocks.reversed) {
+      if (block is _TextBlock) return block;
+    }
+    return null;
+  }
+
+  // Legacy getter so old code that reads _contentController still compiles
+  TextEditingController get _contentController =>
+      (_blocks.firstWhere((b) => b is _TextBlock, orElse: () => _TextBlock()) as _TextBlock).controller;
+
   final FocusNode _titleFocusNode = FocusNode();
+  // _contentFocusNode points to the first text block for backward compat
+  FocusNode get _contentFocusNode =>
+      (_blocks.firstWhere((b) => b is _TextBlock, orElse: () => _TextBlock()) as _TextBlock).focusNode;
 
   @override
   void initState() {
     super.initState();
     final note = widget.existingNote;
     _titleController = TextEditingController(text: note?.title ?? '');
-    _contentController = TextEditingController(text: note?.textContent ?? '');
     _tagInputController = TextEditingController();
     _tags = List.from(note?.tags ?? []);
     _isPinned = note?.isPinned ?? false;
@@ -50,14 +85,17 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
     _mediaAssets = List.from(note?.mediaAssets ?? []);
     _checklist = List.from(note?.checklist ?? []);
     _createdAt = note?.createdAt ?? DateTime.now();
+    // Start with a single text block containing the note content
+    _blocks = [_TextBlock(text: note?.textContent ?? '')];
   }
 
   @override
   void dispose() {
     _titleController.dispose();
-    _contentController.dispose();
+    for (final block in _blocks) {
+      if (block is _TextBlock) block.dispose();
+    }
     _tagInputController.dispose();
-    _contentFocusNode.dispose();
     _titleFocusNode.dispose();
     super.dispose();
   }
@@ -66,7 +104,12 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
     final title = _titleController.text.trim().isEmpty
         ? "Untitled Note"
         : _titleController.text.trim();
-    final content = _contentController.text;
+    // Join all text blocks separated by a blank line (tables are skipped)
+    final content = _blocks
+        .whereType<_TextBlock>()
+        .map((b) => b.controller.text)
+        .join('\n\n')
+        .trim();
     final summary = content.isNotEmpty
         ? content.split("\n").first
         : (widget.existingNote?.summarySnippet ?? "No description provided");
@@ -105,8 +148,11 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
   // ── Apple Notes Formatting Engine ──────────────────────────────────────
 
   void _applyTextFormatting(TextFormattingType format) {
-    final text = _contentController.text;
-    final selection = _contentController.selection;
+    final block = _activeTextBlock;
+    final ctrl = block?.controller ?? _contentController;
+    final focusNode = block?.focusNode ?? _contentFocusNode;
+    final text = ctrl.text;
+    final selection = ctrl.selection;
     final start = selection.start >= 0 ? selection.start : text.length;
     final end = selection.end >= 0 ? selection.end : text.length;
     final selectedText =
@@ -177,17 +223,46 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
     }
 
     final newText = text.replaceRange(start, end, replacement);
-    _contentController.value = TextEditingValue(
+    ctrl.value = TextEditingValue(
       text: newText,
       selection: TextSelection.collapsed(offset: start + cursorOffset),
     );
-    _contentFocusNode.requestFocus();
+    focusNode.requestFocus();
   }
 
   void _insertTable() {
-    // Show Apple Notes-style interactive table widget inline
-    FocusScope.of(context).unfocus();
-    setState(() => _showTable = true);
+    setState(() {
+      final active = _activeTextBlock;
+      if (active == null) {
+        // No focused block — just append a table at the end
+        _blocks.add(_TableBlock());
+        _blocks.add(_TextBlock());
+        return;
+      }
+
+      final blockIdx = _blocks.indexOf(active);
+      final text = active.controller.text;
+      final cursor = active.controller.selection.start;
+      final splitAt = cursor >= 0 ? cursor : text.length;
+
+      // Text before cursor
+      final before = text.substring(0, splitAt);
+      // Text after cursor
+      final after = text.substring(splitAt);
+
+      // Replace current block with: [before text] [table] [after text]
+      final beforeBlock = _TextBlock(text: before);
+      final tableBlock = _TableBlock();
+      final afterBlock = _TextBlock(text: after);
+
+      _blocks.replaceRange(blockIdx, blockIdx + 1, [beforeBlock, tableBlock, afterBlock]);
+      active.dispose(); // clean up replaced block
+
+      // Focus the after-block so user can keep typing below the table
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        afterBlock.focusNode.requestFocus();
+      });
+    });
   }
 
   void _insertMathEquation() {
@@ -650,8 +725,11 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
               const SizedBox(height: 12),
             ],
 
-            // Main Editor / Markdown Preview
+            // ── Block Editor ────────────────────────────────────────────────
+            // Each block is either a text region or an inline table.
+            // This is what gives Apple Notes-style inline tables.
             if (_isPreviewMode) ...[
+              // Preview mode: join all text blocks and render as markdown
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -677,32 +755,51 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
                         ),
                       ],
                     ),
-                    const Divider(
-                        height: 16, color: Color(0xFF282830)),
-                    MathMarkdownViewer(content: _contentController.text),
+                    const Divider(height: 16, color: Color(0xFF282830)),
+                    MathMarkdownViewer(
+                      content: _blocks
+                          .whereType<_TextBlock>()
+                          .map((b) => b.controller.text)
+                          .join('\n\n'),
+                    ),
                   ],
                 ),
               ),
             ] else ...[
-              TextField(
-                controller: _contentController,
-                focusNode: _contentFocusNode,
-                maxLines: null,
-                keyboardType: TextInputType.multiline,
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  height: 1.55,
-                  color: Colors.white,
-                ),
-                decoration: const InputDecoration(
-                  hintText: "Start typing...",
-                  hintStyle: TextStyle(color: Colors.white24, fontSize: 16),
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
+              // Edit mode: render each block sequentially
+              ..._blocks.map((block) {
+                if (block is _TextBlock) {
+                  return TextField(
+                    controller: block.controller,
+                    focusNode: block.focusNode,
+                    maxLines: null,
+                    keyboardType: TextInputType.multiline,
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      height: 1.55,
+                      color: Colors.white,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: _blocks.length == 1 ? "Start typing..." : null,
+                      hintStyle:
+                          const TextStyle(color: Colors.white24, fontSize: 16),
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  );
+                } else if (block is _TableBlock) {
+                  return Padding(
+                    key: block.key,
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: InlineNoteTable(
+                      onDataChanged: (_) {},
+                    ),
+                  );
+                }
+                return const SizedBox.shrink();
+              }),
             ],
-            const SizedBox(height: 24),
+
 
             // Tags Chips
             Wrap(
@@ -763,15 +860,6 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
           ], // end ListView children
         ), // end ListView
       ), // end Expanded
-
-      // ── Interactive table widget (Apple Notes style) ───────────────────────
-      if (_showTable)
-        Padding(
-          padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
-          child: InlineNoteTable(
-            onDataChanged: (_) {},
-          ),
-        ),
 
       // ── Apple Notes Accessory Toolbar ──────────────────────────────────────
       // This sits at the bottom of the Column. The Column is inside a Padding

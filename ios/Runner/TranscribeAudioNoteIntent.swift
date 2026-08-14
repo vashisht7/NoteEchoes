@@ -28,37 +28,64 @@ struct TranscribeAudioNoteIntent: AppIntent {
 
     func perform() async throws -> some IntentResult {
         guard let file = audioFile else {
+            // Save a fallback placeholder if no file was passed
+            let dateStr = DateFormatter.localizedString(from: Date(), dateStyle: .medium, timeStyle: .short)
+            _ = try await PendingVoiceNoteStore.shared.append(text: "Voice Note (\(dateStr))")
             return .result()
         }
 
-        // Direct file URL if provided by Shortcuts
-        if let directURL = file.fileURL {
-            let transcribedText = await transcribeFullAudio(at: directURL)
-            if let text = transcribedText?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty {
-                _ = try await PendingVoiceNoteStore.shared.append(text: text)
-            }
-            return .result()
-        }
-
-        // Fallback: Write file data to temporary directory
+        // Copy audio data to a clean local temporary file in our process sandbox
+        // This avoids any cross-sandbox or security-scoped URL read restrictions
         let tempDir = FileManager.default.temporaryDirectory
-        let fileName = file.filename ?? "recording_\(UUID().uuidString).m4a"
-        let tempURL = tempDir.appendingPathComponent(fileName)
+        let fileName = "notechoes_recording_\(UUID().uuidString).m4a"
+        let localTempURL = tempDir.appendingPathComponent(fileName)
 
-        do {
-            try file.data.write(to: tempURL)
-        } catch {
-            return .result()
+        var audioReady = false
+        if let directURL = file.fileURL {
+            let hasSecurityScope = directURL.startAccessingSecurityScopedResource()
+            do {
+                if FileManager.default.fileExists(atPath: localTempURL.path) {
+                    try? FileManager.default.removeItem(at: localTempURL)
+                }
+                try FileManager.default.copyItem(at: directURL, to: localTempURL)
+                audioReady = true
+            } catch {
+                // Try reading data
+                if let data = try? Data(contentsOf: directURL) {
+                    try? data.write(to: localTempURL)
+                    audioReady = true
+                }
+            }
+            if hasSecurityScope {
+                directURL.stopAccessingSecurityScopedResource()
+            }
         }
 
-        defer { try? FileManager.default.removeItem(at: tempURL) }
+        if !audioReady {
+            do {
+                try file.data.write(to: localTempURL)
+                audioReady = true
+            } catch {
+                let dateStr = DateFormatter.localizedString(from: Date(), dateStyle: .medium, timeStyle: .short)
+                _ = try await PendingVoiceNoteStore.shared.append(text: "Voice Recording (\(dateStr))")
+                return .result()
+            }
+        }
 
-        // Perform chunked speech recognition supporting 1-hour audio
-        let transcribedText = await transcribeFullAudio(at: tempURL)
+        defer { try? FileManager.default.removeItem(at: localTempURL) }
 
+        // Perform chunked speech recognition supporting up to 1-hour audio
+        let transcribedText = await transcribeFullAudio(at: localTempURL)
+
+        let finalNoteText: String
         if let text = transcribedText?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty {
-            _ = try await PendingVoiceNoteStore.shared.append(text: text)
+            finalNoteText = text
+        } else {
+            let dateStr = DateFormatter.localizedString(from: Date(), dateStyle: .medium, timeStyle: .short)
+            finalNoteText = "Voice Memo (\(dateStr))"
         }
+
+        _ = try await PendingVoiceNoteStore.shared.append(text: finalNoteText)
 
         return .result()
     }
@@ -127,7 +154,7 @@ struct TranscribeAudioNoteIntent: AppIntent {
             currentStart += chunkDuration
         }
 
-        let combined = transcribedParagraphs.joined(separator: " ")
+        let combined = transcribedParagraphs.joined(separator: "\n\n")
         return combined.isEmpty ? nil : combined
     }
 
