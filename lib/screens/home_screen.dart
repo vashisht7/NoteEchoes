@@ -5,6 +5,7 @@ import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/note_model.dart';
 import '../models/note_node.dart';
+import '../services/action_button_note_ingestion_service.dart';
 import '../services/note_service.dart';
 import '../services/note_storage_service.dart';
 import '../theme/app_colors.dart';
@@ -89,7 +90,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Future<void> _fetchPendingVoiceNotes() async {
     try {
-      // 1. Check UserDefaults / MethodChannel queue
+      // 1. Ingest from PendingVoiceNoteStore (Action Button / Shortcuts queue)
+      await ActionButtonNoteIngestionService.instance.importPendingNotes();
+
+      // 2. Check legacy MethodChannel queue
       final List<dynamic>? pending = await _actionChannel.invokeMethod('getPendingVoiceNotes');
       if (pending != null && pending.isNotEmpty) {
         for (final item in pending) {
@@ -100,7 +104,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         }
       }
 
-      // 2. Check File-based background Shortcuts queue
+      // 3. Check File-based background Shortcuts queue
       final fileNotes = await NoteStorageService().readAndClearPendingFileNotes();
       for (final text in fileNotes) {
         if (text.trim().isNotEmpty) {
@@ -126,13 +130,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   void _openNoteEditor([NoteModel? note]) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      enableDrag: true,
-      isDismissible: true,
-      builder: (context) => NoteDetailSheet(existingNote: note),
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => NoteDetailScreen(existingNote: note),
+      ),
     );
   }
 

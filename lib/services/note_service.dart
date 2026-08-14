@@ -25,11 +25,23 @@ class NoteService extends ChangeNotifier {
   String? get authProvider => _authProvider;
   bool get isInitialized => _isInitialized;
 
+  Future<void>? _storageInitFuture;
+
+  Future<void> initStorage() {
+    _storageInitFuture ??= _initStorage();
+    return _storageInitFuture!;
+  }
+
   Future<void> _initStorage() async {
     final loaded = await NoteStorageService().loadNotes();
-    _notes.clear();
-    _notes.addAll(loaded);
+    final existingIds = _notes.map((n) => n.noteId).toSet();
+    for (final note in loaded) {
+      if (!existingIds.contains(note.noteId)) {
+        _notes.add(note);
+      }
+    }
     _isInitialized = true;
+    NoteStorageService().saveNotes(_notes);
     notifyListeners();
   }
 

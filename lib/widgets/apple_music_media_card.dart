@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/note_model.dart';
 import '../theme/app_colors.dart';
+import '../utils/date_formatter.dart';
 
 class AppleMusicMediaCard extends StatelessWidget {
   final NoteModel note;
@@ -31,18 +32,30 @@ class AppleMusicMediaCard extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(18),
-          color: AppColors.elevation1,
+          borderRadius: BorderRadius.circular(20),
+          color: const Color(0xFF16161C),
+          border: Border.all(
+            color: note.isPinned
+                ? AppColors.dropletRed.withValues(alpha: 0.6)
+                : const Color(0xFF282834),
+            width: note.isPinned ? 1.5 : 1.1,
+          ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.6),
+              color: Colors.black.withValues(alpha: 0.5),
               blurRadius: 18,
               offset: const Offset(0, 8),
             ),
+            if (note.isPinned)
+              BoxShadow(
+                color: AppColors.dropletRed.withValues(alpha: 0.2),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
           ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(20),
           child: Stack(
             children: [
               // 1. Full-Bleed Artwork / Gradient Canvas
@@ -80,7 +93,8 @@ class AppleMusicMediaCard extends StatelessWidget {
                   children: [
                     if (note.isPinned)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: AppColors.dropletRed.withValues(alpha: 0.9),
                           borderRadius: BorderRadius.circular(12),
@@ -94,7 +108,8 @@ class AppleMusicMediaCard extends StatelessWidget {
                         child: const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.push_pin_rounded, size: 11, color: Colors.white),
+                            Icon(Icons.push_pin_rounded,
+                                size: 11, color: Colors.white),
                             SizedBox(width: 4),
                             Text(
                               "PINNED",
@@ -114,7 +129,8 @@ class AppleMusicMediaCard extends StatelessWidget {
                     // PDF High-Res Preview Badge in Upper Right
                     if (hasPdf)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 9, vertical: 4),
                         decoration: BoxDecoration(
                           color: AppColors.badgePdf.withValues(alpha: 0.95),
                           borderRadius: BorderRadius.circular(8),
@@ -128,7 +144,8 @@ class AppleMusicMediaCard extends StatelessWidget {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.picture_as_pdf_rounded, size: 12, color: Colors.white),
+                            const Icon(Icons.picture_as_pdf_rounded,
+                                size: 12, color: Colors.white),
                             const SizedBox(width: 4),
                             Text(
                               "PDF • ${note.mediaAssets.firstWhere((m) => m.type == MediaAssetType.pdf).pageCount ?? 1}P",
@@ -157,7 +174,7 @@ class AppleMusicMediaCard extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: AppColors.elevation2.withValues(alpha: 0.75),
+                        color: AppColors.elevation2.withValues(alpha: 0.85),
                         border: const Border(
                           top: BorderSide(color: AppColors.glassBorder),
                         ),
@@ -166,6 +183,24 @@ class AppleMusicMediaCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          // Timestamp Header
+                          Row(
+                            children: [
+                              const Icon(Icons.access_time_rounded,
+                                  size: 11, color: AppColors.secondaryText),
+                              const SizedBox(width: 4),
+                              Text(
+                                formatNoteTimestamp(note.createdAt),
+                                style: GoogleFonts.inter(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.secondaryText,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+
                           // Note Title
                           Text(
                             note.title,
@@ -199,7 +234,8 @@ class AppleMusicMediaCard extends StatelessWidget {
                             children: [
                               ...note.tags.take(2).map((tag) => Container(
                                     margin: const EdgeInsets.only(right: 6),
-                                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 7, vertical: 2),
                                     decoration: BoxDecoration(
                                       color: AppColors.badgeTag,
                                       borderRadius: BorderRadius.circular(6),
@@ -235,8 +271,9 @@ class AppleMusicMediaCard extends StatelessWidget {
   }
 
   Widget _buildArtworkBackground(NoteModel note) {
-    // Custom rich media generative visual presets matching Apple Music tiles
-    final firstPreset = note.mediaAssets.isNotEmpty ? note.mediaAssets.first.visualPreset : null;
+    final firstPreset = note.mediaAssets.isNotEmpty
+        ? note.mediaAssets.first.visualPreset
+        : null;
 
     if (firstPreset == "nebula_art") {
       return Container(
@@ -263,9 +300,11 @@ class AppleMusicMediaCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: Colors.white.withValues(alpha: 0.15),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+                  border:
+                      Border.all(color: Colors.white.withValues(alpha: 0.3)),
                 ),
-                child: const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 34),
+                child: const Icon(Icons.auto_awesome_rounded,
+                    color: Colors.white, size: 34),
               ),
               const SizedBox(height: 8),
               Text(
@@ -311,11 +350,15 @@ class AppleMusicMediaCard extends StatelessWidget {
             child: const Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.description_rounded, size: 36, color: AppColors.badgePdf),
+                Icon(Icons.description_rounded,
+                    size: 36, color: AppColors.badgePdf),
                 SizedBox(height: 6),
                 Text(
                   "Architecture Specs V2.4",
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
+                  style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white),
                 ),
               ],
             ),
@@ -324,7 +367,6 @@ class AppleMusicMediaCard extends StatelessWidget {
       );
     }
 
-    // Default System Architecture visual preset
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -348,9 +390,11 @@ class AppleMusicMediaCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: AppColors.accentBlue.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.accentBlue.withValues(alpha: 0.4)),
+                  border: Border.all(
+                      color: AppColors.accentBlue.withValues(alpha: 0.4)),
                 ),
-                child: const Icon(Icons.architecture_rounded, size: 34, color: AppColors.accentBlue),
+                child: const Icon(Icons.architecture_rounded,
+                    size: 34, color: AppColors.accentBlue),
               ),
               const SizedBox(height: 10),
               Text(

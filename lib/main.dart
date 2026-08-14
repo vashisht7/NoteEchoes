@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'screens/home_screen.dart';
+import 'services/note_service.dart';
 import 'services/action_button_note_ingestion_service.dart';
 import 'ai/config/ai_feature_flags.dart';
 import 'ai/config/ai_runtime_config.dart';
@@ -19,7 +20,8 @@ Future<void> main() async {
     ),
   );
 
-  // Initialize AI configuration & feature flags
+  // Initialize storage, AI configuration & feature flags
+  await NoteService().initStorage();
   await AiFeatureFlags.instance.load();
   await AiRuntimeConfig.instance.detect();
 
