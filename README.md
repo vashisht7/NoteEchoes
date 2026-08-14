@@ -8,6 +8,9 @@
 For the complete technical blueprint, directory index mapping every Dart/Swift file to its functionality, and agent handoff details, see:
 👉 **[ARCHITECTURE_AND_AGENT_HANDOFF.md](ARCHITECTURE_AND_AGENT_HANDOFF.md)**
 
+For the device-download strategy, free product scope, monetization options, and
+custom-model roadmap, see **[future_plans.md](future_plans.md)**.
+
 ---
 
 ## 🌟 Key Features
@@ -74,6 +77,10 @@ In Xcode, select your Apple team and connected iPhone. Keep the App Group
 `group.com.vashisht.notechoes` enabled. If Xcode asks, trust the official MLX
 build plugin. The AI model is downloaded from the model settings page and is
 not stored in the application bundle.
+
+The unsigned iPhone release build measured approximately 77 MB on August 14,
+2026. Final App Store download and installed sizes can differ because of signing,
+compression, and device thinning.
 
 ---
 
