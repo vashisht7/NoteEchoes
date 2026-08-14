@@ -8,6 +8,8 @@ class SceneDelegate: FlutterSceneDelegate {
     private let legacyPendingNotesKey =
         "notechoes_pending_voice_notes"
 
+    private var sharedDefaults: UserDefaults { SharedDefaults.suite }
+
     private var actionChannel: FlutterMethodChannel?
 
     override func scene(
@@ -132,11 +134,11 @@ class SceneDelegate: FlutterSceneDelegate {
             }
 
         case "getPendingVoiceNotes":
-            let notes = UserDefaults.standard.stringArray(
+            let notes = sharedDefaults.stringArray(
                 forKey: legacyPendingNotesKey
             ) ?? []
 
-            UserDefaults.standard.removeObject(
+            sharedDefaults.removeObject(
                 forKey: legacyPendingNotesKey
             )
 
@@ -160,13 +162,13 @@ class SceneDelegate: FlutterSceneDelegate {
 
             guard !extractedText.isEmpty else { return }
 
-            var current = UserDefaults.standard.stringArray(
+            var current = sharedDefaults.stringArray(
                 forKey: legacyPendingNotesKey
             ) ?? []
 
             current.append(extractedText)
 
-            UserDefaults.standard.set(
+            sharedDefaults.set(
                 current,
                 forKey: legacyPendingNotesKey
             )

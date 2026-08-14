@@ -77,6 +77,7 @@
 		E959606E381E328A9F33FC53 /* Pods_RunnerTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_RunnerTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		FCC98FE1E3680450CB46AFD6 /* SaveDictatedNoteIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SaveDictatedNoteIntent.swift; sourceTree = "<group>"; };
 		FE0C7A4A2642545CF8EA7BCC /* PendingVoiceNoteStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingVoiceNoteStore.swift; sourceTree = "<group>"; };
+		AA1234567890ABCDEF000001 /* Runner.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Runner.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -162,6 +163,7 @@
 				A1B2C3D4E5F6078900112234 /* NotechoesShortcuts.swift */,
 				C4D5E6F7A8B9C0D100223345 /* TranscribeAudioNoteIntent.swift */,
 				FE0C7A4A2642545CF8EA7BCC /* PendingVoiceNoteStore.swift */,
+				AA1234567890ABCDEF000001 /* Runner.entitlements */,
 				97C146FA1CF9000F007C117D /* Main.storyboard */,
 				97C146FD1CF9000F007C117D /* Assets.xcassets */,
 				97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */,
@@ -510,6 +512,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.vashisht.notechoes;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;
 				SWIFT_OBJC_BRIDGING_HEADER = "Runner/Runner-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";
@@ -693,6 +696,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.vashisht.notechoes;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;
 				SWIFT_OBJC_BRIDGING_HEADER = "Runner/Runner-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -716,6 +720,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.vashisht.notechoes;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;
 				SWIFT_OBJC_BRIDGING_HEADER = "Runner/Runner-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";

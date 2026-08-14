@@ -27,46 +27,47 @@ class AppleNotesToolbar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-    final isKeyboardOpen = bottomInset > 0 || isKeyboardVisible;
+    final isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0 || isKeyboardVisible;
 
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF1E1E22).withValues(alpha: 0.95),
+        color: const Color(0xFF1E1E22).withValues(alpha: 0.97),
         border: const Border(
-          top: BorderSide(color: Color(0xFF32323A), width: 0.8),
+          top: BorderSide(color: Color(0xFF36363E), width: 0.6),
         ),
       ),
       child: ClipRect(
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),
-          child: SafeArea(
-            top: false,
-            bottom: !isKeyboardOpen,
-            child: Container(
+          filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
+          child: Padding(
+            // Only add safe area bottom padding when the keyboard is NOT open
+            padding: EdgeInsets.only(
+              bottom: isKeyboardOpen ? 0 : MediaQuery.of(context).padding.bottom,
+            ),
+            child: SizedBox(
               height: 46,
-              padding: const EdgeInsets.symmetric(horizontal: 8),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // 1. Table Tool
-                  _buildToolbarIcon(
+                  const SizedBox(width: 8),
+
+                  // Table
+                  _toolButton(
                     icon: Icons.table_chart_outlined,
                     tooltip: "Insert Table",
                     onTap: onInsertTable,
                   ),
+                  const SizedBox(width: 2),
 
-                  // 2. Aa Typography & Styling
+                  // Aa Typography
                   InkWell(
                     onTap: onFormatText,
                     borderRadius: BorderRadius.circular(8),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 5,
-                      ),
+                      height: 34,
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.08),
+                        color: const Color(0xFFFFD60A).withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
@@ -74,52 +75,57 @@ class AppleNotesToolbar extends StatelessWidget {
                         style: GoogleFonts.inter(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
-                          color: const Color(0xFFFFD60A), // Apple Notes Yellow
+                          color: const Color(0xFFFFD60A),
                         ),
                       ),
                     ),
                   ),
+                  const SizedBox(width: 2),
 
-                  // 3. Checklist
-                  _buildToolbarIcon(
+                  // Checklist
+                  _toolButton(
                     icon: Icons.checklist_rounded,
                     tooltip: "Checklist",
                     onTap: onInsertChecklist,
                   ),
+                  const SizedBox(width: 2),
 
-                  // 4. Camera & Attachments
-                  _buildToolbarIcon(
+                  // Camera & Attachments
+                  _toolButton(
                     icon: Icons.camera_alt_outlined,
                     tooltip: "Camera & Photos",
                     onTap: onAddAttachment,
                   ),
+                  const SizedBox(width: 2),
 
-                  // 5. Drawing & Markup Canvas
-                  _buildToolbarIcon(
+                  // Drawing
+                  _toolButton(
                     icon: Icons.draw_outlined,
                     tooltip: "Markup & Sketch",
                     color: const Color(0xFFFF9F0A),
                     onTap: onOpenDrawing,
                   ),
+                  const SizedBox(width: 2),
 
-                  // 6. Math & LaTeX Formula
-                  _buildToolbarIcon(
+                  // Math
+                  _toolButton(
                     icon: Icons.functions_rounded,
                     tooltip: "LaTeX Math",
                     color: AppColors.nebulaCyan,
                     onTap: onInsertMath,
                   ),
 
-                  // 7. Dismiss Keyboard
+                  const Spacer(),
+
+                  // Dismiss keyboard
                   if (isKeyboardOpen)
-                    _buildToolbarIcon(
+                    _toolButton(
                       icon: Icons.keyboard_hide_rounded,
                       tooltip: "Hide Keyboard",
                       color: Colors.white70,
                       onTap: onHideKeyboard,
-                    )
-                  else
-                    const SizedBox(width: 36),
+                    ),
+                  const SizedBox(width: 8),
                 ],
               ),
             ),
@@ -129,18 +135,18 @@ class AppleNotesToolbar extends StatelessWidget {
     );
   }
 
-  Widget _buildToolbarIcon({
+  Widget _toolButton({
     required IconData icon,
     required String tooltip,
     Color? color,
     required VoidCallback onTap,
   }) {
     return IconButton(
-      icon: Icon(icon, size: 21, color: color ?? Colors.white),
+      icon: Icon(icon, size: 22, color: color ?? Colors.white),
       tooltip: tooltip,
-      splashRadius: 18,
-      padding: EdgeInsets.zero,
+      padding: const EdgeInsets.all(8),
       constraints: const BoxConstraints(minWidth: 38, minHeight: 38),
+      splashRadius: 20,
       onPressed: onTap,
     );
   }

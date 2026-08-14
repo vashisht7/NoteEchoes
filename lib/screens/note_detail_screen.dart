@@ -9,6 +9,7 @@ import '../utils/date_formatter.dart';
 import '../widgets/apple_drawing_canvas.dart';
 import '../widgets/apple_notes_toolbar.dart';
 import '../widgets/apple_text_format_sheet.dart';
+import '../widgets/inline_note_table.dart';
 import '../widgets/math_markdown_viewer.dart';
 
 class NoteDetailScreen extends StatefulWidget {
@@ -31,6 +32,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
   late List<CheckListItem> _checklist;
   late DateTime _createdAt;
   bool _isPreviewMode = false;
+  bool _showTable = false;
 
   final FocusNode _contentFocusNode = FocusNode();
   final FocusNode _titleFocusNode = FocusNode();
@@ -183,18 +185,9 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
   }
 
   void _insertTable() {
-    const tableTemplate =
-        "\n\n| Item | Description | Status |\n| :--- | :--- | :--- |\n| Task 1 | Requirements | Done |\n| Task 2 | Design specs | In Progress |\n\n";
-    final text = _contentController.text;
-    final selection = _contentController.selection;
-    final index = selection.start >= 0 ? selection.start : text.length;
-
-    final newText = text.replaceRange(index, index, tableTemplate);
-    _contentController.value = TextEditingValue(
-      text: newText,
-      selection: TextSelection.collapsed(offset: index + tableTemplate.length),
-    );
-    _contentFocusNode.requestFocus();
+    // Show Apple Notes-style interactive table widget inline
+    FocusScope.of(context).unfocus();
+    setState(() => _showTable = true);
   }
 
   void _insertMathEquation() {
@@ -368,8 +361,9 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
         _saveNote(pop: false);
       },
       child: Scaffold(
-        backgroundColor: const Color(0xFF000000), // Pure OLED Apple Black
-        resizeToAvoidBottomInset: true,
+        backgroundColor: const Color(0xFF000000),
+        // Must be false — we manually handle keyboard avoidance in the body Column
+        resizeToAvoidBottomInset: false,
         appBar: AppBar(
           backgroundColor: const Color(0xFF000000),
           elevation: 0,
@@ -478,9 +472,18 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
             ),
           ],
         ),
-        body: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 80),
-          children: [
+        body: Padding(
+          // This is the key: padding == keyboard height pushes
+          // the entire Column up so the toolbar stays visible.
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: Column(
+            children: [
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                  children: [
             // Apple-style creation date header
             Center(
               child: Padding(
@@ -757,24 +760,41 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
               ],
             ),
             const SizedBox(height: 40),
-          ],
+          ], // end ListView children
+        ), // end ListView
+      ), // end Expanded
+
+      // ── Interactive table widget (Apple Notes style) ───────────────────────
+      if (_showTable)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
+          child: InlineNoteTable(
+            onDataChanged: (_) {},
+          ),
         ),
 
-        // Apple Notes Accessory Toolbar: Floats directly above the keyboard
-        bottomNavigationBar: AppleNotesToolbar(
-          isKeyboardVisible: isKeyboardOpen,
-          onInsertTable: _insertTable,
-          onFormatText: () => AppleTextFormatSheet.show(
-            context,
-            onFormatSelected: _applyTextFormatting,
-          ),
-          onInsertChecklist: _addChecklistItem,
-          onAddAttachment: _showAttachmentPicker,
-          onOpenDrawing: _openDrawingCanvas,
-          onInsertMath: _insertMathEquation,
-          onHideKeyboard: () => FocusScope.of(context).unfocus(),
+      // ── Apple Notes Accessory Toolbar ──────────────────────────────────────
+      // This sits at the bottom of the Column. The Column is inside a Padding
+      // with EdgeInsets.only(bottom: viewInsets.bottom), which makes the
+      // entire Column content (including this toolbar) rise as the keyboard
+      // appears — so the toolbar always floats directly above the keyboard.
+      AppleNotesToolbar(
+        isKeyboardVisible: isKeyboardOpen,
+        onInsertTable: _insertTable,
+        onFormatText: () => AppleTextFormatSheet.show(
+          context,
+          onFormatSelected: _applyTextFormatting,
         ),
+        onInsertChecklist: _addChecklistItem,
+        onAddAttachment: _showAttachmentPicker,
+        onOpenDrawing: _openDrawingCanvas,
+        onInsertMath: _insertMathEquation,
+        onHideKeyboard: () => FocusScope.of(context).unfocus(),
       ),
-    );
+    ], // end Column children
+  ), // end Column
+        ), // end body Padding
+      ), // end Scaffold
+    ); // end PopScope
   }
 }
