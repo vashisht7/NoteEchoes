@@ -7,12 +7,16 @@ class InlineNoteTable extends StatefulWidget {
   final int initialRows;
   final int initialCols;
   final ValueChanged<List<List<String>>>? onDataChanged;
+  final List<List<String>> initialData;
+  final VoidCallback? onRemove;
 
   const InlineNoteTable({
     super.key,
     this.initialRows = 3,
     this.initialCols = 3,
     this.onDataChanged,
+    this.initialData = const [],
+    this.onRemove,
   });
 
   @override
@@ -25,12 +29,25 @@ class _InlineNoteTableState extends State<InlineNoteTable> {
   @override
   void initState() {
     super.initState();
+    final rows = widget.initialData.isEmpty
+        ? widget.initialRows
+        : widget.initialData.length;
+    final cols = widget.initialData.isEmpty
+        ? widget.initialCols
+        : widget.initialData
+              .map((row) => row.length)
+              .fold<int>(1, (a, b) => a > b ? a : b);
     _controllers = List.generate(
-      widget.initialRows,
-      (r) => List.generate(
-        widget.initialCols,
-        (c) => TextEditingController(),
-      ),
+      rows,
+      (r) => List.generate(cols, (c) {
+        final value =
+            r < widget.initialData.length && c < widget.initialData[r].length
+            ? widget.initialData[r][c]
+            : '';
+        final controller = TextEditingController(text: value);
+        controller.addListener(_emitData);
+        return controller;
+      }),
     );
   }
 
@@ -47,20 +64,34 @@ class _InlineNoteTableState extends State<InlineNoteTable> {
   int get _rows => _controllers.length;
   int get _cols => _controllers.isNotEmpty ? _controllers.first.length : 0;
 
+  void _emitData() {
+    widget.onDataChanged?.call(
+      _controllers
+          .map((row) => row.map((controller) => controller.text).toList())
+          .toList(),
+    );
+  }
+
+  TextEditingController _newController() {
+    final controller = TextEditingController();
+    controller.addListener(_emitData);
+    return controller;
+  }
+
   void _addRow() {
     setState(() {
-      _controllers.add(
-        List.generate(_cols, (_) => TextEditingController()),
-      );
+      _controllers.add(List.generate(_cols, (_) => _newController()));
     });
+    _emitData();
   }
 
   void _addColumn() {
     setState(() {
       for (final row in _controllers) {
-        row.add(TextEditingController());
+        row.add(_newController());
       }
     });
+    _emitData();
   }
 
   void _removeRow(int index) {
@@ -71,6 +102,7 @@ class _InlineNoteTableState extends State<InlineNoteTable> {
       }
       _controllers.removeAt(index);
     });
+    _emitData();
   }
 
   void _removeCol(int index) {
@@ -81,6 +113,7 @@ class _InlineNoteTableState extends State<InlineNoteTable> {
         row.removeAt(index);
       }
     });
+    _emitData();
   }
 
   @override
@@ -100,8 +133,11 @@ class _InlineNoteTableState extends State<InlineNoteTable> {
             padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),
             child: Row(
               children: [
-                const Icon(Icons.table_chart_outlined,
-                    size: 14, color: Color(0xFF8E8E93)),
+                const Icon(
+                  Icons.table_chart_outlined,
+                  size: 14,
+                  color: Color(0xFF8E8E93),
+                ),
                 const SizedBox(width: 6),
                 Text(
                   "Table",
@@ -114,11 +150,12 @@ class _InlineNoteTableState extends State<InlineNoteTable> {
                 const Spacer(),
                 // Remove table button
                 GestureDetector(
-                  onTap: () {
-                    // Let parent remove this widget by returning null
-                  },
-                  child: const Icon(Icons.close_rounded,
-                      size: 16, color: Color(0xFF636366)),
+                  onTap: widget.onRemove,
+                  child: const Icon(
+                    Icons.close_rounded,
+                    size: 16,
+                    color: Color(0xFF636366),
+                  ),
                 ),
               ],
             ),
@@ -180,8 +217,11 @@ class _InlineNoteTableState extends State<InlineNoteTable> {
             if (_cols > 1)
               GestureDetector(
                 onTap: () => _removeCol(c),
-                child: const Icon(Icons.close_rounded,
-                    size: 12, color: Color(0xFF636366)),
+                child: const Icon(
+                  Icons.close_rounded,
+                  size: 12,
+                  color: Color(0xFF636366),
+                ),
               ),
           ],
         ),
@@ -202,8 +242,11 @@ class _InlineNoteTableState extends State<InlineNoteTable> {
               onTap: () => _removeRow(r),
               child: const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 6, vertical: 10),
-                child: Icon(Icons.remove_circle_outline_rounded,
-                    size: 14, color: Color(0xFF636366)),
+                child: Icon(
+                  Icons.remove_circle_outline_rounded,
+                  size: 14,
+                  color: Color(0xFF636366),
+                ),
               ),
             ),
           const SizedBox(width: 4),
@@ -218,32 +261,25 @@ class _InlineNoteTableState extends State<InlineNoteTable> {
       width: 110,
       margin: const EdgeInsets.all(2),
       decoration: BoxDecoration(
-        color: isHeader
-            ? const Color(0xFF2C2C2E)
-            : const Color(0xFF1C1C1E),
+        color: isHeader ? const Color(0xFF2C2C2E) : const Color(0xFF1C1C1E),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(
-          color: const Color(0xFF3A3A42),
-          width: 0.8,
-        ),
+        border: Border.all(color: const Color(0xFF3A3A42), width: 0.8),
       ),
       child: TextField(
         controller: _controllers[r][c],
         style: GoogleFonts.inter(
           fontSize: 13,
-          fontWeight:
-              isHeader ? FontWeight.w600 : FontWeight.normal,
-          color: isHeader
-              ? Colors.white
-              : const Color(0xFFD1D1D6),
+          fontWeight: isHeader ? FontWeight.w600 : FontWeight.normal,
+          color: isHeader ? Colors.white : const Color(0xFFD1D1D6),
         ),
         decoration: InputDecoration(
           contentPadding: const EdgeInsets.symmetric(
-              horizontal: 8, vertical: 8),
+            horizontal: 8,
+            vertical: 8,
+          ),
           border: InputBorder.none,
           hintText: isHeader ? "Header" : "Cell",
-          hintStyle: const TextStyle(
-              color: Color(0xFF48484A), fontSize: 12),
+          hintStyle: const TextStyle(color: Color(0xFF48484A), fontSize: 12),
         ),
         maxLines: null,
         textInputAction: TextInputAction.next,

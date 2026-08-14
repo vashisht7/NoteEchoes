@@ -17,8 +17,8 @@ For the complete technical blueprint, directory index mapping every Dart/Swift f
 |                                            NOTECHOES CAPABILITIES                                             |
 +---------------------------------------------------------------------------------------------------------------+
 | 1. 🎙️ Action Button & Apple Shortcuts Voice Capture                                                            |
-|    • Headless "Record Audio" -> "Transcribe & Save to Notechoes" Shortcut with 1-hour audio chunking          |
-|    • Multi-tier thread-safe queue (App Group shared container + UserDefaults suite + fallback)               |
+|    • Multilingual "Record Audio" -> "Transcribe Audio" -> "Save Dictated Note" Shortcut                    |
+|    • Durable App Group queue shared by the Shortcut and the main app                                          |
 |    • Automatic first-frame ingestion into unified chronological feed on home screen                           |
 |                                                                                                               |
 | 2. 📝 Full-Screen Apple Notes-Style Editor                                                                    |
@@ -34,7 +34,8 @@ For the complete technical blueprint, directory index mapping every Dart/Swift f
 |    • Keep-style dual-column masonry grid with voice memo wave badges and formatted timestamps                 |
 |                                                                                                               |
 | 4. 🧠 Local On-Device AI Architecture (Phases 1-12)                                                            |
-|    • Qwen 3.5 0.8B local LLM + Sherpa-ONNX Dolphin STT offline providers                                     |
+|    • Qwen3-0.6B 4-bit through MLX Swift; downloaded on first use (~351 MB)                                    |
+|    • Multilingual transcription supplied by Apple's Transcribe Audio Shortcut action                          |
 |    • SQLite / Drift database with persistent background AI job queue & FTS5 full-text search                  |
 |    • Grounded document Q&A and cross-notebook semantic synthesis                                              |
 |    • Apple Intelligence Writing Tools, EventKit Calendar, CoreSpotlight, and Journaling bridges              |
@@ -47,8 +48,8 @@ For the complete technical blueprint, directory index mapping every Dart/Swift f
 
 ### Prerequisites
 - Flutter SDK (3.24+ / 3.29+)
-- Xcode 15+ / 16+
-- macOS 14+ or iOS 16+
+- Current Xcode with the Apple Metal Toolchain installed
+- iOS 17+
 
 ### Setup Commands
 ```bash
@@ -59,7 +60,7 @@ cd NoteEchoes
 # 2. Install dependencies
 flutter pub get
 
-# 3. Open Xcode Workspace for iOS
+# 3. Open the workspace (not Runner.xcodeproj)
 open ios/Runner.xcworkspace
 
 # 4. Run on macOS
@@ -68,6 +69,11 @@ flutter run -d macos
 # 5. Run on Connected iOS Device
 flutter run -d ios
 ```
+
+In Xcode, select your Apple team and connected iPhone. Keep the App Group
+`group.com.vashisht.notechoes` enabled. If Xcode asks, trust the official MLX
+build plugin. The AI model is downloaded from the model settings page and is
+not stored in the application bundle.
 
 ---
 

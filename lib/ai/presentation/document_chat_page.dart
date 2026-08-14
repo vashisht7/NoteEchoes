@@ -4,7 +4,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../domain/source_citation.dart';
-import '../domain/document_chunk.dart';
 
 class DocumentChatPage extends StatefulWidget {
   final String title;

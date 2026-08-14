@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:notechoes_app/main.dart';
 import 'package:notechoes_app/services/ai_categorization_engine.dart';
 import 'package:notechoes_app/services/note_service.dart';
+import 'package:notechoes_app/models/note_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -45,15 +46,39 @@ void main() {
   });
 
   group('NoteService Integration Tests', () {
-    test('createFromVoiceTranscription saves note with AI categories', () {
+    test('createFromVoiceTranscription saves note with AI categories', () async {
       final service = NoteService();
       final initialCount = service.allNotes.length;
 
-      final note = service.createFromVoiceTranscription("Brainstorming new startup ideas for spatial audio notes.");
+      final note = await service.createFromVoiceTranscription("Brainstorming new startup ideas for spatial audio notes.");
 
       expect(service.allNotes.length, equals(initialCount + 1));
       expect(note.tags.contains('ideas'), isTrue);
       expect(note.title.isNotEmpty, isTrue);
+    });
+
+    test('multilingual text and table blocks survive persistence encoding', () {
+      final original = NoteModel(
+        noteId: 'multilingual-table',
+        title: 'ప్రాజెక్ట్ योजना',
+        contentType: NoteContentType.textOnly,
+        summarySnippet: 'తెలుగు और हिन्दी',
+        textContent: 'తెలుగు और हिन्दी\nName | स्थिति',
+        createdAt: DateTime.utc(2026, 1, 2),
+        contentBlocks: const [
+          NoteBlockData.text('తెలుగు और हिन्दी'),
+          NoteBlockData.table([
+            ['Name', 'स्थिति'],
+            ['పని', 'पूर्ण'],
+          ]),
+        ],
+      );
+
+      final restored = NoteModel.fromJson(original.toJson());
+      expect(restored.title, original.title);
+      expect(restored.contentBlocks.length, 2);
+      expect(restored.contentBlocks.last.tableCells[1][0], 'పని');
+      expect(restored.contentBlocks.last.searchableText, contains('स्थिति'));
     });
   });
 

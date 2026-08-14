@@ -47,9 +47,7 @@ class NoteStorageService {
 
     final notes = decodedList
         .map(
-          (item) => NoteModel.fromJson(
-            Map<String, dynamic>.from(item as Map),
-          ),
+          (item) => NoteModel.fromJson(Map<String, dynamic>.from(item as Map)),
         )
         .toList();
 
@@ -77,13 +75,12 @@ class NoteStorageService {
 
   /// Persists all notes to local device storage
   Future<void> saveNotes(List<NoteModel> notes) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final serialized = notes.map((n) => n.toJson()).toList();
-      final jsonString = jsonEncode(serialized);
-      await prefs.setString(_storageKey, jsonString);
-    } catch (e) {
-      debugPrint("Error saving notes to storage: $e");
+    final prefs = await SharedPreferences.getInstance();
+    final serialized = notes.map((n) => n.toJson()).toList();
+    final jsonString = jsonEncode(serialized);
+    final didPersist = await prefs.setString(_storageKey, jsonString);
+    if (!didPersist) {
+      throw StateError('SharedPreferences rejected the notes write');
     }
   }
 

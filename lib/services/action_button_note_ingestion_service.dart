@@ -26,8 +26,7 @@ final class ActionButtonNoteIngestionService with WidgetsBindingObserver {
     'com.vashisht.notechoes/action_button',
   );
 
-  final AiCategorizationEngine _categorizationEngine =
-      AiCategorizationEngine();
+  final AiCategorizationEngine _categorizationEngine = AiCategorizationEngine();
 
   bool _isImporting = false;
   bool _observerAttached = false;
@@ -59,8 +58,7 @@ final class ActionButtonNoteIngestionService with WidgetsBindingObserver {
 
       int imported = 0;
       while (true) {
-        final pending =
-            await _channel.invokeMapMethod<String, dynamic>(
+        final pending = await _channel.invokeMapMethod<String, dynamic>(
           'peekPendingActionButtonNote',
         );
 
@@ -69,9 +67,8 @@ final class ActionButtonNoteIngestionService with WidgetsBindingObserver {
 
         final id = pending['id'] as String? ?? '';
         final text = (pending['text'] as String? ?? '').trim();
-        final createdAt = DateTime.tryParse(
-              pending['createdAt'] as String? ?? '',
-            ) ??
+        final createdAt =
+            DateTime.tryParse(pending['createdAt'] as String? ?? '') ??
             DateTime.now();
 
         // Always acknowledge even if text is empty, to avoid infinite loops
@@ -98,7 +95,9 @@ final class ActionButtonNoteIngestionService with WidgetsBindingObserver {
           checklist: analysis.extractedChecklist,
         );
 
-        NoteService().addNote(note);
+        // Acknowledge only after the note is durably committed. If persistence
+        // fails, the App Intent queue retains the item for the next launch.
+        await NoteService().addNote(note);
         await _acknowledge(id);
         imported++;
         debugPrint('notechoes: imported voice note "$id" ($imported so far)');

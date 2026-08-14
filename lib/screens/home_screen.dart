@@ -8,6 +8,8 @@ import '../models/note_node.dart';
 import '../services/action_button_note_ingestion_service.dart';
 import '../services/note_service.dart';
 import '../services/note_storage_service.dart';
+import '../ai/infrastructure/knowledge_service.dart';
+import '../ai/presentation/document_chat_page.dart';
 import '../theme/app_colors.dart';
 import '../widgets/apple_music_media_card.dart';
 import '../widgets/auth_sign_in_sheet.dart';
@@ -31,7 +33,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final NoteService _noteService = NoteService();
   bool _isSearchExpanded = false;
 
-  static const MethodChannel _actionChannel = MethodChannel('com.vashisht.notechoes/action_button');
+  static const MethodChannel _actionChannel = MethodChannel(
+    'com.vashisht.notechoes/action_button',
+  );
 
   @override
   void initState() {
@@ -57,26 +61,38 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _fetchPendingVoiceNotes();
 
     _actionChannel.setMethodCallHandler((call) async {
-      if (call.method == 'onSaveVoiceNote') {
+      if (call.method == 'onPendingActionButtonNote') {
+        await ActionButtonNoteIngestionService.instance.importPendingNotes();
+      } else if (call.method == 'onSaveVoiceNote') {
         final args = call.arguments as Map?;
         final text = (args?['text'] as String?) ?? '';
         if (text.trim().isNotEmpty) {
-          final note = _noteService.createFromVoiceTranscription(text);
+          final note = await _noteService.createFromVoiceTranscription(text);
           if (mounted) {
             setState(() {});
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 backgroundColor: AppColors.elevation2,
                 behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
                 content: Row(
                   children: [
-                    const Icon(Icons.auto_awesome, size: 16, color: Color(0xFF00F2FE)),
+                    const Icon(
+                      Icons.auto_awesome,
+                      size: 16,
+                      color: Color(0xFF00F2FE),
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         "Saved note #${note.tags.join(', #')}",
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
                       ),
                     ),
                   ],
@@ -99,21 +115,24 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       await ActionButtonNoteIngestionService.instance.importPendingNotes();
 
       // 2. Check legacy MethodChannel queue
-      final List<dynamic>? pending = await _actionChannel.invokeMethod('getPendingVoiceNotes');
+      final List<dynamic>? pending = await _actionChannel.invokeMethod(
+        'getPendingVoiceNotes',
+      );
       if (pending != null && pending.isNotEmpty) {
         for (final item in pending) {
           final text = item.toString();
           if (text.trim().isNotEmpty) {
-            _noteService.createFromVoiceTranscription(text);
+            await _noteService.createFromVoiceTranscription(text);
           }
         }
       }
 
       // 3. Check File-based background Shortcuts queue
-      final fileNotes = await NoteStorageService().readAndClearPendingFileNotes();
+      final fileNotes = await NoteStorageService()
+          .readAndClearPendingFileNotes();
       for (final text in fileNotes) {
         if (text.trim().isNotEmpty) {
-          _noteService.createFromVoiceTranscription(text);
+          await _noteService.createFromVoiceTranscription(text);
         }
       }
 
@@ -145,8 +164,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void _openVoiceAssistant() {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => const VoiceAssistantScreen(
-          currentState: VoiceState.listening,
+        builder: (context) =>
+            const VoiceAssistantScreen(currentState: VoiceState.listening),
+      ),
+    );
+  }
+
+  void _openNotesChat() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => DocumentChatPage(
+          title: 'My Notes',
+          sourceId: 'all-notes',
+          isDocument: false,
+          onAsk: KnowledgeService.instance.askNotes,
         ),
       ),
     );
@@ -157,9 +188,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   void _openSettings() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (context) => const SettingsScreen()),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (context) => const SettingsScreen()));
   }
 
   void _openSignInSheet() {
@@ -180,9 +211,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               decoration: BoxDecoration(
                 color: AppColors.elevation2.withValues(alpha: 0.94),
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(28),
+                ),
                 border: const Border(
-                  top: BorderSide(color: AppColors.glassBorderBright, width: 1.2),
+                  top: BorderSide(
+                    color: AppColors.glassBorderBright,
+                    width: 1.2,
+                  ),
                 ),
               ),
               child: Column(
@@ -208,7 +244,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           shape: BoxShape.circle,
                           color: AppColors.dropletRed.withValues(alpha: 0.15),
                         ),
-                        child: const Icon(Icons.note_alt_rounded, size: 18, color: AppColors.dropletRed),
+                        child: const Icon(
+                          Icons.note_alt_rounded,
+                          size: 18,
+                          color: AppColors.dropletRed,
+                        ),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
@@ -240,7 +280,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
                   // 2. Pin / Unpin
                   _buildContextMenuItem(
-                    icon: note.isPinned ? Icons.push_pin_outlined : Icons.push_pin_rounded,
+                    icon: note.isPinned
+                        ? Icons.push_pin_outlined
+                        : Icons.push_pin_rounded,
                     label: note.isPinned ? "Unpin Note" : "Pin Note to Top",
                     color: note.isPinned ? AppColors.dropletRed : Colors.white,
                     onTap: () {
@@ -257,14 +299,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     color: Colors.white,
                     onTap: () {
                       Navigator.pop(context);
-                      final contentToCopy = note.textContent.isNotEmpty ? note.textContent : note.summarySnippet;
-                      Clipboard.setData(ClipboardData(text: "${note.title}\n\n$contentToCopy"));
+                      final contentToCopy = note.textContent.isNotEmpty
+                          ? note.textContent
+                          : note.summarySnippet;
+                      Clipboard.setData(
+                        ClipboardData(text: "${note.title}\n\n$contentToCopy"),
+                      );
                       HapticFeedback.lightImpact();
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           backgroundColor: AppColors.elevation2,
                           behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
                           content: const Text("Copied note to clipboard!"),
                         ),
                       );
@@ -297,7 +345,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         SnackBar(
                           backgroundColor: AppColors.elevation2,
                           behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
                           content: Text("Deleted '${note.title}'"),
                           action: SnackBarAction(
                             label: "UNDO",
@@ -359,10 +409,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       builder: (context) {
         return AlertDialog(
           backgroundColor: AppColors.elevation2,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           title: Text(
             "Rename Note",
-            style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold),
+            style: GoogleFonts.outfit(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           content: TextField(
             controller: controller,
@@ -386,12 +441,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text("Cancel", style: TextStyle(color: AppColors.secondaryText)),
+              child: const Text(
+                "Cancel",
+                style: TextStyle(color: AppColors.secondaryText),
+              ),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.dropletRed,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
               onPressed: () {
                 final newTitle = controller.text.trim();
@@ -401,7 +461,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 }
                 Navigator.pop(context);
               },
-              child: const Text("Save", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              child: const Text(
+                "Save",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ],
         );
@@ -434,7 +500,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   child: AnimatedOpacity(
                     duration: const Duration(milliseconds: 300),
                     curve: const Cubic(0.16, 1, 0.3, 1),
-                    opacity: _isSearchExpanded && _noteService.searchQuery.isEmpty ? 0.20 : 1.0,
+                    opacity:
+                        _isSearchExpanded && _noteService.searchQuery.isEmpty
+                        ? 0.20
+                        : 1.0,
                     child: notes.isEmpty
                         ? _buildEmptyState()
                         : _buildHybridGrid(notes),
@@ -456,7 +525,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   });
                 },
                 onTranscribeVoice: _openSiriActionOverlay,
-                onDiscuss: _openVoiceAssistant,
+                onDiscuss: _openNotesChat,
                 onSettings: _openSettings,
               ),
             ),
@@ -498,7 +567,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     onTap: _openSignInSheet,
                     child: Container(
                       margin: const EdgeInsets.only(right: 8),
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.elevation2,
                         borderRadius: BorderRadius.circular(16),
@@ -508,14 +580,22 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            _noteService.isSignedIn ? Icons.account_circle_rounded : Icons.login_rounded,
+                            _noteService.isSignedIn
+                                ? Icons.account_circle_rounded
+                                : Icons.login_rounded,
                             size: 15,
-                            color: _noteService.isSignedIn ? AppColors.accentGreen : AppColors.secondaryText,
+                            color: _noteService.isSignedIn
+                                ? AppColors.accentGreen
+                                : AppColors.secondaryText,
                           ),
                           const SizedBox(width: 5),
                           Text(
                             _noteService.isSignedIn ? "Signed In" : "Sign In",
-                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white),
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
                           ),
                         ],
                       ),
@@ -562,7 +642,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 color: isSelected ? AppColors.elevation2 : AppColors.elevation1,
                 borderRadius: BorderRadius.circular(18),
                 border: Border.all(
-                  color: isSelected ? AppColors.glassBorderBright : AppColors.glassBorder,
+                  color: isSelected
+                      ? AppColors.glassBorderBright
+                      : AppColors.glassBorder,
                   width: isSelected ? 1.4 : 1.0,
                 ),
                 boxShadow: isSelected
@@ -580,7 +662,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   style: GoogleFonts.inter(
                     fontSize: 12.5,
                     fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                    color: isSelected ? AppColors.primaryText : AppColors.secondaryText,
+                    color: isSelected
+                        ? AppColors.primaryText
+                        : AppColors.secondaryText,
                   ),
                 ),
               ),
@@ -605,7 +689,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               height: 90,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: AppColors.dropletRed.withValues(alpha: 0.6), width: 2),
+                border: Border.all(
+                  color: AppColors.dropletRed.withValues(alpha: 0.6),
+                  width: 2,
+                ),
                 boxShadow: [
                   BoxShadow(
                     color: AppColors.dropletRed.withValues(alpha: 0.3),
@@ -709,7 +796,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             const SizedBox(width: 6),
             Text(
               label,
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
             ),
           ],
         ),
@@ -722,9 +813,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
       slivers: [
-        const SliverToBoxAdapter(
-          child: SizedBox(height: 8),
-        ),
+        const SliverToBoxAdapter(child: SizedBox(height: 8)),
         SliverPadding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           sliver: SliverMasonryGrid.count(
@@ -754,9 +843,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         ),
 
         // Bottom space for floating navigation bar
-        const SliverToBoxAdapter(
-          child: SizedBox(height: 120),
-        ),
+        const SliverToBoxAdapter(child: SizedBox(height: 120)),
       ],
     );
   }

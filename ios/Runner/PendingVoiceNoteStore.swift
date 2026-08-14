@@ -85,42 +85,37 @@ actor PendingVoiceNoteStore {
             return items
         }
 
-        // Tier 3: Standard UserDefaults
-        if let data = UserDefaults.standard.data(forKey: queueKey),
-           let items = try? JSONDecoder().decode([PendingNote].self, from: data),
-           !items.isEmpty {
-            return items
-        }
-
         return []
     }
 
     private func persist(_ queue: [PendingNote]) throws {
         let data = try JSONEncoder().encode(queue)
 
-        // Tier 1: Write to App Group suite
+        guard let containerURL = SharedDefaults.sharedContainerURL else {
+            throw PendingVoiceNoteError.appGroupUnavailable
+        }
+
+        // Write the shared file first. This is the cross-process source of
+        // truth used by both a headless App Intent and the foreground app.
+        let fileURL = containerURL.appendingPathComponent(fallbackFile)
+        try data.write(to: fileURL, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+
+        // Mirror to App Group defaults for migration/recovery.
         defaults.set(data, forKey: queueKey)
         defaults.synchronize()
-
-        // Tier 2: Write to standard defaults as fallback
-        UserDefaults.standard.set(data, forKey: queueKey)
-        UserDefaults.standard.synchronize()
-
-        // Tier 3: Write to shared App Group file if available
-        if let containerURL = SharedDefaults.sharedContainerURL {
-            let fileURL = containerURL.appendingPathComponent(fallbackFile)
-            try? data.write(to: fileURL, options: .atomic)
-        }
     }
 }
 
 enum PendingVoiceNoteError: LocalizedError {
     case emptyText
+    case appGroupUnavailable
 
     var errorDescription: String? {
         switch self {
         case .emptyText:
             return "No dictated text was received."
+        case .appGroupUnavailable:
+            return "The notechoes App Group is unavailable. Re-enable the App Groups capability in Xcode."
         }
     }
 }

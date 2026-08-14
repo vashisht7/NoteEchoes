@@ -275,6 +275,11 @@ class AiDatabase extends _$AiDatabase {
     );
   }
 
+  Future<void> updateDocumentPageCount(String id, int pageCount) =>
+      (update(documentsTable)..where((t) => t.id.equals(id))).write(
+        DocumentsTableCompanion(pageCount: Value(pageCount)),
+      );
+
   // ── Document chunks ───────────────────────────────────────────
 
   Future<List<DocumentChunksTableData>> getChunksForDocument(

@@ -2,14 +2,13 @@ import 'package:flutter/foundation.dart';
 import '../models/note_model.dart';
 import 'ai_categorization_engine.dart';
 import 'note_storage_service.dart';
+import '../ai/infrastructure/knowledge_service.dart';
 
 class NoteService extends ChangeNotifier {
   static final NoteService _instance = NoteService._internal();
   factory NoteService() => _instance;
 
-  NoteService._internal() {
-    _initStorage();
-  }
+  NoteService._internal();
 
   // Clean starting state: empty by default, loaded from local storage
   final List<NoteModel> _notes = [];
@@ -26,6 +25,7 @@ class NoteService extends ChangeNotifier {
   bool get isInitialized => _isInitialized;
 
   Future<void>? _storageInitFuture;
+  Future<void> _writeTail = Future<void>.value();
 
   Future<void> initStorage() {
     _storageInitFuture ??= _initStorage();
@@ -41,8 +41,23 @@ class NoteService extends ChangeNotifier {
       }
     }
     _isInitialized = true;
-    NoteStorageService().saveNotes(_notes);
+    for (final note in _notes) {
+      try {
+        await KnowledgeService.instance.indexNote(note);
+      } catch (error) {
+        debugPrint('Could not index note ${note.noteId}: $error');
+      }
+    }
     notifyListeners();
+  }
+
+  Future<void> _persist() {
+    final snapshot = List<NoteModel>.from(_notes);
+    final write = _writeTail.then(
+      (_) => NoteStorageService().saveNotes(snapshot),
+    );
+    _writeTail = write.catchError((Object _) {});
+    return write;
   }
 
   void signIn({required String email, required String provider}) {
@@ -68,12 +83,18 @@ class NoteService extends ChangeNotifier {
 
   List<NoteModel> get notes {
     var filtered = _notes.where((note) {
-      final matchesTag = _selectedTag == 'All' || note.tags.contains(_selectedTag);
-      final matchesQuery = _searchQuery.isEmpty ||
+      final matchesTag =
+          _selectedTag == 'All' || note.tags.contains(_selectedTag);
+      final matchesQuery =
+          _searchQuery.isEmpty ||
           note.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          note.summarySnippet.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          note.summarySnippet.toLowerCase().contains(
+            _searchQuery.toLowerCase(),
+          ) ||
           note.textContent.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          note.tags.any((t) => t.toLowerCase().contains(_searchQuery.toLowerCase()));
+          note.tags.any(
+            (t) => t.toLowerCase().contains(_searchQuery.toLowerCase()),
+          );
       return matchesTag && matchesQuery;
     }).toList();
 
@@ -110,16 +131,22 @@ class NoteService extends ChangeNotifier {
     notifyListeners();
   }
 
-  void addNote(NoteModel note) {
+  Future<void> addNote(NoteModel note) async {
+    await initStorage();
     _notes.removeWhere((n) => n.noteId == note.noteId);
     _notes.insert(0, note);
-    NoteStorageService().saveNotes(_notes);
     notifyListeners();
+    await _persist();
+    try {
+      await KnowledgeService.instance.indexNote(note);
+    } catch (error) {
+      debugPrint('Could not index note ${note.noteId}: $error');
+    }
   }
 
   /// Creates and saves a note directly from voice transcription or speech
   /// using the on-device AI categorization engine.
-  NoteModel createFromVoiceTranscription(String spokenText) {
+  Future<NoteModel> createFromVoiceTranscription(String spokenText) async {
     final analysis = AiCategorizationEngine().analyzeNote(spokenText);
     final tagsSet = <String>{'voice-memos', 'voice-memo'};
     tagsSet.addAll(analysis.categories);
@@ -136,44 +163,59 @@ class NoteService extends ChangeNotifier {
       isPinned: false,
     );
 
-    addNote(note);
+    await addNote(note);
     return note;
   }
 
-  void updateNote(NoteModel note) {
+  Future<void> updateNote(NoteModel note) async {
+    await initStorage();
     final index = _notes.indexWhere((n) => n.noteId == note.noteId);
     if (index != -1) {
       _notes[index] = note;
-      NoteStorageService().saveNotes(_notes);
       notifyListeners();
+      await _persist();
+      try {
+        await KnowledgeService.instance.indexNote(note);
+      } catch (error) {
+        debugPrint('Could not index note ${note.noteId}: $error');
+      }
     }
   }
 
-  void deleteNote(String noteId) {
+  Future<void> deleteNote(String noteId) async {
+    await initStorage();
     _notes.removeWhere((n) => n.noteId == noteId);
-    NoteStorageService().saveNotes(_notes);
     notifyListeners();
+    await _persist();
+    try {
+      await KnowledgeService.instance.removeNote(noteId);
+    } catch (error) {
+      debugPrint('Could not remove note $noteId from search: $error');
+    }
   }
 
-  void togglePin(String noteId) {
+  Future<void> togglePin(String noteId) async {
+    await initStorage();
     final index = _notes.indexWhere((n) => n.noteId == noteId);
     if (index != -1) {
       final current = _notes[index];
       _notes[index] = current.copyWith(isPinned: !current.isPinned);
-      NoteStorageService().saveNotes(_notes);
       notifyListeners();
+      await _persist();
     }
   }
 
-  void toggleCheckItem(String noteId, String itemId) {
+  Future<void> toggleCheckItem(String noteId, String itemId) async {
+    await initStorage();
     final noteIndex = _notes.indexWhere((n) => n.noteId == noteId);
     if (noteIndex != -1) {
       final note = _notes[noteIndex];
       final itemIndex = note.checklist.indexWhere((i) => i.id == itemId);
       if (itemIndex != -1) {
-        note.checklist[itemIndex].isCompleted = !note.checklist[itemIndex].isCompleted;
-        NoteStorageService().saveNotes(_notes);
+        note.checklist[itemIndex].isCompleted =
+            !note.checklist[itemIndex].isCompleted;
         notifyListeners();
+        await _persist();
       }
     }
   }
@@ -184,7 +226,7 @@ class NoteService extends ChangeNotifier {
   }
 
   // Ingest Uploaded PDF Document with math, tables & structural Markdown
-  void ingestUploadedDocument({
+  Future<void> ingestUploadedDocument({
     required String fileName,
     required String? filePath,
     required String extractedText,
@@ -202,12 +244,16 @@ class NoteService extends ChangeNotifier {
     final note = NoteModel(
       noteId: "echo_doc_${DateTime.now().millisecondsSinceEpoch}",
       title: title,
-      contentType: mediaAssets.isNotEmpty ? NoteContentType.richMedia : NoteContentType.textOnly,
+      contentType: mediaAssets.isNotEmpty
+          ? NoteContentType.richMedia
+          : NoteContentType.textOnly,
       mediaAssets: mediaAssets.isNotEmpty
           ? mediaAssets
           : [
               MediaAsset(
-                type: fileName.toLowerCase().endsWith(".pdf") ? MediaAssetType.pdf : MediaAssetType.image,
+                type: fileName.toLowerCase().endsWith(".pdf")
+                    ? MediaAssetType.pdf
+                    : MediaAssetType.image,
                 url: filePath ?? "assets/document.pdf",
                 pageCount: 4,
                 caption: fileName,
@@ -221,7 +267,7 @@ class NoteService extends ChangeNotifier {
       isPinned: false,
     );
 
-    addNote(note);
+    return addNote(note);
   }
 
   // Get notes for voice assistant context carousel

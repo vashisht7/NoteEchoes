@@ -149,7 +149,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
     });
   }
 
-  void _saveAiResponseAsNote() {
+  Future<void> _saveAiResponseAsNote() async {
     final text = _voiceService.fullGeneratedResponse.isNotEmpty
         ? _voiceService.fullGeneratedResponse
         : "Voice Assistant Summary";
@@ -162,7 +162,9 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
       createdAt: DateTime.now(),
       tags: ["voice-memo", "ai-summary"],
     );
-    NoteService().addNote(newNote);
+    await NoteService().addNote(newNote);
+
+    if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

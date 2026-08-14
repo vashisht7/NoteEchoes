@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../config/ai_feature_flags.dart';
 import '../config/ai_runtime_config.dart';
-import '../domain/ai_models.dart';
+import '../infrastructure/qwen_llama_provider.dart';
 
 class AiModelSettingsPage extends StatefulWidget {
   const AiModelSettingsPage({super.key});
@@ -25,10 +25,6 @@ class _AiModelSettingsPageState extends State<AiModelSettingsPage>
   final _runtime = AiRuntimeConfig.instance;
 
   // Live state tracking for models
-  bool _dolphinDownloading = false;
-  double _dolphinProgress = 0.0;
-  String _dolphinStatusText = '';
-
   bool _qwenDownloading = false;
   double _qwenProgress = 0.0;
   String _qwenStatusText = '';
@@ -50,7 +46,6 @@ class _AiModelSettingsPageState extends State<AiModelSettingsPage>
     super.dispose();
   }
 
-  bool get _dolphinInstalled => _flags.dolphinSttEnabled;
   bool get _qwenInstalled => _flags.localLlmEnabled;
 
   @override
@@ -84,29 +79,27 @@ class _AiModelSettingsPageState extends State<AiModelSettingsPage>
             const _SectionHeader('Offline Speech Recognition'),
             const SizedBox(height: 8),
             _ModelCard(
-              name: 'Dolphin Base INT8',
+              name: 'Apple / Shortcut Transcription',
               description:
-                  'High-accuracy offline speech recognition for Telugu (తెలుగు), '
-                  'Hindi (हिंदी), and English. Enables zero-cloud voice memo ingestion.',
-              size: '104 MB',
-              languages: ['English', 'Telugu (తెలుగు)', 'Hindi (हिंदी)'],
-              isInstalled: _dolphinInstalled,
-              isDownloading: _dolphinDownloading,
-              downloadProgress: _dolphinProgress,
-              statusText: _dolphinStatusText,
-              onDownload: _startDolphinDownload,
-              onDelete: _dolphinInstalled ? _deleteDolphin : null,
+                  'Your Action Button Shortcut transcribes the recording and sends Unicode text. '
+                  'The app saves that text in any language without another bundled speech model.',
+              size: '0 MB added',
+              languages: ['Multilingual', 'Uses selected Shortcut language'],
+              isInstalled: true,
+              isDownloading: false,
+              downloadProgress: 1,
+              statusText: '',
             ),
             const SizedBox(height: 20),
             const _SectionHeader('On-Device LLM (Summaries & Chat)'),
             const SizedBox(height: 8),
             _ModelCard(
-              name: 'Qwen 3.5-0.8B Q4_K_M',
+              name: 'Qwen3-0.6B MLX 4-bit',
               description:
                   'Quantized neural model for instant structured note summaries, '
                   'calendar/event extraction, journal reflections, and grounded document Q&A.',
-              size: '533 MB',
-              languages: ['English', 'Telugu', 'Hindi'],
+              size: '351 MB download',
+              languages: ['Multilingual', 'English', 'Telugu', 'Hindi'],
               isInstalled: _qwenInstalled,
               isDownloading: _qwenDownloading,
               downloadProgress: _qwenProgress,
@@ -130,60 +123,10 @@ class _AiModelSettingsPageState extends State<AiModelSettingsPage>
 
   // ── Download & Lifecycle Orchestration ─────────────────────────────────
 
-  void _startDolphinDownload() {
-    _showDownloadSheet(
-      modelName: 'Dolphin Base INT8',
-      modelSize: '104 MB',
-      details:
-          'Downloads the on-device acoustic model for Telugu, Hindi, and English transcription. '
-          'Once installed, speech is processed 100% offline with zero cloud requests.',
-      onConfirm: () async {
-        setState(() {
-          _dolphinDownloading = true;
-          _dolphinProgress = 0.0;
-          _dolphinStatusText = 'Connecting to model repository…';
-        });
-
-        // Smooth animated download & verification flow
-        const totalSteps = 20;
-        for (int i = 1; i <= totalSteps; i++) {
-          await Future.delayed(const Duration(milliseconds: 120));
-          if (!mounted) return;
-          setState(() {
-            _dolphinProgress = i / totalSteps;
-            final downloadedMb = ((104 * i) / totalSteps).toStringAsFixed(1);
-            if (i < 18) {
-              _dolphinStatusText =
-                  'Downloading: $downloadedMb MB / 104.0 MB (${(_dolphinProgress * 100).toInt()}%)';
-            } else if (i < 20) {
-              _dolphinStatusText = 'Verifying SHA-256 checksum…';
-            } else {
-              _dolphinStatusText = 'Configuring local engine…';
-            }
-          });
-        }
-
-        // Enable feature flag & persist
-        await _flags.setDolphinSttEnabled(true);
-
-        if (mounted) {
-          setState(() {
-            _dolphinDownloading = false;
-            _dolphinProgress = 1.0;
-            _dolphinStatusText = '';
-          });
-          _showToast(
-            '✓ Dolphin STT model installed successfully! Offline Telugu/Hindi/English ready.',
-          );
-        }
-      },
-    );
-  }
-
   void _startQwenDownload() {
     _showDownloadSheet(
-      modelName: 'Qwen 3.5-0.8B Q4_K_M',
-      modelSize: '533 MB',
+      modelName: 'Qwen3-0.6B MLX 4-bit',
+      modelSize: '351 MB',
       details:
           'Downloads the local LLM weights for smart note summaries, auto-titling, '
           'action extraction, and offline document chat. Stored in Application Support.',
@@ -194,65 +137,46 @@ class _AiModelSettingsPageState extends State<AiModelSettingsPage>
           _qwenStatusText = 'Connecting to model repository…';
         });
 
-        const totalSteps = 25;
-        for (int i = 1; i <= totalSteps; i++) {
-          await Future.delayed(const Duration(milliseconds: 140));
+        try {
+          await QwenLlamaProvider.instance.load();
+          await _flags.setLocalLlmEnabled(true);
+          await _flags.setNoteAnalysisEnabled(true);
+          await _flags.setReminderExtractionEnabled(true);
+          await _flags.setPdfIngestionEnabled(true);
+          await _flags.setCrossNoteSearchEnabled(true);
+          await _flags.setDocumentChatEnabled(true);
           if (!mounted) return;
-          setState(() {
-            _qwenProgress = i / totalSteps;
-            final downloadedMb = ((533 * i) / totalSteps).toStringAsFixed(1);
-            if (i < 22) {
-              _qwenStatusText =
-                  'Downloading: $downloadedMb MB / 533.0 MB (${(_qwenProgress * 100).toInt()}%)';
-            } else if (i < 24) {
-              _qwenStatusText = 'Verifying SHA-256 checksum…';
-            } else {
-              _qwenStatusText = 'Initializing Metal/GPU buffers…';
-            }
-          });
-        }
-
-        // Enable feature flags & persist
-        await _flags.setLocalLlmEnabled(true);
-        await _flags.setNoteAnalysisEnabled(true);
-        await _flags.setReminderExtractionEnabled(true);
-        await _flags.setDocumentChatEnabled(true);
-
-        if (mounted) {
           setState(() {
             _qwenDownloading = false;
             _qwenProgress = 1.0;
             _qwenStatusText = '';
           });
           _showToast(
-            '✓ Qwen 3.5 LLM installed! Smart summaries and offline chat unlocked.',
+            'Qwen3 MLX is ready for multilingual notes and document chat.',
           );
+        } catch (error) {
+          if (!mounted) return;
+          setState(() {
+            _qwenDownloading = false;
+            _qwenProgress = 0;
+            _qwenStatusText = '';
+          });
+          _showToast('Model download failed: $error');
         }
       },
     );
   }
 
-  Future<void> _deleteDolphin() async {
-    final confirmed = await _showDeleteDialog(
-      'Dolphin Base INT8',
-      'This will remove the 104 MB model from your phone. Voice notes will fall back to Apple Speech.',
-    );
-    if (confirmed == true) {
-      await _flags.setDolphinSttEnabled(false);
-      setState(() {});
-      _showToast('Dolphin model deleted. 104 MB freed.');
-    }
-  }
-
   Future<void> _deleteQwen() async {
     final confirmed = await _showDeleteDialog(
-      'Qwen 3.5-0.8B Q4_K_M',
-      'This will remove the 533 MB model. Summarization will fall back to the built-in regex engine.',
+      'Qwen3-0.6B MLX 4-bit',
+      'This disables and unloads the local model. Its cached files remain available for a fast re-enable.',
     );
     if (confirmed == true) {
       await _flags.setLocalLlmEnabled(false);
+      await QwenLlamaProvider.instance.unload();
       setState(() {});
-      _showToast('Qwen LLM model deleted. 533 MB freed.');
+      _showToast('Qwen MLX disabled and unloaded.');
     }
   }
 
@@ -480,9 +404,9 @@ class _DeviceTierCard extends StatelessWidget {
   String get _tierDescription {
     switch (tier) {
       case DeviceTier.tierA:
-        return 'Your device has ≥ 6 GB RAM. Supports parallel Qwen LLM, Dolphin STT, and GPU acceleration.';
+        return 'Your device has ≥ 6 GB RAM and supports local Qwen3 MLX acceleration.';
       case DeviceTier.tierB:
-        return 'Your device supports the LLM and Dolphin Base STT model with sequential job execution.';
+        return 'Your device supports the local Qwen3 model with sequential job execution.';
       case DeviceTier.tierC:
         return 'Speech mode active. Basic features work without any downloaded models.';
     }
@@ -519,10 +443,7 @@ class _DeviceTierCard extends StatelessWidget {
               color: _tierColor,
               shape: BoxShape.circle,
               boxShadow: [
-                BoxShadow(
-                  color: _tierColor.withOpacity(0.5),
-                  blurRadius: 8,
-                ),
+                BoxShadow(color: _tierColor.withOpacity(0.5), blurRadius: 8),
               ],
             ),
           ),
@@ -629,8 +550,10 @@ class _ModelCard extends StatelessWidget {
               ),
               if (isInstalled)
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFF4ADE80).withOpacity(0.15),
                     borderRadius: BorderRadius.circular(6),
@@ -711,8 +634,9 @@ class _ModelCard extends StatelessWidget {
               child: LinearProgressIndicator(
                 value: downloadProgress > 0 ? downloadProgress : null,
                 backgroundColor: Colors.white12,
-                valueColor:
-                    const AlwaysStoppedAnimation<Color>(Color(0xFF6B5CFF)),
+                valueColor: const AlwaysStoppedAnimation<Color>(
+                  Color(0xFF6B5CFF),
+                ),
                 minHeight: 6,
               ),
             ),

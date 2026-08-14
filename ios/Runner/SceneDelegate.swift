@@ -11,6 +11,8 @@ class SceneDelegate: FlutterSceneDelegate {
     private var sharedDefaults: UserDefaults { SharedDefaults.suite }
 
     private var actionChannel: FlutterMethodChannel?
+    private var mlxChannel: FlutterMethodChannel?
+    private var pdfVisionChannel: FlutterMethodChannel?
 
     override func scene(
         _ scene: UIScene,
@@ -30,6 +32,13 @@ class SceneDelegate: FlutterSceneDelegate {
         }
     }
 
+    override func sceneDidBecomeActive(_ scene: UIScene) {
+        super.sceneDidBecomeActive(scene)
+        // During willConnect the storyboard may not have attached Flutter's
+        // controller yet. Retry here so the Dart queue bridge is never absent.
+        configureActionChannel(for: scene)
+    }
+
     override func scene(
         _ scene: UIScene,
         openURLContexts URLContexts: Set<UIOpenURLContext>
@@ -42,10 +51,12 @@ class SceneDelegate: FlutterSceneDelegate {
     }
 
     private func configureActionChannel(for scene: UIScene) {
+        guard actionChannel == nil else { return }
         guard
             let windowScene = scene as? UIWindowScene,
             let flutterViewController = windowScene.windows
-                .first?.rootViewController as? FlutterViewController
+                .compactMap({ $0.rootViewController as? FlutterViewController })
+                .first
         else {
             NSLog("notechoes: FlutterViewController unavailable")
             return
@@ -58,6 +69,45 @@ class SceneDelegate: FlutterSceneDelegate {
 
         actionChannel = channel
 
+        let mlxChannel = FlutterMethodChannel(
+            name: "notechoes/mlx_text_generation",
+            binaryMessenger: flutterViewController.binaryMessenger
+        )
+        self.mlxChannel = mlxChannel
+        mlxChannel.setMethodCallHandler { call, result in
+            Self.handleMLXMethodCall(call, result: result)
+        }
+
+        let pdfVisionChannel = FlutterMethodChannel(
+            name: "notechoes/pdf_vision",
+            binaryMessenger: flutterViewController.binaryMessenger
+        )
+        self.pdfVisionChannel = pdfVisionChannel
+        pdfVisionChannel.setMethodCallHandler { call, result in
+            guard call.method == "extractPages",
+                  let arguments = call.arguments as? [String: Any],
+                  let path = arguments["path"] as? String else {
+                result(FlutterMethodNotImplemented)
+                return
+            }
+            Task {
+                do {
+                    let pages = try await PDFVisionExtractionService.extractPages(
+                        at: path
+                    )
+                    await MainActor.run { result(pages) }
+                } catch {
+                    await MainActor.run {
+                        result(FlutterError(
+                            code: "PDF_VISION_FAILED",
+                            message: error.localizedDescription,
+                            details: nil
+                        ))
+                    }
+                }
+            }
+        }
+
         channel.setMethodCallHandler { [weak self] call, result in
             guard let self else {
                 result(FlutterMethodNotImplemented)
@@ -65,6 +115,64 @@ class SceneDelegate: FlutterSceneDelegate {
             }
 
             self.handleMethodCall(call, result: result)
+        }
+    }
+
+    private static func handleMLXMethodCall(
+        _ call: FlutterMethodCall,
+        result: @escaping FlutterResult
+    ) {
+        switch call.method {
+        case "load":
+            Task {
+                do {
+                    try await MLXTextGenerationService.shared.load()
+                    await MainActor.run { result(true) }
+                } catch {
+                    await MainActor.run {
+                        result(FlutterError(
+                            code: "MLX_LOAD_FAILED",
+                            message: error.localizedDescription,
+                            details: nil
+                        ))
+                    }
+                }
+            }
+        case "generate":
+            guard let arguments = call.arguments as? [String: Any],
+                  let prompt = arguments["prompt"] as? String else {
+                result(FlutterError(
+                    code: "INVALID_PROMPT",
+                    message: "A prompt is required.",
+                    details: nil
+                ))
+                return
+            }
+            let systemPrompt = arguments["systemPrompt"] as? String
+            Task {
+                do {
+                    let text = try await MLXTextGenerationService.shared.generate(
+                        prompt: prompt,
+                        systemPrompt: systemPrompt
+                    )
+                    await MainActor.run { result(text) }
+                } catch {
+                    await MainActor.run {
+                        result(FlutterError(
+                            code: "MLX_GENERATION_FAILED",
+                            message: error.localizedDescription,
+                            details: nil
+                        ))
+                    }
+                }
+            }
+        case "unload":
+            Task {
+                await MLXTextGenerationService.shared.unload()
+                await MainActor.run { result(nil) }
+            }
+        default:
+            result(FlutterMethodNotImplemented)
         }
     }
 
@@ -162,21 +270,21 @@ class SceneDelegate: FlutterSceneDelegate {
 
             guard !extractedText.isEmpty else { return }
 
-            var current = sharedDefaults.stringArray(
-                forKey: legacyPendingNotesKey
-            ) ?? []
-
-            current.append(extractedText)
-
-            sharedDefaults.set(
-                current,
-                forKey: legacyPendingNotesKey
-            )
-
-            actionChannel?.invokeMethod(
-                "onSaveVoiceNote",
-                arguments: ["text": extractedText]
-            )
+            Task {
+                do {
+                    _ = try await PendingVoiceNoteStore.shared.append(
+                        text: extractedText
+                    )
+                    await MainActor.run {
+                        self.actionChannel?.invokeMethod(
+                            "onPendingActionButtonNote",
+                            arguments: nil
+                        )
+                    }
+                } catch {
+                    NSLog("notechoes: URL note queue failed: \(error)")
+                }
+            }
         }
         // NOTE: `notechoes://record` URL handling has been intentionally
         // removed. The Action Button should use the Shortcuts-based

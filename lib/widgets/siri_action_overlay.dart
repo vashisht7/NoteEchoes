@@ -239,7 +239,7 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
 
     if (!mounted) return;
 
-    final note = NoteService().createFromVoiceTranscription(cleanText);
+    final note = await NoteService().createFromVoiceTranscription(cleanText);
 
     setState(() {
       _isAnalyzing = false;

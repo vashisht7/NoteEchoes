@@ -1,7 +1,14 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
+import '../ai/infrastructure/knowledge_service.dart';
+import '../ai/presentation/document_chat_page.dart';
 import '../models/note_model.dart';
 import '../services/note_service.dart';
 import '../theme/app_colors.dart';
@@ -25,8 +32,8 @@ class _TextBlock {
   final TextEditingController controller;
   final FocusNode focusNode;
   _TextBlock({String text = ''})
-      : controller = TextEditingController(text: text),
-        focusNode = FocusNode();
+    : controller = TextEditingController(text: text),
+      focusNode = FocusNode();
   void dispose() {
     controller.dispose();
     focusNode.dispose();
@@ -35,6 +42,10 @@ class _TextBlock {
 
 class _TableBlock {
   final Key key = UniqueKey();
+  List<List<String>> cells;
+
+  _TableBlock({List<List<String>>? cells})
+    : cells = cells ?? List.generate(3, (_) => List.filled(3, ''));
 }
 
 class _NoteDetailScreenState extends State<NoteDetailScreen> {
@@ -47,6 +58,9 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
   late List<CheckListItem> _checklist;
   late DateTime _createdAt;
   bool _isPreviewMode = false;
+  bool _isSaving = false;
+  bool _allowPop = false;
+  late final String _noteId;
 
   // Block-editor model: a sequence of text blocks and table blocks
   // Text blocks hold TextEditingControllers; table blocks are interactive inline tables
@@ -66,12 +80,16 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
 
   // Legacy getter so old code that reads _contentController still compiles
   TextEditingController get _contentController =>
-      (_blocks.firstWhere((b) => b is _TextBlock, orElse: () => _TextBlock()) as _TextBlock).controller;
+      (_blocks.firstWhere((b) => b is _TextBlock, orElse: () => _TextBlock())
+              as _TextBlock)
+          .controller;
 
   final FocusNode _titleFocusNode = FocusNode();
   // _contentFocusNode points to the first text block for backward compat
   FocusNode get _contentFocusNode =>
-      (_blocks.firstWhere((b) => b is _TextBlock, orElse: () => _TextBlock()) as _TextBlock).focusNode;
+      (_blocks.firstWhere((b) => b is _TextBlock, orElse: () => _TextBlock())
+              as _TextBlock)
+          .focusNode;
 
   @override
   void initState() {
@@ -85,8 +103,23 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
     _mediaAssets = List.from(note?.mediaAssets ?? []);
     _checklist = List.from(note?.checklist ?? []);
     _createdAt = note?.createdAt ?? DateTime.now();
-    // Start with a single text block containing the note content
-    _blocks = [_TextBlock(text: note?.textContent ?? '')];
+    _noteId = note?.noteId ?? "echo_${DateTime.now().microsecondsSinceEpoch}";
+    final savedBlocks = note?.contentBlocks ?? const <NoteBlockData>[];
+    _blocks = savedBlocks.isEmpty
+        ? [_TextBlock(text: note?.textContent ?? '')]
+        : savedBlocks.map<dynamic>((block) {
+            if (block.type == NoteBlockType.table) {
+              return _TableBlock(
+                cells: block.tableCells
+                    .map((row) => List<String>.from(row))
+                    .toList(),
+              );
+            }
+            return _TextBlock(text: block.text);
+          }).toList();
+    if (_blocks.whereType<_TextBlock>().isEmpty) {
+      _blocks.add(_TextBlock());
+    }
   }
 
   @override
@@ -100,16 +133,29 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
     super.dispose();
   }
 
-  void _saveNote({bool pop = true}) {
+  List<NoteBlockData> _serializedBlocks() => _blocks.map((block) {
+    if (block is _TableBlock) return NoteBlockData.table(block.cells);
+    return NoteBlockData.text((block as _TextBlock).controller.text);
+  }).toList();
+
+  String _plainTextContent(List<NoteBlockData> blocks) => blocks
+      .map((block) => block.searchableText.trim())
+      .where((text) => text.isNotEmpty)
+      .join('\n\n')
+      .trim();
+
+  Future<bool> _saveNote({
+    bool pop = true,
+    bool showConfirmation = false,
+  }) async {
+    if (_isSaving) return false;
+    if (mounted) setState(() => _isSaving = true);
+
     final title = _titleController.text.trim().isEmpty
         ? "Untitled Note"
         : _titleController.text.trim();
-    // Join all text blocks separated by a blank line (tables are skipped)
-    final content = _blocks
-        .whereType<_TextBlock>()
-        .map((b) => b.controller.text)
-        .join('\n\n')
-        .trim();
+    final contentBlocks = _serializedBlocks();
+    final content = _plainTextContent(contentBlocks);
     final summary = content.isNotEmpty
         ? content.split("\n").first
         : (widget.existingNote?.summarySnippet ?? "No description provided");
@@ -120,11 +166,11 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
     }
 
     final note = NoteModel(
-      noteId: widget.existingNote?.noteId ??
-          "echo_${DateTime.now().millisecondsSinceEpoch}",
+      noteId: _noteId,
       title: title,
-      contentType:
-          _mediaAssets.isNotEmpty ? NoteContentType.richMedia : _contentType,
+      contentType: _mediaAssets.isNotEmpty
+          ? NoteContentType.richMedia
+          : _contentType,
       mediaAssets: _mediaAssets,
       summarySnippet: summary,
       textContent: content,
@@ -132,16 +178,46 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
       tags: _tags,
       isPinned: _isPinned,
       checklist: _checklist,
+      contentBlocks: contentBlocks,
     );
 
-    if (widget.existingNote != null) {
-      NoteService().updateNote(note);
-    } else {
-      NoteService().addNote(note);
-    }
+    try {
+      if (widget.existingNote != null) {
+        await NoteService().updateNote(note);
+      } else {
+        await NoteService().addNote(note);
+      }
 
-    if (pop && mounted) {
-      Navigator.of(context).pop();
+      if (!mounted) return true;
+      setState(() {
+        _isSaving = false;
+        if (pop) _allowPop = true;
+      });
+      if (pop) {
+        Navigator.of(context).pop(note);
+      } else if (showConfirmation) {
+        HapticFeedback.lightImpact();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            behavior: SnackBarBehavior.floating,
+            content: Text('Note saved'),
+            duration: Duration(seconds: 1),
+          ),
+        );
+      }
+      return true;
+    } catch (error) {
+      if (mounted) {
+        setState(() => _isSaving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.redAccent,
+            content: Text('Could not save note: $error'),
+          ),
+        );
+      }
+      return false;
     }
   }
 
@@ -155,8 +231,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
     final selection = ctrl.selection;
     final start = selection.start >= 0 ? selection.start : text.length;
     final end = selection.end >= 0 ? selection.end : text.length;
-    final selectedText =
-        start < end ? text.substring(start, end) : "text";
+    final selectedText = start < end ? text.substring(start, end) : "text";
 
     String replacement = "";
     int cursorOffset = 0;
@@ -255,7 +330,11 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
       final tableBlock = _TableBlock();
       final afterBlock = _TextBlock(text: after);
 
-      _blocks.replaceRange(blockIdx, blockIdx + 1, [beforeBlock, tableBlock, afterBlock]);
+      _blocks.replaceRange(blockIdx, blockIdx + 1, [
+        beforeBlock,
+        tableBlock,
+        afterBlock,
+      ]);
       active.dispose(); // clean up replaced block
 
       // Focus the after-block so user can keep typing below the table
@@ -286,11 +365,13 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
 
   void _addChecklistItem() {
     setState(() {
-      _checklist.add(CheckListItem(
-        id: "c_${DateTime.now().millisecondsSinceEpoch}",
-        text: "New task item",
-        isCompleted: false,
-      ));
+      _checklist.add(
+        CheckListItem(
+          id: "c_${DateTime.now().millisecondsSinceEpoch}",
+          text: "New task item",
+          isCompleted: false,
+        ),
+      );
     });
   }
 
@@ -329,33 +410,45 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
                 ),
               ),
               ListTile(
-                leading: const Icon(Icons.picture_as_pdf_rounded,
-                    color: AppColors.badgePdf),
+                leading: const Icon(
+                  Icons.picture_as_pdf_rounded,
+                  color: AppColors.badgePdf,
+                ),
                 title: const Text("Scan / Attach Document (PDF)"),
-                subtitle: const Text("Import PDF with OCR tables & math",
-                    style: TextStyle(fontSize: 12, color: Colors.white54)),
+                subtitle: const Text(
+                  "Import PDF with OCR tables & math",
+                  style: TextStyle(fontSize: 12, color: Colors.white54),
+                ),
                 onTap: () {
                   Navigator.pop(ctx);
                   _pickAndAttachFile(['pdf']);
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.photo_library_rounded,
-                    color: AppColors.nebulaCyan),
+                leading: const Icon(
+                  Icons.photo_library_rounded,
+                  color: AppColors.nebulaCyan,
+                ),
                 title: const Text("Photo Library"),
-                subtitle: const Text("Insert photos or artwork",
-                    style: TextStyle(fontSize: 12, color: Colors.white54)),
+                subtitle: const Text(
+                  "Insert photos or artwork",
+                  style: TextStyle(fontSize: 12, color: Colors.white54),
+                ),
                 onTap: () {
                   Navigator.pop(ctx);
                   _pickAndAttachFile(['png', 'jpg', 'jpeg']);
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.draw_rounded,
-                    color: Color(0xFFFF9F0A)),
+                leading: const Icon(
+                  Icons.draw_rounded,
+                  color: Color(0xFFFF9F0A),
+                ),
                 title: const Text("Markup & Sketch (Apple Notes Style)"),
-                subtitle: const Text("Draw with pen, pencil and marker",
-                    style: TextStyle(fontSize: 12, color: Colors.white54)),
+                subtitle: const Text(
+                  "Draw with pen, pencil and marker",
+                  style: TextStyle(fontSize: 12, color: Colors.white54),
+                ),
                 onTap: () {
                   Navigator.pop(ctx);
                   _openDrawingCanvas();
@@ -378,26 +471,83 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
       if (result != null && result.files.isNotEmpty) {
         final file = result.files.first;
         final isPdf = file.extension?.toLowerCase() == 'pdf';
+        final sourcePath = file.path;
+        if (sourcePath == null) {
+          throw StateError('The selected file has no path.');
+        }
+        final storedPath = await _copyAttachment(sourcePath, file.name);
+
+        String? documentId;
+        int? pageCount;
+        if (isPdf) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                behavior: SnackBarBehavior.floating,
+                content: Text('Reading and indexing PDF…'),
+              ),
+            );
+          }
+          final document = await KnowledgeService.instance.ingestPdf(
+            storedPath,
+          );
+          documentId = document.id;
+          pageCount = document.pageCount;
+        }
+
+        if (!mounted) return;
 
         setState(() {
-          _mediaAssets.add(MediaAsset(
-            type: isPdf ? MediaAssetType.pdf : MediaAssetType.image,
-            url: file.path ?? "assets/${file.name}",
-            pageCount: isPdf ? 4 : null,
-            caption: file.name,
-            visualPreset: isPdf ? "pdf_doc" : "nebula_art",
-          ));
+          _mediaAssets.add(
+            MediaAsset(
+              type: isPdf ? MediaAssetType.pdf : MediaAssetType.image,
+              url: storedPath,
+              pageCount: pageCount,
+              caption: file.name,
+              visualPreset: isPdf ? "pdf_doc" : "nebula_art",
+              documentId: documentId,
+            ),
+          );
           _contentType = NoteContentType.richMedia;
 
           if (_titleController.text.isEmpty) {
-            _titleController.text =
-                file.name.replaceAll(RegExp(r'\.[a-zA-Z0-9]+$'), '');
+            _titleController.text = file.name.replaceAll(
+              RegExp(r'\.[a-zA-Z0-9]+$'),
+              '',
+            );
           }
         });
       }
     } catch (e) {
       debugPrint("File picker error: $e");
     }
+  }
+
+  Future<String> _copyAttachment(String sourcePath, String fileName) async {
+    final documents = await getApplicationDocumentsDirectory();
+    final directory = Directory(p.join(documents.path, 'attachments'));
+    await directory.create(recursive: true);
+    final extension = p.extension(fileName);
+    final storedName = '${DateTime.now().microsecondsSinceEpoch}$extension';
+    final destination = p.join(directory.path, storedName);
+    await File(sourcePath).copy(destination);
+    return destination;
+  }
+
+  void _openDocumentChat(MediaAsset asset) {
+    final documentId = asset.documentId;
+    if (documentId == null) return;
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => DocumentChatPage(
+          title: asset.caption ?? 'PDF',
+          sourceId: documentId,
+          isDocument: true,
+          onAsk: (question) =>
+              KnowledgeService.instance.askDocument(question, documentId),
+        ),
+      ),
+    );
   }
 
   void _shareNote() {
@@ -414,11 +564,18 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         content: const Row(
           children: [
-            Icon(Icons.check_circle_rounded, size: 16, color: Color(0xFFFFD60A)),
+            Icon(
+              Icons.check_circle_rounded,
+              size: 16,
+              color: Color(0xFFFFD60A),
+            ),
             SizedBox(width: 8),
             Text(
               "Note copied to clipboard",
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ],
         ),
@@ -431,9 +588,10 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
     final isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
 
     return PopScope(
+      canPop: _allowPop,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
-        _saveNote(pop: false);
+        unawaited(_saveNote(pop: true));
       },
       child: Scaffold(
         backgroundColor: const Color(0xFF000000),
@@ -444,9 +602,9 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
           elevation: 0,
           leadingWidth: 90,
           leading: GestureDetector(
-            onTap: () {
+            onTap: () async {
               HapticFeedback.lightImpact();
-              _saveNote(pop: true);
+              await _saveNote(pop: true);
             },
             child: Row(
               children: [
@@ -475,15 +633,11 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
                 _isPreviewMode
                     ? Icons.edit_note_rounded
                     : Icons.visibility_rounded,
-                color: _isPreviewMode
-                    ? AppColors.nebulaCyan
-                    : Colors.white70,
+                color: _isPreviewMode ? AppColors.nebulaCyan : Colors.white70,
                 size: 22,
               ),
-              tooltip:
-                  _isPreviewMode ? "Edit Mode" : "Math & Markdown Preview",
-              onPressed: () =>
-                  setState(() => _isPreviewMode = !_isPreviewMode),
+              tooltip: _isPreviewMode ? "Edit Mode" : "Math & Markdown Preview",
+              onPressed: () => setState(() => _isPreviewMode = !_isPreviewMode),
             ),
 
             // Share button
@@ -500,12 +654,8 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
             // Pin toggle
             IconButton(
               icon: Icon(
-                _isPinned
-                    ? Icons.push_pin_rounded
-                    : Icons.push_pin_outlined,
-                color: _isPinned
-                    ? AppColors.dropletRed
-                    : Colors.white70,
+                _isPinned ? Icons.push_pin_rounded : Icons.push_pin_outlined,
+                color: _isPinned ? AppColors.dropletRed : Colors.white70,
                 size: 21,
               ),
               tooltip: _isPinned ? "Unpin" : "Pin",
@@ -521,8 +671,10 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
                   size: 21,
                 ),
                 tooltip: "Delete Note",
-                onPressed: () {
-                  NoteService().deleteNote(widget.existingNote!.noteId);
+                onPressed: () async {
+                  await NoteService().deleteNote(widget.existingNote!.noteId);
+                  if (!context.mounted) return;
+                  setState(() => _allowPop = true);
                   Navigator.of(context).pop();
                 },
               ),
@@ -531,12 +683,14 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
             Padding(
               padding: const EdgeInsets.only(right: 12, left: 4),
               child: TextButton(
-                onPressed: () {
-                  FocusScope.of(context).unfocus();
-                  _saveNote(pop: false);
-                },
+                onPressed: _isSaving
+                    ? null
+                    : () async {
+                        FocusScope.of(context).unfocus();
+                        await _saveNote(pop: false, showConfirmation: true);
+                      },
                 child: Text(
-                  "Done",
+                  _isSaving ? "Saving…" : "Done",
                   style: GoogleFonts.inter(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -559,328 +713,369 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
                   children: [
-            // Apple-style creation date header
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Text(
-                  formatNoteTimestamp(_createdAt),
-                  style: GoogleFonts.inter(
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.white38,
-                    letterSpacing: 0.2,
-                  ),
-                ),
-              ),
-            ),
-
-            // Large Title Field
-            TextField(
-              controller: _titleController,
-              focusNode: _titleFocusNode,
-              style: GoogleFonts.outfit(
-                fontSize: 26,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-                letterSpacing: -0.5,
-              ),
-              decoration: const InputDecoration(
-                hintText: "Title",
-                hintStyle: TextStyle(color: Colors.white24),
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.zero,
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // Attached Media (Drawings, PDFs, Images)
-            if (_mediaAssets.isNotEmpty) ...[
-              SizedBox(
-                height: 110,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: _mediaAssets.length,
-                  itemBuilder: (context, idx) {
-                    final asset = _mediaAssets[idx];
-                    final isPdf = asset.type == MediaAssetType.pdf;
-                    final isSketch = asset.visualPreset == "sketch_markup";
-
-                    return Container(
-                      width: 150,
-                      margin: const EdgeInsets.only(right: 12),
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1C1C1E),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: const Color(0xFF2C2C2E),
+                    // Apple-style creation date header
+                    Center(
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Text(
+                          formatNoteTimestamp(_createdAt),
+                          style: GoogleFonts.inter(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.white38,
+                            letterSpacing: 0.2,
+                          ),
                         ),
                       ),
-                      child: Stack(
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                isPdf
-                                    ? Icons.picture_as_pdf_rounded
-                                    : (isSketch
-                                        ? Icons.draw_rounded
-                                        : Icons.image_rounded),
-                                color: isPdf
-                                    ? AppColors.badgePdf
-                                    : (isSketch
-                                        ? const Color(0xFFFF9F0A)
-                                        : AppColors.nebulaCyan),
-                                size: 28,
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                asset.caption ?? "Attachment",
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
+                    ),
+
+                    // Large Title Field
+                    TextField(
+                      controller: _titleController,
+                      focusNode: _titleFocusNode,
+                      style: GoogleFonts.outfit(
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        letterSpacing: -0.5,
+                      ),
+                      decoration: const InputDecoration(
+                        hintText: "Title",
+                        hintStyle: TextStyle(color: Colors.white24),
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Attached Media (Drawings, PDFs, Images)
+                    if (_mediaAssets.isNotEmpty) ...[
+                      SizedBox(
+                        height: 110,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: _mediaAssets.length,
+                          itemBuilder: (context, idx) {
+                            final asset = _mediaAssets[idx];
+                            final isPdf = asset.type == MediaAssetType.pdf;
+                            final isSketch =
+                                asset.visualPreset == "sketch_markup";
+
+                            return GestureDetector(
+                              onTap: isPdf && asset.documentId != null
+                                  ? () => _openDocumentChat(asset)
+                                  : null,
+                              child: Container(
+                                width: 150,
+                                margin: const EdgeInsets.only(right: 12),
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF1C1C1E),
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(
+                                    color: const Color(0xFF2C2C2E),
+                                  ),
                                 ),
+                                child: Stack(
+                                  children: [
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          isPdf
+                                              ? Icons.picture_as_pdf_rounded
+                                              : (isSketch
+                                                    ? Icons.draw_rounded
+                                                    : Icons.image_rounded),
+                                          color: isPdf
+                                              ? AppColors.badgePdf
+                                              : (isSketch
+                                                    ? const Color(0xFFFF9F0A)
+                                                    : AppColors.nebulaCyan),
+                                          size: 28,
+                                        ),
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          asset.caption ?? "Attachment",
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    Positioned(
+                                      top: -4,
+                                      right: -4,
+                                      child: GestureDetector(
+                                        onTap: () => setState(
+                                          () => _mediaAssets.removeAt(idx),
+                                        ),
+                                        child: const Icon(
+                                          Icons.cancel_rounded,
+                                          size: 18,
+                                          color: Colors.white38,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+
+                    // Checklists Section
+                    if (_checklist.isNotEmpty) ...[
+                      ..._checklist.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final item = entry.value;
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Row(
+                            children: [
+                              IconButton(
+                                icon: Icon(
+                                  item.isCompleted
+                                      ? Icons.check_circle_rounded
+                                      : Icons.radio_button_unchecked_rounded,
+                                  color: item.isCompleted
+                                      ? const Color(0xFFFFD60A)
+                                      : Colors.white38,
+                                  size: 20,
+                                ),
+                                onPressed: () => setState(
+                                  () => item.isCompleted = !item.isCompleted,
+                                ),
+                              ),
+                              Expanded(
+                                child: TextFormField(
+                                  initialValue: item.text,
+                                  onChanged: (v) => item.text = v,
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    color: item.isCompleted
+                                        ? Colors.white38
+                                        : Colors.white,
+                                    decoration: item.isCompleted
+                                        ? TextDecoration.lineThrough
+                                        : null,
+                                  ),
+                                  decoration: const InputDecoration(
+                                    border: InputBorder.none,
+                                    isDense: true,
+                                  ),
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.close_rounded,
+                                  size: 16,
+                                  color: Colors.white24,
+                                ),
+                                onPressed: () =>
+                                    setState(() => _checklist.removeAt(index)),
                               ),
                             ],
                           ),
-                          Positioned(
-                            top: -4,
-                            right: -4,
-                            child: GestureDetector(
-                              onTap: () => setState(
-                                  () => _mediaAssets.removeAt(idx)),
-                              child: const Icon(
-                                Icons.cancel_rounded,
-                                size: 18,
-                                color: Colors.white38,
+                        );
+                      }),
+                      const SizedBox(height: 12),
+                    ],
+
+                    // ── Block Editor ────────────────────────────────────────────────
+                    // Each block is either a text region or an inline table.
+                    // This is what gives Apple Notes-style inline tables.
+                    if (_isPreviewMode) ...[
+                      // Preview mode: join all text blocks and render as markdown
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF141416),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: const Color(0xFF282830)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.auto_awesome,
+                                  size: 14,
+                                  color: AppColors.nebulaCyan,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  "MATH & MARKDOWN PREVIEW",
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.nebulaCyan,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const Divider(height: 16, color: Color(0xFF282830)),
+                            MathMarkdownViewer(
+                              content: _blocks
+                                  .whereType<_TextBlock>()
+                                  .map((b) => b.controller.text)
+                                  .join('\n\n'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ] else ...[
+                      // Edit mode: render each block sequentially
+                      ..._blocks.map((block) {
+                        if (block is _TextBlock) {
+                          return TextField(
+                            controller: block.controller,
+                            focusNode: block.focusNode,
+                            maxLines: null,
+                            keyboardType: TextInputType.multiline,
+                            style: GoogleFonts.inter(
+                              fontSize: 16,
+                              height: 1.55,
+                              color: Colors.white,
+                            ),
+                            decoration: InputDecoration(
+                              hintText: _blocks.length == 1
+                                  ? "Start typing..."
+                                  : null,
+                              hintStyle: const TextStyle(
+                                color: Colors.white24,
+                                fontSize: 16,
+                              ),
+                              border: InputBorder.none,
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                          );
+                        } else if (block is _TableBlock) {
+                          return Padding(
+                            key: block.key,
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: InlineNoteTable(
+                              initialData: block.cells,
+                              onDataChanged: (cells) => block.cells = cells,
+                              onRemove: () {
+                                setState(() {
+                                  _blocks.remove(block);
+                                  if (_blocks.whereType<_TextBlock>().isEmpty) {
+                                    _blocks.add(_TextBlock());
+                                  }
+                                });
+                              },
+                            ),
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      }),
+                    ],
+
+                    // Tags Chips
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        ..._tags.map(
+                          (tag) => Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 9,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1C1C1E),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: const Color(0xFF2C2C2E),
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
-
-            // Checklists Section
-            if (_checklist.isNotEmpty) ...[
-              ..._checklist.asMap().entries.map((entry) {
-                final index = entry.key;
-                final item = entry.value;
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: Row(
-                    children: [
-                      IconButton(
-                        icon: Icon(
-                          item.isCompleted
-                              ? Icons.check_circle_rounded
-                              : Icons.radio_button_unchecked_rounded,
-                          color: item.isCompleted
-                              ? const Color(0xFFFFD60A)
-                              : Colors.white38,
-                          size: 20,
-                        ),
-                        onPressed: () => setState(
-                            () => item.isCompleted = !item.isCompleted),
-                      ),
-                      Expanded(
-                        child: TextFormField(
-                          initialValue: item.text,
-                          onChanged: (v) => item.text = v,
-                          style: TextStyle(
-                            fontSize: 15,
-                            color: item.isCompleted
-                                ? Colors.white38
-                                : Colors.white,
-                            decoration: item.isCompleted
-                                ? TextDecoration.lineThrough
-                                : null,
-                          ),
-                          decoration: const InputDecoration(
-                            border: InputBorder.none,
-                            isDense: true,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  "#$tag",
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Color(0xFFFFD60A),
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                GestureDetector(
+                                  onTap: () =>
+                                      setState(() => _tags.remove(tag)),
+                                  child: const Icon(
+                                    Icons.close_rounded,
+                                    size: 13,
+                                    color: Colors.white38,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close_rounded,
-                            size: 16, color: Colors.white24),
-                        onPressed: () =>
-                            setState(() => _checklist.removeAt(index)),
-                      ),
-                    ],
-                  ),
-                );
-              }),
-              const SizedBox(height: 12),
-            ],
-
-            // ── Block Editor ────────────────────────────────────────────────
-            // Each block is either a text region or an inline table.
-            // This is what gives Apple Notes-style inline tables.
-            if (_isPreviewMode) ...[
-              // Preview mode: join all text blocks and render as markdown
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF141416),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFF282830)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.auto_awesome,
-                            size: 14, color: AppColors.nebulaCyan),
-                        const SizedBox(width: 6),
-                        Text(
-                          "MATH & MARKDOWN PREVIEW",
-                          style: GoogleFonts.inter(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.nebulaCyan,
+                        SizedBox(
+                          width: 100,
+                          child: TextField(
+                            controller: _tagInputController,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.white,
+                            ),
+                            decoration: const InputDecoration(
+                              hintText: "+ Add tag",
+                              hintStyle: TextStyle(color: Colors.white38),
+                              isDense: true,
+                              border: InputBorder.none,
+                              contentPadding: EdgeInsets.symmetric(vertical: 4),
+                            ),
+                            onSubmitted: (v) {
+                              if (v.trim().isNotEmpty &&
+                                  !_tags.contains(v.trim())) {
+                                setState(() => _tags.add(v.trim()));
+                                _tagInputController.clear();
+                              }
+                            },
                           ),
                         ),
                       ],
                     ),
-                    const Divider(height: 16, color: Color(0xFF282830)),
-                    MathMarkdownViewer(
-                      content: _blocks
-                          .whereType<_TextBlock>()
-                          .map((b) => b.controller.text)
-                          .join('\n\n'),
-                    ),
-                  ],
+                    const SizedBox(height: 40),
+                  ], // end ListView children
+                ), // end ListView
+              ), // end Expanded
+              // ── Apple Notes Accessory Toolbar ──────────────────────────────────────
+              // This sits at the bottom of the Column. The Column is inside a Padding
+              // with EdgeInsets.only(bottom: viewInsets.bottom), which makes the
+              // entire Column content (including this toolbar) rise as the keyboard
+              // appears — so the toolbar always floats directly above the keyboard.
+              AppleNotesToolbar(
+                isKeyboardVisible: isKeyboardOpen,
+                onInsertTable: _insertTable,
+                onFormatText: () => AppleTextFormatSheet.show(
+                  context,
+                  onFormatSelected: _applyTextFormatting,
                 ),
+                onInsertChecklist: _addChecklistItem,
+                onAddAttachment: _showAttachmentPicker,
+                onOpenDrawing: _openDrawingCanvas,
+                onInsertMath: _insertMathEquation,
+                onHideKeyboard: () => FocusScope.of(context).unfocus(),
               ),
-            ] else ...[
-              // Edit mode: render each block sequentially
-              ..._blocks.map((block) {
-                if (block is _TextBlock) {
-                  return TextField(
-                    controller: block.controller,
-                    focusNode: block.focusNode,
-                    maxLines: null,
-                    keyboardType: TextInputType.multiline,
-                    style: GoogleFonts.inter(
-                      fontSize: 16,
-                      height: 1.55,
-                      color: Colors.white,
-                    ),
-                    decoration: InputDecoration(
-                      hintText: _blocks.length == 1 ? "Start typing..." : null,
-                      hintStyle:
-                          const TextStyle(color: Colors.white24, fontSize: 16),
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                  );
-                } else if (block is _TableBlock) {
-                  return Padding(
-                    key: block.key,
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: InlineNoteTable(
-                      onDataChanged: (_) {},
-                    ),
-                  );
-                }
-                return const SizedBox.shrink();
-              }),
-            ],
-
-
-            // Tags Chips
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                ..._tags.map((tag) => Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 9, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1C1C1E),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: const Color(0xFF2C2C2E)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            "#$tag",
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Color(0xFFFFD60A),
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          GestureDetector(
-                            onTap: () => setState(() => _tags.remove(tag)),
-                            child: const Icon(Icons.close_rounded,
-                                size: 13, color: Colors.white38),
-                          ),
-                        ],
-                      ),
-                    )),
-                SizedBox(
-                  width: 100,
-                  child: TextField(
-                    controller: _tagInputController,
-                    style: const TextStyle(fontSize: 12, color: Colors.white),
-                    decoration: const InputDecoration(
-                      hintText: "+ Add tag",
-                      hintStyle: TextStyle(color: Colors.white38),
-                      isDense: true,
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.symmetric(vertical: 4),
-                    ),
-                    onSubmitted: (v) {
-                      if (v.trim().isNotEmpty && !_tags.contains(v.trim())) {
-                        setState(() => _tags.add(v.trim()));
-                        _tagInputController.clear();
-                      }
-                    },
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 40),
-          ], // end ListView children
-        ), // end ListView
-      ), // end Expanded
-
-      // ── Apple Notes Accessory Toolbar ──────────────────────────────────────
-      // This sits at the bottom of the Column. The Column is inside a Padding
-      // with EdgeInsets.only(bottom: viewInsets.bottom), which makes the
-      // entire Column content (including this toolbar) rise as the keyboard
-      // appears — so the toolbar always floats directly above the keyboard.
-      AppleNotesToolbar(
-        isKeyboardVisible: isKeyboardOpen,
-        onInsertTable: _insertTable,
-        onFormatText: () => AppleTextFormatSheet.show(
-          context,
-          onFormatSelected: _applyTextFormatting,
-        ),
-        onInsertChecklist: _addChecklistItem,
-        onAddAttachment: _showAttachmentPicker,
-        onOpenDrawing: _openDrawingCanvas,
-        onInsertMath: _insertMathEquation,
-        onHideKeyboard: () => FocusScope.of(context).unfocus(),
-      ),
-    ], // end Column children
-  ), // end Column
+            ], // end Column children
+          ), // end Column
         ), // end body Padding
       ), // end Scaffold
     ); // end PopScope

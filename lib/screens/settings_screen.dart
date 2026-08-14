@@ -38,7 +38,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.primaryText, size: 20),
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: AppColors.primaryText,
+            size: 20,
+          ),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
@@ -54,15 +58,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         children: [
           // Section 1: AI & Voice Configuration
-          _buildSectionHeader("AI & VOICE INTELLIGENCE", Icons.auto_awesome_rounded, AppColors.nebulaCyan),
+          _buildSectionHeader(
+            "AI & VOICE INTELLIGENCE",
+            Icons.auto_awesome_rounded,
+            AppColors.nebulaCyan,
+          ),
           _buildCardGroup([
             _buildActionTile(
               icon: Icons.psychology_rounded,
               title: "Local AI Models & Downloads",
-              subtitle: "Manage offline Dolphin STT (Telugu/Hindi/En) & Qwen 3.5 LLM",
+              subtitle: "Apple multilingual transcription & Qwen3 MLX",
               onTap: () {
                 Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const AiModelSettingsPage()),
+                  MaterialPageRoute(
+                    builder: (_) => const AiModelSettingsPage(),
+                  ),
                 );
               },
             ),
@@ -93,7 +103,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             _buildDivider(),
             _buildSliderTile(
-              title: "Voice Pitch Modulation: ${_voicePitch.toStringAsFixed(2)}x",
+              title:
+                  "Voice Pitch Modulation: ${_voicePitch.toStringAsFixed(2)}x",
               subtitle: "Harmonic tone of text-to-speech engine",
               value: _voicePitch,
               min: 0.5,
@@ -103,7 +114,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             _buildDivider(),
             _buildSliderTile(
-              title: "Context Memory Threshold: ${(_contextMemoryThreshold * 100).toInt()}%",
+              title:
+                  "Context Memory Threshold: ${(_contextMemoryThreshold * 100).toInt()}%",
               subtitle: "Relevance score for 360° orbital carousel",
               value: _contextMemoryThreshold,
               min: 0.3,
@@ -123,7 +135,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 24),
 
           // Section 2: Storage & Cloud Sync
-          _buildSectionHeader("STORAGE & CLOUD SYNC", Icons.cloud_done_rounded, AppColors.accentBlue),
+          _buildSectionHeader(
+            "STORAGE & CLOUD SYNC",
+            Icons.cloud_done_rounded,
+            AppColors.accentBlue,
+          ),
           _buildCardGroup([
             _buildSwitchTile(
               title: "Google Drive Auto-Sync",
@@ -148,7 +164,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 24),
 
           // Section 3: Display & Visuals
-          _buildSectionHeader("DISPLAY & VISUAL PHYSICS", Icons.palette_rounded, AppColors.dropletRed),
+          _buildSectionHeader(
+            "DISPLAY & VISUAL PHYSICS",
+            Icons.palette_rounded,
+            AppColors.dropletRed,
+          ),
           _buildCardGroup([
             _buildSwitchTile(
               title: "Pitch Black OLED Mode",
@@ -177,7 +197,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             _buildDivider(),
             _buildSliderTile(
-              title: "macOS Glassmorphism Blur: ${_glassBlurStrength.toInt()}px",
+              title:
+                  "macOS Glassmorphism Blur: ${_glassBlurStrength.toInt()}px",
               value: _glassBlurStrength,
               min: 8.0,
               max: 32.0,
@@ -189,14 +210,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 24),
 
           // Section 4: Data Management & Export
-          _buildSectionHeader("DATA MANAGEMENT", Icons.save_alt_rounded, AppColors.accentGreen),
+          _buildSectionHeader(
+            "DATA MANAGEMENT",
+            Icons.save_alt_rounded,
+            AppColors.accentGreen,
+          ),
           _buildCardGroup([
             _buildActionTile(
               icon: Icons.file_download_outlined,
               title: "Export Notes (.md, .json, .pdf)",
               subtitle: "Download full archive with media attachments",
               onTap: () {
-                _showSuccessBanner("Notes archive exported to Downloads (.zip)");
+                _showSuccessBanner(
+                  "Notes archive exported to Downloads (.zip)",
+                );
               },
             ),
             _buildDivider(),
@@ -255,7 +282,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         content: Row(
           children: [
-            const Icon(Icons.check_circle, color: AppColors.accentGreen, size: 18),
+            const Icon(
+              Icons.check_circle,
+              color: AppColors.accentGreen,
+              size: 18,
+            ),
             const SizedBox(width: 8),
             Text(msg),
           ],
@@ -294,9 +325,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
-        child: Column(
-          children: children,
-        ),
+        child: Column(children: children),
       ),
     );
   }
@@ -321,8 +350,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
       value: value,
       onChanged: onChanged,
       activeTrackColor: AppColors.dropletRed,
-      title: Text(title, style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600)),
-      subtitle: Text(subtitle, style: const TextStyle(fontSize: 12, color: AppColors.secondaryText)),
+      title: Text(
+        title,
+        style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: const TextStyle(fontSize: 12, color: AppColors.secondaryText),
+      ),
     );
   }
 
@@ -334,18 +369,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required ValueChanged<String?> onChanged,
   }) {
     return ListTile(
-      title: Text(title, style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600)),
-      subtitle: Text(subtitle, style: const TextStyle(fontSize: 12, color: AppColors.secondaryText)),
+      title: Text(
+        title,
+        style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: const TextStyle(fontSize: 12, color: AppColors.secondaryText),
+      ),
       trailing: DropdownButton<String>(
         value: value,
         dropdownColor: AppColors.elevation2,
         underline: const SizedBox.shrink(),
         style: const TextStyle(fontSize: 13, color: AppColors.primaryText),
         items: items
-            .map((item) => DropdownMenuItem(
-                  value: item,
-                  child: Text(item),
-                ))
+            .map((item) => DropdownMenuItem(value: item, child: Text(item)))
             .toList(),
         onChanged: onChanged,
       ),
@@ -366,10 +404,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+          Text(
+            title,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          ),
           if (subtitle != null) ...[
             const SizedBox(height: 2),
-            Text(subtitle, style: const TextStyle(fontSize: 12, color: AppColors.secondaryText)),
+            Text(
+              subtitle,
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppColors.secondaryText,
+              ),
+            ),
           ],
           Slider(
             value: value,
@@ -393,9 +440,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }) {
     return ListTile(
       leading: Icon(icon, color: AppColors.primaryText),
-      title: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-      subtitle: Text(subtitle, style: const TextStyle(fontSize: 12, color: AppColors.secondaryText)),
-      trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.secondaryText),
+      title: Text(
+        title,
+        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: const TextStyle(fontSize: 12, color: AppColors.secondaryText),
+      ),
+      trailing: const Icon(
+        Icons.arrow_forward_ios_rounded,
+        size: 14,
+        color: AppColors.secondaryText,
+      ),
       onTap: onTap,
     );
   }

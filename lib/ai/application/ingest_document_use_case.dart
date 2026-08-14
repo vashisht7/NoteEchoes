@@ -2,7 +2,6 @@
 // Coordinates PDF import, text extraction, chunking, and FTS indexing.
 
 import 'dart:io';
-import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'package:uuid/uuid.dart';
 import 'package:drift/drift.dart' show Value;
@@ -10,7 +9,6 @@ import '../providers/document_processor.dart';
 import '../providers/text_generation_provider.dart';
 import '../infrastructure/ai_database.dart';
 import '../domain/document_chunk.dart';
-import '../config/ai_feature_flags.dart';
 
 class IngestDocumentUseCase {
   final DocumentProcessor processor;
@@ -42,11 +40,6 @@ class IngestDocumentUseCase {
       return _rowToDocument(existing);
     }
 
-    if (!AiFeatureFlags.instance.pdfIngestionEnabled) {
-      throw Exception(
-          'PDF ingestion is disabled. Enable it from Settings → AI Models.');
-    }
-
     final documentId = const Uuid().v4();
     final now = DateTime.now();
 
@@ -58,15 +51,16 @@ class IngestDocumentUseCase {
         localPath: Value(pdfFilePath),
         sha256: Value(fileHash),
         title: Value(fileName.replaceAll('.pdf', '')),
-        processingState:
-            Value(DocumentProcessingState.pending.jsonKey),
+        processingState: Value(DocumentProcessingState.pending.jsonKey),
         importedAt: Value(now.millisecondsSinceEpoch),
       ),
     );
 
     // Update to extracting state
     await database.updateDocumentState(
-        documentId, DocumentProcessingState.extractingText.jsonKey);
+      documentId,
+      DocumentProcessingState.extractingText.jsonKey,
+    );
 
     final document = ProcessedDocument(
       id: documentId,
@@ -80,11 +74,21 @@ class IngestDocumentUseCase {
 
     try {
       // Extract and chunk
-      final chunks =
-          await processor.process(pdfFilePath, document, onProgress: onProgress);
+      final chunks = await processor.process(
+        pdfFilePath,
+        document,
+        onProgress: onProgress,
+      );
+      final pageCount = chunks.fold<int>(
+        0,
+        (highest, chunk) => chunk.pageEnd > highest ? chunk.pageEnd : highest,
+      );
+      await database.updateDocumentPageCount(documentId, pageCount);
 
       await database.updateDocumentState(
-          documentId, DocumentProcessingState.indexing.jsonKey);
+        documentId,
+        DocumentProcessingState.indexing.jsonKey,
+      );
 
       // Index each chunk
       for (final chunk in chunks) {
@@ -114,13 +118,20 @@ class IngestDocumentUseCase {
       }
 
       await database.updateDocumentState(
-          documentId, DocumentProcessingState.completed.jsonKey);
+        documentId,
+        DocumentProcessingState.completed.jsonKey,
+      );
 
       return document.copyWith(
-          processingState: DocumentProcessingState.completed);
+        pageCount: pageCount,
+        processingState: DocumentProcessingState.completed,
+      );
     } catch (e) {
       await database.updateDocumentState(
-          documentId, DocumentProcessingState.failed.jsonKey, e.toString());
+        documentId,
+        DocumentProcessingState.failed.jsonKey,
+        e.toString(),
+      );
       rethrow;
     }
   }
@@ -133,7 +144,9 @@ class IngestDocumentUseCase {
       sha256: row.sha256,
       title: row.title,
       pageCount: row.pageCount,
-      processingState: DocumentProcessingStateExt.fromString(row.processingState),
+      processingState: DocumentProcessingStateExt.fromString(
+        row.processingState,
+      ),
       processingError: row.processingError,
       importedAt: DateTime.fromMillisecondsSinceEpoch(row.importedAt),
     );
