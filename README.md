@@ -1,27 +1,12 @@
 # 🛡️ NoteEchoes
 
-**NoteEchoes** is a next-generation AI-powered note-taking and voice assistant application for **iOS and macOS**. It bridges on-device mathematical LaTeX document comprehension with a full-screen conversational voice surface.
+**NoteEchoes** is a next-generation, private-first AI note-taking and voice intelligence application for **iOS and macOS**. It combines on-device neural transcription, mathematical LaTeX previewing, Apple Notes-style block editing with interactive inline tables, and headless Apple Shortcuts integration for instant voice capture.
 
 ---
 
-## 📱 Quick Install on Mobile (Direct Download)
-
-<div align="center">
-
-[![Download IPA](https://img.shields.io/badge/Download-NoteEchoes.ipa-FF2D55?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/vashisht7/NoteEchoes/releases/download/v1.0.0/NoteEchoes.ipa)
-[![Platform](https://img.shields.io/badge/Platform-iOS%20%7C%20macOS-00F2FE?style=for-the-badge&logo=apple)](https://github.com/vashisht7/NoteEchoes)
-[![License](https://img.shields.io/badge/License-MIT-7D2AE8?style=for-the-badge)](LICENSE)
-
-</div>
-
-### 📲 How to Install Directly on Your iPhone:
-1. **Direct Download**: Tap the **[Download NoteEchoes.ipa](https://github.com/vashisht7/NoteEchoes/releases/download/v1.0.0/NoteEchoes.ipa)** button on your mobile device.
-2. **Sideload via Sideloadly / AltStore / TrollStore / Apple Configurator**:
-   - Open **Sideloadly** or **AltStore** on your computer.
-   - Drag and drop `NoteEchoes.ipa` and click **Start / Install**.
-3. **Xcode Direct Deployment**:
-   - Open **Xcode > Window > Devices and Simulators** (`Cmd + Shift + 2`).
-   - Drag `NoteEchoes.ipa` into **Installed Apps**.
+## 📖 Architecture & Developer Documentation
+For the complete technical blueprint, directory index mapping every Dart/Swift file to its functionality, and agent handoff details, see:
+👉 **[ARCHITECTURE_AND_AGENT_HANDOFF.md](ARCHITECTURE_AND_AGENT_HANDOFF.md)**
 
 ---
 
@@ -31,25 +16,28 @@
 +---------------------------------------------------------------------------------------------------------------+
 |                                            NOTECHOES CAPABILITIES                                             |
 +---------------------------------------------------------------------------------------------------------------+
-| 1. 🧮 Option A: English Math & Document Vision                                                                |
-|    • On-device LaTeX Math rendering ($$ E = mc^2 $$, integrals, fractions, matrices)                          |
-|    • Structured Markdown Tables (| Header | Header |) with dark glass borders                                 |
-|    • Live Math & Markdown Preview toggle in the note editor                                                   |
+| 1. 🎙️ Action Button & Apple Shortcuts Voice Capture                                                            |
+|    • Headless "Record Audio" -> "Transcribe & Save to Notechoes" Shortcut with 1-hour audio chunking          |
+|    • Multi-tier thread-safe queue (App Group shared container + UserDefaults suite + fallback)               |
+|    • Automatic first-frame ingestion into unified chronological feed on home screen                           |
 |                                                                                                               |
-| 2. 🎙️ 3-State Conversational Voice Surface                                                                    |
-|    • State 1: Liquid red water droplet ripples with bottom 3D cylindrical revolving thought wheel             |
-|    • State 2: Meta AI Dream Bubble with rich candidate note tiles cross-fading inside the orb                 |
-|    • State 3: Apple Music / Gemini Live Spoken Highlighting with synchronized luminous white glowing words   |
+| 2. 📝 Full-Screen Apple Notes-Style Editor                                                                    |
+|    • Floating accessory toolbar docked directly above the iOS soft keyboard                                  |
+|    • Aa typography modal sheet (Title, Heading, Subheading, Monospaced, Bold, Italic, Bullet, Numbered, Quote) |
+|    • Block-editor architecture: cursor-level inline interactive tables with dynamic row/column additions       |
+|    • Math & Markdown live preview toggle ($$ \int e^{-x^2} dx $$, tables, syntax highlighting)                |
+|    • Native sketch markup canvas with Apple Pencil & finger drawing support                                   |
 |                                                                                                               |
-| 3. 🌌 Clean Thought Canvas                                                                                    |
-|    • Starts empty by default (zero hardcoded mock clutter)                                                    |
-|    • Full note creation, editing, tagging, pinning, and note deletion                                         |
+| 3. 📱 Unified Chronological Feed                                                                              |
+|    • Newest notes (voice memos, text, checklists, rich docs) always appear on the top                         |
+|    • Pinned notes prioritized at the top-left with glowing indicators                                         |
+|    • Keep-style dual-column masonry grid with voice memo wave badges and formatted timestamps                 |
 |                                                                                                               |
-| 4. 📁 File & PDF Ingestion                                                                                    |
-|    • Upload .pdf, .png, .jpg, or .md files to extract structured markdown and LaTeX formulas                  |
-|                                                                                                               |
-| 5. 🔑 Initial Sign-In Modal                                                                                  |
-|    • Frosted glass auth sheet supporting Apple ID and Google Sign-In with single-tap skip                     |
+| 4. 🧠 Local On-Device AI Architecture (Phases 1-12)                                                            |
+|    • Qwen 3.5 0.8B local LLM + Sherpa-ONNX Dolphin STT offline providers                                     |
+|    • SQLite / Drift database with persistent background AI job queue & FTS5 full-text search                  |
+|    • Grounded document Q&A and cross-notebook semantic synthesis                                              |
+|    • Apple Intelligence Writing Tools, EventKit Calendar, CoreSpotlight, and Journaling bridges              |
 +---------------------------------------------------------------------------------------------------------------+
 ```
 
@@ -58,11 +46,11 @@
 ## 🛠️ Build & Run from Source
 
 ### Prerequisites
-- Flutter SDK (3.24+)
+- Flutter SDK (3.24+ / 3.29+)
 - Xcode 15+ / 16+
 - macOS 14+ or iOS 16+
 
-### Commands
+### Setup Commands
 ```bash
 # 1. Clone repository
 git clone https://github.com/vashisht7/NoteEchoes.git
@@ -71,17 +59,17 @@ cd NoteEchoes
 # 2. Install dependencies
 flutter pub get
 
-# 3. Run on macOS
+# 3. Open Xcode Workspace for iOS
+open ios/Runner.xcworkspace
+
+# 4. Run on macOS
 flutter run -d macos
 
-# 4. Run on Connected iOS Device
+# 5. Run on Connected iOS Device
 flutter run -d ios
-
-# 5. Build Release IPA
-flutter build ipa --no-codesign
 ```
 
 ---
 
 ## 📄 License
-MIT License. Built with ❤️ for next-generation spatial computing and voice AI.
+MIT License. Built for next-generation spatial computing, tactile mobile UX, and private on-device intelligence.
