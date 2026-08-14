@@ -4,6 +4,7 @@
 
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../config/ai_feature_flags.dart';
 import '../config/ai_runtime_config.dart';
@@ -28,6 +29,10 @@ class _AiModelSettingsPageState extends State<AiModelSettingsPage>
   bool _qwenDownloading = false;
   double _qwenProgress = 0.0;
   String _qwenStatusText = '';
+  static const _speechChannel = MethodChannel('noteechoes/offline_speech');
+  bool _whisperInstalled = false;
+  bool _whisperDownloading = false;
+  String _whisperStatusText = '';
 
   @override
   void initState() {
@@ -38,6 +43,7 @@ class _AiModelSettingsPageState extends State<AiModelSettingsPage>
     );
     _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut);
     _fadeCtrl.forward();
+    _syncWhisperStatus();
   }
 
   @override
@@ -90,6 +96,21 @@ class _AiModelSettingsPageState extends State<AiModelSettingsPage>
               downloadProgress: 1,
               statusText: '',
             ),
+            const SizedBox(height: 10),
+            _ModelCard(
+              name: 'Whisper Base Multilingual',
+              description:
+                  'Core ML speech recognition for complete offline recordings. '
+                  'Optimized for Telugu, English and Hindi voice notes.',
+              size: '147 MB download',
+              languages: ['Telugu', 'English', 'Hindi', 'Multilingual'],
+              isInstalled: _whisperInstalled,
+              isDownloading: _whisperDownloading,
+              downloadProgress: _whisperDownloading ? 0.35 : 0,
+              statusText: _whisperStatusText,
+              onDownload: _whisperDownloading ? null : _startWhisperDownload,
+              onDelete: _whisperInstalled ? _disableWhisper : null,
+            ),
             const SizedBox(height: 20),
             const _SectionHeader('On-Device LLM (Summaries & Chat)'),
             const SizedBox(height: 8),
@@ -122,6 +143,69 @@ class _AiModelSettingsPageState extends State<AiModelSettingsPage>
   }
 
   // ── Download & Lifecycle Orchestration ─────────────────────────────────
+
+  Future<void> _syncWhisperStatus() async {
+    try {
+      final installed =
+          await _speechChannel.invokeMethod<bool>('isWhisperInstalled') ??
+          false;
+      if (!mounted) return;
+      setState(() => _whisperInstalled = installed);
+      await _flags.setWhisperSttEnabled(installed);
+    } catch (_) {
+      if (mounted) {
+        setState(() => _whisperInstalled = _flags.whisperSttEnabled);
+      }
+    }
+  }
+
+  void _startWhisperDownload() {
+    _showDownloadSheet(
+      modelName: 'Whisper Base Multilingual',
+      modelSize: '147 MB',
+      details:
+          'Downloads the Apple Core ML Whisper Base model. It recognizes Telugu, '
+          'English and Hindi locally and transcribes the complete recorded file.',
+      onConfirm: () async {
+        setState(() {
+          _whisperDownloading = true;
+          _whisperStatusText = 'Downloading and preparing Core ML model…';
+        });
+        try {
+          await _speechChannel.invokeMethod<bool>('downloadWhisperBase');
+          await _flags.setWhisperSttEnabled(true);
+          if (!mounted) return;
+          setState(() {
+            _whisperInstalled = true;
+            _whisperDownloading = false;
+            _whisperStatusText = '';
+          });
+          _showToast('Offline multilingual speech recognition is ready.');
+        } catch (error) {
+          if (!mounted) return;
+          setState(() {
+            _whisperDownloading = false;
+            _whisperStatusText = '';
+          });
+          _showToast('Speech model download failed: $error');
+        }
+      },
+    );
+  }
+
+  Future<void> _disableWhisper() async {
+    final confirmed = await _showDeleteDialog(
+      'Whisper Base Multilingual',
+      'This disables offline Whisper transcription. Apple Speech will be used instead.',
+    );
+    if (confirmed == true) {
+      await _speechChannel.invokeMethod<bool>('disableWhisper');
+      await _flags.setWhisperSttEnabled(false);
+      if (!mounted) return;
+      setState(() => _whisperInstalled = false);
+      _showToast('Offline Whisper transcription disabled.');
+    }
+  }
 
   void _startQwenDownload() {
     _showDownloadSheet(
@@ -272,12 +356,14 @@ class _AiModelSettingsPageState extends State<AiModelSettingsPage>
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF6B5CFF).withOpacity(0.15),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.cloud_download_rounded,
-                    color: Color(0xFF6B5CFF),
+                    color: Theme.of(context).colorScheme.primary,
                     size: 22,
                   ),
                 ),
@@ -342,7 +428,7 @@ class _AiModelSettingsPageState extends State<AiModelSettingsPage>
                       onConfirm();
                     },
                     style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF6B5CFF),
+                      backgroundColor: Theme.of(context).colorScheme.primary,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -634,8 +720,8 @@ class _ModelCard extends StatelessWidget {
               child: LinearProgressIndicator(
                 value: downloadProgress > 0 ? downloadProgress : null,
                 backgroundColor: Colors.white12,
-                valueColor: const AlwaysStoppedAnimation<Color>(
-                  Color(0xFF6B5CFF),
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  Theme.of(context).colorScheme.primary,
                 ),
                 minHeight: 6,
               ),
@@ -646,7 +732,7 @@ class _ModelCard extends StatelessWidget {
                 statusText,
                 style: GoogleFonts.inter(
                   fontSize: 11,
-                  color: const Color(0xFF6B5CFF),
+                  color: Theme.of(context).colorScheme.primary,
                 ),
               ),
             ],
@@ -665,7 +751,7 @@ class _ModelCard extends StatelessWidget {
                   style: GoogleFonts.inter(fontWeight: FontWeight.w600),
                 ),
                 style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF6B5CFF),
+                  backgroundColor: Theme.of(context).colorScheme.primary,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),

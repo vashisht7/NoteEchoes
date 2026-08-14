@@ -23,6 +23,7 @@ class FloatingGlassNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final accent = Theme.of(context).colorScheme.primary;
     return Container(
       margin: const EdgeInsets.only(bottom: 24),
       height: 64,
@@ -45,11 +46,6 @@ class FloatingGlassNavBar extends StatelessWidget {
                     color: Colors.black.withValues(alpha: 0.65),
                     blurRadius: 28,
                     offset: const Offset(0, 10),
-                  ),
-                  BoxShadow(
-                    color: AppColors.dropletRedSoft.withValues(alpha: 0.15),
-                    blurRadius: 18,
-                    offset: const Offset(0, 2),
                   ),
                 ],
               ),
@@ -91,21 +87,12 @@ class FloatingGlassNavBar extends StatelessWidget {
                       height: 50,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        gradient: const LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            Color(0xFFFF5277),
-                            AppColors.dropletRed,
-                            Color(0xFFBA002A),
-                          ],
-                        ),
+                        color: accent,
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.dropletRed.withValues(alpha: 0.65),
-                            blurRadius: 16,
-                            spreadRadius: 2,
-                            offset: const Offset(0, 4),
+                            color: accent.withValues(alpha: 0.28),
+                            blurRadius: 10,
+                            offset: const Offset(0, 3),
                           ),
                         ],
                       ),
@@ -169,11 +156,7 @@ class FloatingGlassNavBar extends StatelessWidget {
             color: AppColors.glassmorphicTint,
           ),
           child: Center(
-            child: Icon(
-              icon,
-              color: AppColors.primaryText,
-              size: 20,
-            ),
+            child: Icon(icon, color: AppColors.primaryText, size: 20),
           ),
         ),
       ),

@@ -17,6 +17,8 @@
 		A11000000000000000000003 /* MLXLLM in Frameworks */ = {isa = PBXBuildFile; productRef = A11000000000000000000006 /* MLXLLM */; };
 		A11000000000000000000004 /* MLXLMCommon in Frameworks */ = {isa = PBXBuildFile; productRef = A11000000000000000000007 /* MLXLMCommon */; };
 		A11000000000000000000008 /* PDFVisionExtractionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11000000000000000000009 /* PDFVisionExtractionService.swift */; };
+		A12000000000000000000001 /* OfflineSpeechService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A12000000000000000000002 /* OfflineSpeechService.swift */; };
+		A12000000000000000000003 /* WhisperKit in Frameworks */ = {isa = PBXBuildFile; productRef = A12000000000000000000005 /* WhisperKit */; };
 		78A318202AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage in Frameworks */ = {isa = PBXBuildFile; productRef = 78A3181F2AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage */; };
 		97C146FC1CF9000F007C117D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FA1CF9000F007C117D /* Main.storyboard */; };
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
@@ -63,6 +65,7 @@
 		7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		A11000000000000000000002 /* MLXTextGenerationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MLXTextGenerationService.swift; sourceTree = "<group>"; };
 		A11000000000000000000009 /* PDFVisionExtractionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFVisionExtractionService.swift; sourceTree = "<group>"; };
+		A12000000000000000000002 /* OfflineSpeechService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineSpeechService.swift; sourceTree = "<group>"; };
 		78E0A7A72DC9AD7400C4905E /* FlutterGeneratedPluginSwiftPackage */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = FlutterGeneratedPluginSwiftPackage; path = Flutter/ephemeral/Packages/FlutterGeneratedPluginSwiftPackage; sourceTree = "<group>"; };
 		7AFA3C8E1D35360C0083082E /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Release.xcconfig; path = Flutter/Release.xcconfig; sourceTree = "<group>"; };
 		855822F015F9E683CE818190 /* Pods-Runner.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.debug.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"; sourceTree = "<group>"; };
@@ -101,6 +104,7 @@
 			files = (
 				A11000000000000000000003 /* MLXLLM in Frameworks */,
 				A11000000000000000000004 /* MLXLMCommon in Frameworks */,
+				A12000000000000000000003 /* WhisperKit in Frameworks */,
 				78A318202AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage in Frameworks */,
 				C7816CA49A33485691C09D98 /* Pods_Runner.framework in Frameworks */,
 			);
@@ -182,6 +186,7 @@
 				7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */,
 				A11000000000000000000002 /* MLXTextGenerationService.swift */,
 				A11000000000000000000009 /* PDFVisionExtractionService.swift */,
+				A12000000000000000000002 /* OfflineSpeechService.swift */,
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
 			);
 			path = Runner;
@@ -240,6 +245,7 @@
 				78A3181F2AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage */,
 				A11000000000000000000006 /* MLXLLM */,
 				A11000000000000000000007 /* MLXLMCommon */,
+				A12000000000000000000005 /* WhisperKit */,
 			);
 			productName = Runner;
 			productReference = 97C146EE1CF9000F007C117D /* Runner.app */;
@@ -277,6 +283,7 @@
 			packageReferences = (
 				781AD8BC2B33823900A9FFBB /* XCLocalSwiftPackageReference "FlutterGeneratedPluginSwiftPackage" */,
 				A11000000000000000000005 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */,
+				A12000000000000000000004 /* XCRemoteSwiftPackageReference "argmax-oss-swift" */,
 			);
 			productRefGroup = 97C146EF1CF9000F007C117D /* Products */;
 			projectDirPath = "";
@@ -422,6 +429,7 @@
 				7884E8682EC3CC0700C636F2 /* SceneDelegate.swift in Sources */,
 				A11000000000000000000001 /* MLXTextGenerationService.swift in Sources */,
 				A11000000000000000000008 /* PDFVisionExtractionService.swift in Sources */,
+				A12000000000000000000001 /* OfflineSpeechService.swift in Sources */,
 				BBC47EA9C13714B26A97BDC7 /* PendingVoiceNoteStore.swift in Sources */,
 				B87DE432F07D241E9ACD1B94 /* SaveDictatedNoteIntent.swift in Sources */,
 				A1B2C3D4E5F6078900112233 /* NotechoesShortcuts.swift in Sources */,
@@ -786,6 +794,14 @@
 				minimumVersion = 2.31.3;
 			};
 		};
+		A12000000000000000000004 /* XCRemoteSwiftPackageReference "argmax-oss-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/argmaxinc/argmax-oss-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCLocalSwiftPackageReference section */
@@ -805,6 +821,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = A11000000000000000000005 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */;
 			productName = MLXLMCommon;
+		};
+		A12000000000000000000005 /* WhisperKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A12000000000000000000004 /* XCRemoteSwiftPackageReference "argmax-oss-swift" */;
+			productName = WhisperKit;
 		};
 		78A3181F2AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage */ = {
 			isa = XCSwiftPackageProductDependency;

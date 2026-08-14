@@ -21,6 +21,7 @@ dependencies:
   shared_preferences: ^2.5.5
   path_provider: ^2.1.6
   speech_to_text: ^7.4.0
+  record: ^7.1.1
 
   # ── AI infrastructure ─────────────────────────────────────────────────────
   # Drift: SQLite ORM for the AI job queue, transcript store, document chunks.

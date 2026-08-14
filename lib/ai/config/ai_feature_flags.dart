@@ -9,14 +9,17 @@ import 'package:shared_preferences/shared_preferences.dart';
 class _Keys {
   static const localLlmEnabled = 'ai_flag_local_llm_enabled';
   static const dolphinSttEnabled = 'ai_flag_dolphin_stt_enabled';
+  static const whisperSttEnabled = 'ai_flag_whisper_stt_enabled';
   static const noteAnalysisEnabled = 'ai_flag_note_analysis_enabled';
-  static const reminderExtractionEnabled = 'ai_flag_reminder_extraction_enabled';
+  static const reminderExtractionEnabled =
+      'ai_flag_reminder_extraction_enabled';
   static const pdfIngestionEnabled = 'ai_flag_pdf_ingestion_enabled';
   static const crossNoteSearchEnabled = 'ai_flag_cross_note_search_enabled';
   static const documentChatEnabled = 'ai_flag_document_chat_enabled';
   static const journalingMemoryEnabled = 'ai_flag_journaling_memory_enabled';
   static const appleIntegrationsEnabled = 'ai_flag_apple_integrations_enabled';
-  static const backgroundProcessingEnabled = 'ai_flag_background_processing_enabled';
+  static const backgroundProcessingEnabled =
+      'ai_flag_background_processing_enabled';
 }
 
 /// Global AI feature flags.
@@ -36,7 +39,10 @@ class AiFeatureFlags {
   }
 
   void _assertLoaded() {
-    assert(_loaded, 'AiFeatureFlags.load() must be called before reading flags.');
+    assert(
+      _loaded,
+      'AiFeatureFlags.load() must be called before reading flags.',
+    );
   }
 
   bool _get(String key) {
@@ -56,6 +62,9 @@ class AiFeatureFlags {
 
   /// Whether the Dolphin multilingual ASR is available and enabled.
   bool get dolphinSttEnabled => _get(_Keys.dolphinSttEnabled);
+
+  /// Whether the downloadable WhisperKit multilingual speech pack is ready.
+  bool get whisperSttEnabled => _get(_Keys.whisperSttEnabled);
 
   /// Whether AI note analysis (title, summary, tags via LLM) is active.
   bool get noteAnalysisEnabled => _get(_Keys.noteAnalysisEnabled);
@@ -79,19 +88,28 @@ class AiFeatureFlags {
   bool get appleIntegrationsEnabled => _get(_Keys.appleIntegrationsEnabled);
 
   /// Whether background AI processing (WorkManager / BGAppRefresh) is enabled.
-  bool get backgroundProcessingEnabled => _get(_Keys.backgroundProcessingEnabled);
+  bool get backgroundProcessingEnabled =>
+      _get(_Keys.backgroundProcessingEnabled);
 
   // ── Write accessors (infrastructure layer only) ───────────────
 
   Future<void> setLocalLlmEnabled(bool v) => _set(_Keys.localLlmEnabled, v);
   Future<void> setDolphinSttEnabled(bool v) => _set(_Keys.dolphinSttEnabled, v);
-  Future<void> setNoteAnalysisEnabled(bool v) => _set(_Keys.noteAnalysisEnabled, v);
-  Future<void> setReminderExtractionEnabled(bool v) => _set(_Keys.reminderExtractionEnabled, v);
-  Future<void> setPdfIngestionEnabled(bool v) => _set(_Keys.pdfIngestionEnabled, v);
-  Future<void> setCrossNoteSearchEnabled(bool v) => _set(_Keys.crossNoteSearchEnabled, v);
-  Future<void> setDocumentChatEnabled(bool v) => _set(_Keys.documentChatEnabled, v);
-  Future<void> setJournalingMemoryEnabled(bool v) => _set(_Keys.journalingMemoryEnabled, v);
-  Future<void> setAppleIntegrationsEnabled(bool v) => _set(_Keys.appleIntegrationsEnabled, v);
+  Future<void> setWhisperSttEnabled(bool v) => _set(_Keys.whisperSttEnabled, v);
+  Future<void> setNoteAnalysisEnabled(bool v) =>
+      _set(_Keys.noteAnalysisEnabled, v);
+  Future<void> setReminderExtractionEnabled(bool v) =>
+      _set(_Keys.reminderExtractionEnabled, v);
+  Future<void> setPdfIngestionEnabled(bool v) =>
+      _set(_Keys.pdfIngestionEnabled, v);
+  Future<void> setCrossNoteSearchEnabled(bool v) =>
+      _set(_Keys.crossNoteSearchEnabled, v);
+  Future<void> setDocumentChatEnabled(bool v) =>
+      _set(_Keys.documentChatEnabled, v);
+  Future<void> setJournalingMemoryEnabled(bool v) =>
+      _set(_Keys.journalingMemoryEnabled, v);
+  Future<void> setAppleIntegrationsEnabled(bool v) =>
+      _set(_Keys.appleIntegrationsEnabled, v);
   Future<void> setBackgroundProcessingEnabled(bool v) =>
       _set(_Keys.backgroundProcessingEnabled, v);
 
@@ -100,6 +118,7 @@ class AiFeatureFlags {
     await Future.wait([
       _set(_Keys.localLlmEnabled, false),
       _set(_Keys.dolphinSttEnabled, false),
+      _set(_Keys.whisperSttEnabled, false),
       _set(_Keys.noteAnalysisEnabled, false),
       _set(_Keys.reminderExtractionEnabled, false),
       _set(_Keys.pdfIngestionEnabled, false),

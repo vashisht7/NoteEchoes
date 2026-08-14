@@ -20,7 +20,9 @@ class KeepTextNoteCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isVoiceMemo = note.tags.contains('voice-memos') ||
+    final accent = Theme.of(context).colorScheme.primary;
+    final isVoiceMemo =
+        note.tags.contains('voice-memos') ||
         note.tags.contains('voice-memo') ||
         note.tags.contains('voice');
 
@@ -30,28 +32,20 @@ class KeepTextNoteCard extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
-          color: const Color(0xFF16161C),
-          borderRadius: BorderRadius.circular(16),
+          color: AppColors.elevation1,
+          borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: note.isPinned
-                ? AppColors.dropletRed.withValues(alpha: 0.6)
-                : (isVoiceMemo
-                    ? AppColors.nebulaCyan.withValues(alpha: 0.25)
-                    : const Color(0xFF282832)),
-            width: note.isPinned ? 1.5 : 1.1,
+                ? accent.withValues(alpha: 0.7)
+                : AppColors.glassBorder,
+            width: note.isPinned ? 1.4 : 1,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.45),
-              blurRadius: 14,
-              offset: const Offset(0, 5),
+              color: Colors.black.withValues(alpha: 0.22),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
             ),
-            if (note.isPinned)
-              BoxShadow(
-                color: AppColors.dropletRed.withValues(alpha: 0.15),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
           ],
         ),
         child: Padding(
@@ -73,9 +67,7 @@ class KeepTextNoteCard extends StatelessWidget {
                             ? Icons.mic_rounded
                             : Icons.access_time_rounded,
                         size: 12,
-                        color: isVoiceMemo
-                            ? AppColors.nebulaCyan
-                            : AppColors.secondaryText,
+                        color: isVoiceMemo ? accent : AppColors.secondaryText,
                       ),
                       const SizedBox(width: 5),
                       Text(
@@ -84,7 +76,7 @@ class KeepTextNoteCard extends StatelessWidget {
                           fontSize: 10.5,
                           fontWeight: FontWeight.w600,
                           color: isVoiceMemo
-                              ? AppColors.nebulaCyan.withValues(alpha: 0.9)
+                              ? accent.withValues(alpha: 0.9)
                               : AppColors.secondaryText,
                           letterSpacing: 0.2,
                         ),
@@ -96,26 +88,24 @@ class KeepTextNoteCard extends StatelessWidget {
                   if (note.isPinned)
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 2),
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
-                        color: AppColors.dropletRed.withValues(alpha: 0.2),
+                        color: accent.withValues(alpha: 0.14),
                         borderRadius: BorderRadius.circular(6),
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(
-                            Icons.push_pin_rounded,
-                            size: 11,
-                            color: AppColors.dropletRed,
-                          ),
-                          SizedBox(width: 3),
+                          Icon(Icons.push_pin_rounded, size: 11, color: accent),
+                          const SizedBox(width: 3),
                           Text(
                             "PIN",
                             style: TextStyle(
                               fontSize: 9,
                               fontWeight: FontWeight.w800,
-                              color: AppColors.dropletRed,
+                              color: accent,
                             ),
                           ),
                         ],
@@ -216,15 +206,17 @@ class KeepTextNoteCard extends StatelessWidget {
                         tag == 'voice-memos' || tag == 'voice-memo';
                     return Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 7, vertical: 2.5),
+                        horizontal: 7,
+                        vertical: 2.5,
+                      ),
                       decoration: BoxDecoration(
                         color: isVoiceTag
-                            ? AppColors.nebulaCyan.withValues(alpha: 0.15)
+                            ? accent.withValues(alpha: 0.10)
                             : AppColors.badgeTag,
                         borderRadius: BorderRadius.circular(6),
                         border: Border.all(
                           color: isVoiceTag
-                              ? AppColors.nebulaCyan.withValues(alpha: 0.3)
+                              ? accent.withValues(alpha: 0.24)
                               : Colors.transparent,
                         ),
                       ),
@@ -233,9 +225,7 @@ class KeepTextNoteCard extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w600,
-                          color: isVoiceTag
-                              ? AppColors.nebulaCyan
-                              : AppColors.primaryText,
+                          color: isVoiceTag ? accent : AppColors.primaryText,
                         ),
                       ),
                     );

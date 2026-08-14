@@ -1,14 +1,17 @@
 import 'dart:async';
-import 'dart:math';
+import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:record/record.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import '../models/note_model.dart';
 import '../services/ai_categorization_engine.dart';
 import '../services/note_service.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_preferences.dart';
 
 class SiriActionOverlay extends StatefulWidget {
   final VoidCallback? onDismiss;
@@ -21,12 +24,15 @@ class SiriActionOverlay extends StatefulWidget {
   });
 
   /// Static helper to trigger the Siri overlay modal from anywhere
-  static Future<NoteModel?> show(BuildContext context, {bool autoStart = true}) {
+  static Future<NoteModel?> show(
+    BuildContext context, {
+    bool autoStart = true,
+  }) {
     return showGeneralDialog<NoteModel>(
       context: context,
       barrierDismissible: true,
       barrierLabel: "SiriActionOverlay",
-      barrierColor: Colors.black.withValues(alpha: 0.20), // Translucent so phone content is clearly visible
+      barrierColor: Colors.black.withValues(alpha: 0.78),
       transitionDuration: const Duration(milliseconds: 250),
       pageBuilder: (context, anim1, anim2) {
         return SiriActionOverlay(
@@ -47,25 +53,26 @@ class SiriActionOverlay extends StatefulWidget {
   State<SiriActionOverlay> createState() => _SiriActionOverlayState();
 }
 
-class _SiriActionOverlayState extends State<SiriActionOverlay>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _auraController;
-
+class _SiriActionOverlayState extends State<SiriActionOverlay> {
   final stt.SpeechToText _speech = stt.SpeechToText();
+  final AudioRecorder _audioRecorder = AudioRecorder();
+  static const MethodChannel _offlineSpeechChannel = MethodChannel(
+    'noteechoes/offline_speech',
+  );
   bool _isSpeechAvailable = false;
   bool _isRecording = false;
   bool _isAnalyzing = false;
   bool _isRestartingListening = false;
-  
+
   String _accumulatedText = "";
   String _currentSessionText = "";
-  double _soundLevel = 0.5;
 
   int _recordingSeconds = 0;
   Timer? _durationTimer;
   Timer? _watchdogTimer;
   NoteAnalysisResult? _completedAnalysis;
   String _statusMessage = "";
+  String? _recordingPath;
 
   String get _spokenText {
     final combined = "$_accumulatedText $_currentSessionText".trim();
@@ -76,11 +83,6 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
   void initState() {
     super.initState();
 
-    _auraController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 3000),
-    )..repeat();
-
     _initSpeechAndStart();
   }
 
@@ -89,7 +91,9 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
       _isSpeechAvailable = await _speech.initialize(
         onStatus: (status) {
           debugPrint("SpeechToText Status: $status");
-          if (_isRecording && (status == 'done' || status == 'notListening') && mounted) {
+          if (_isRecording &&
+              (status == 'done' || status == 'notListening') &&
+              mounted) {
             _handleSessionEndAndRestart();
           }
         },
@@ -140,16 +144,10 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
             setState(() {
               _currentSessionText = result.recognizedWords;
               if (result.finalResult && _currentSessionText.trim().isNotEmpty) {
-                _accumulatedText = "$_accumulatedText $_currentSessionText".trim();
+                _accumulatedText = "$_accumulatedText $_currentSessionText"
+                    .trim();
                 _currentSessionText = "";
               }
-            });
-          }
-        },
-        onSoundLevelChange: (level) {
-          if (mounted) {
-            setState(() {
-              _soundLevel = (level.abs() / 10.0).clamp(0.2, 1.0);
             });
           }
         },
@@ -158,6 +156,7 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
           pauseFor: const Duration(hours: 2),
           partialResults: true,
           onDevice: false,
+          localeId: _appleLocaleId,
         ),
       );
     } catch (e) {
@@ -165,7 +164,42 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
     }
   }
 
-  void _startRecording() {
+  String? get _appleLocaleId =>
+      switch (AppPreferences.instance.speechLanguageCode) {
+        'te' => 'te-IN',
+        'hi' => 'hi-IN',
+        'en' => 'en-US',
+        _ => null,
+      };
+
+  Future<void> _startRecording() async {
+    if (_isRecording) return;
+    if (!await _audioRecorder.hasPermission()) {
+      if (mounted) {
+        setState(
+          () => _statusMessage =
+              'Microphone permission is required to record a note.',
+        );
+      }
+      return;
+    }
+
+    final tempDirectory = await getTemporaryDirectory();
+    _recordingPath =
+        '${tempDirectory.path}/noteechoes_${DateTime.now().microsecondsSinceEpoch}.m4a';
+    await _audioRecorder.start(
+      const RecordConfig(
+        encoder: AudioEncoder.aacLc,
+        bitRate: 64000,
+        sampleRate: 16000,
+        numChannels: 1,
+        autoGain: true,
+        echoCancel: true,
+        noiseSuppress: true,
+      ),
+      path: _recordingPath!,
+    );
+
     HapticFeedback.heavyImpact();
     setState(() {
       _isRecording = true;
@@ -184,40 +218,64 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
       }
     });
 
-    // 1-second Watchdog Timer: Guarantees continuous recording for hours
+    // Do not run two microphone engines at once. The previous implementation
+    // kept restarting Apple's live recognizer, which could drop words between
+    // sessions and could conflict with the durable audio recorder.
     _watchdogTimer?.cancel();
-    _watchdogTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_isRecording && _isSpeechAvailable && mounted) {
-        if (!_speech.isListening && !_isRestartingListening) {
-          debugPrint("Watchdog: Speech engine stopped while recording. Re-triggering listen...");
-          _handleSessionEndAndRestart();
-        }
-      }
-    });
-
-    if (_isSpeechAvailable) {
-      _restartListeningSession();
-    } else {
-      setState(() {
-        _statusMessage = "Microphone permission required for speech dictation.";
-      });
-    }
+    setState(
+      () => _statusMessage =
+          'Recording full audio • ${AppPreferences.instance.speechLanguageLabel}',
+    );
   }
 
-  void _stopRecordingAndSave() async {
+  Future<void> _stopRecordingAndSave() async {
     if (!_isRecording && !_isAnalyzing) return;
 
     HapticFeedback.mediumImpact();
     _durationTimer?.cancel();
     _watchdogTimer?.cancel();
+
+    // Set this first so the Speech callbacks cannot restart themselves while
+    // the full audio file is being finalized.
+    setState(() {
+      _isRecording = false;
+      _isAnalyzing = true;
+      _statusMessage = 'Finalizing the complete recording…';
+    });
+
+    final recordedPath = await _audioRecorder.stop() ?? _recordingPath;
     if (_isSpeechAvailable) {
       await _speech.stop();
     }
 
-    final cleanText = _spokenText.trim();
+    var cleanText = _spokenText.trim();
+
+    // The recorded file is the source of truth. Unlike a live recognition
+    // session it is not truncated when iOS ends or restarts SFSpeechRecognizer.
+    if (recordedPath != null && await File(recordedPath).exists()) {
+      try {
+        final completeTranscript = await _offlineSpeechChannel
+            .invokeMethod<String>('transcribeAudioFile', {
+              'path': recordedPath,
+              'language': AppPreferences.instance.speechLanguageCode,
+            });
+        if (completeTranscript != null &&
+            completeTranscript.trim().isNotEmpty) {
+          cleanText = completeTranscript.trim();
+        }
+      } catch (error) {
+        debugPrint(
+          'Full-file transcription failed; using live preview: $error',
+        );
+      } finally {
+        try {
+          await File(recordedPath).delete();
+        } catch (_) {}
+      }
+    }
+
     if (cleanText.isEmpty) {
       setState(() {
-        _isRecording = false;
         _isAnalyzing = false;
         _statusMessage = "No speech detected.";
       });
@@ -227,10 +285,7 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
       return;
     }
 
-    setState(() {
-      _isRecording = false;
-      _isAnalyzing = true;
-    });
+    setState(() => _statusMessage = 'Saving note…');
 
     // Deep semantic categorization on user's real spoken words
     final analysis = AiCategorizationEngine().analyzeNote(cleanText);
@@ -260,10 +315,10 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
   void dispose() {
     _durationTimer?.cancel();
     _watchdogTimer?.cancel();
-    _auraController.dispose();
     if (_isSpeechAvailable) {
       _speech.stop();
     }
+    _audioRecorder.dispose();
     super.dispose();
   }
 
@@ -280,28 +335,14 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
         backgroundColor: Colors.transparent,
         body: Stack(
           children: [
-            // 1. Apple Intelligence Screen Perimeter Glowing Edge Aura (NO center ripples)
-            Positioned.fill(
-              child: IgnorePointer(
-                child: AnimatedBuilder(
-                  animation: _auraController,
-                  builder: (context, child) {
-                    return CustomPaint(
-                      painter: SiriScreenEdgeAuraPainter(
-                        phase: _auraController.value,
-                        amplitude: _soundLevel,
-                        isRecording: _isRecording,
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ),
-
-            // 2. Center Content Canvas (Transparent pass-through so underlying screen is visible)
+            // Calm, legible recording surface. The previous neon perimeter
+            // competed with the note content and made the app feel synthetic.
             SafeArea(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 16,
+                ),
                 child: Column(
                   children: [
                     // Top Status Pill
@@ -331,6 +372,7 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
   // TOP STATUS BADGE (Apple Intelligence Siri Mode)
   // ==========================================================
   Widget _buildTopStatusPill() {
+    final accent = Theme.of(context).colorScheme.primary;
     return ClipRRect(
       borderRadius: BorderRadius.circular(24),
       child: BackdropFilter(
@@ -340,7 +382,9 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
           decoration: BoxDecoration(
             color: Colors.black.withValues(alpha: 0.55),
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: AppColors.glassBorderBright.withValues(alpha: 0.6)),
+            border: Border.all(
+              color: AppColors.glassBorderBright.withValues(alpha: 0.6),
+            ),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.4),
@@ -357,15 +401,14 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: _isRecording
-                      ? const Color(0xFFFF2D55)
+                      ? accent
                       : _isAnalyzing
-                          ? const Color(0xFF00F2FE)
-                          : AppColors.accentGreen,
+                      ? accent
+                      : AppColors.accentGreen,
                   boxShadow: [
                     BoxShadow(
-                      color: (_isRecording ? const Color(0xFFFF2D55) : const Color(0xFF00F2FE))
-                          .withValues(alpha: 0.8),
-                      blurRadius: 8,
+                      color: accent.withValues(alpha: 0.28),
+                      blurRadius: 5,
                     ),
                   ],
                 ),
@@ -375,8 +418,8 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
                 _isRecording
                     ? "Recording Voice Note (${_recordingSeconds}s)..."
                     : _isAnalyzing
-                        ? "AI Categorizing..."
-                        : "Note Saved!",
+                    ? "Transcribing complete recording…"
+                    : "Note Saved!",
                 style: GoogleFonts.inter(
                   fontSize: 12.5,
                   fontWeight: FontWeight.w600,
@@ -394,6 +437,7 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
   // FLOATING TRANSCRIPTION CARD (Transparent Frosted Glass)
   // ==========================================================
   Widget _buildFloatingTranscriptionCard() {
+    final accent = Theme.of(context).colorScheme.primary;
     return ClipRRect(
       borderRadius: BorderRadius.circular(24),
       child: BackdropFilter(
@@ -404,7 +448,9 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
           decoration: BoxDecoration(
             color: Colors.black.withValues(alpha: 0.55),
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: AppColors.glassBorderBright.withValues(alpha: 0.5)),
+            border: Border.all(
+              color: AppColors.glassBorderBright.withValues(alpha: 0.5),
+            ),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.4),
@@ -447,16 +493,21 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
                       alignment: WrapAlignment.center,
                       children: _completedAnalysis!.categories.map((tag) {
                         return Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 5,
+                          ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF00F2FE).withValues(alpha: 0.20),
+                            color: accent.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: const Color(0xFF00F2FE).withValues(alpha: 0.6)),
+                            border: Border.all(
+                              color: accent.withValues(alpha: 0.28),
+                            ),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.auto_awesome, size: 11, color: Color(0xFF00F2FE)),
+                              Icon(Icons.tag_rounded, size: 11, color: accent),
                               const SizedBox(width: 4),
                               Text(
                                 "#$tag",
@@ -477,21 +528,15 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
                   _statusMessage.isNotEmpty
                       ? _statusMessage
                       : _spokenText.isNotEmpty
-                          ? _spokenText
-                          : "Listening to your voice...\nSpeak your note now.",
+                      ? _spokenText
+                      : "Listening to your voice...\nSpeak your note now.",
                   textAlign: TextAlign.center,
                   style: GoogleFonts.outfit(
                     fontSize: _spokenText.isNotEmpty ? 20 : 15,
                     fontWeight: FontWeight.w600,
-                    color: _spokenText.isNotEmpty ? Colors.white : AppColors.secondaryText,
-                    shadows: _spokenText.isNotEmpty
-                        ? [
-                            Shadow(
-                              color: Colors.white.withValues(alpha: 0.6),
-                              blurRadius: 12,
-                            ),
-                          ]
-                        : null,
+                    color: _spokenText.isNotEmpty
+                        ? Colors.white
+                        : AppColors.secondaryText,
                   ),
                 ),
         ),
@@ -503,6 +548,7 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
   // BOTTOM ACTION BUTTON — TOGGLE: TAP TO START / TAP TO STOP
   // ==========================================================
   Widget _buildBottomActionControl() {
+    final accent = Theme.of(context).colorScheme.primary;
     return GestureDetector(
       onTap: () {
         if (_isRecording) {
@@ -514,7 +560,7 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
         decoration: BoxDecoration(
-          color: _isRecording ? AppColors.dropletRed : AppColors.elevation2.withValues(alpha: 0.85),
+          color: _isRecording ? accent : AppColors.elevation2,
           borderRadius: BorderRadius.circular(32),
           border: Border.all(
             color: _isRecording ? Colors.white : AppColors.glassBorderBright,
@@ -522,9 +568,8 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
           ),
           boxShadow: [
             BoxShadow(
-              color: (_isRecording ? AppColors.dropletRed : Colors.black).withValues(alpha: 0.5),
-              blurRadius: 16,
-              spreadRadius: 1,
+              color: Colors.black.withValues(alpha: 0.35),
+              blurRadius: 10,
             ),
           ],
         ),
@@ -549,77 +594,5 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
         ),
       ),
     );
-  }
-}
-
-// ==========================================================
-// PAINTER: APPLE INTELLIGENCE PERIMETER SCREEN EDGE GLOW (SIRI AURA)
-// ==========================================================
-class SiriScreenEdgeAuraPainter extends CustomPainter {
-  final double phase;
-  final double amplitude;
-  final bool isRecording;
-
-  SiriScreenEdgeAuraPainter({
-    required this.phase,
-    required this.amplitude,
-    required this.isRecording,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (!isRecording) return;
-
-    final rect = Offset.zero & size;
-    final rrect = RRect.fromRectAndRadius(rect.deflate(2), const Radius.circular(38));
-
-    // Outer screen edge glow path
-    final glowPaint = Paint()
-      ..shader = SweepGradient(
-        center: Alignment.center,
-        startAngle: 0.0,
-        endAngle: 2 * pi,
-        transform: GradientRotation(phase * 2 * pi),
-        colors: [
-          const Color(0xFFFF0844),
-          const Color(0xFF7D2AE8),
-          const Color(0xFF00F2FE),
-          const Color(0xFFFF2D55),
-          const Color(0xFFFF0844),
-        ],
-        stops: const [0.0, 0.28, 0.55, 0.82, 1.0],
-      ).createShader(rect)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 6.0 + (amplitude * 5.0)
-      ..maskFilter = MaskFilter.blur(BlurStyle.normal, 10.0 + (amplitude * 6.0));
-
-    canvas.drawRRect(rrect, glowPaint);
-
-    // Inner sharp edge rim
-    final sharpPaint = Paint()
-      ..shader = SweepGradient(
-        center: Alignment.center,
-        startAngle: 0.0,
-        endAngle: 2 * pi,
-        transform: GradientRotation(phase * 2 * pi),
-        colors: const [
-          Color(0xFFFF0844),
-          Color(0xFF7D2AE8),
-          Color(0xFF00F2FE),
-          Color(0xFFFF2D55),
-          Color(0xFFFF0844),
-        ],
-      ).createShader(rect)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.4;
-
-    canvas.drawRRect(rrect, sharpPaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant SiriScreenEdgeAuraPainter oldDelegate) {
-    return oldDelegate.phase != phase ||
-        oldDelegate.amplitude != amplitude ||
-        oldDelegate.isRecording != isRecording;
   }
 }

@@ -79,10 +79,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 ),
                 content: Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.auto_awesome,
                       size: 16,
-                      color: Color(0xFF00F2FE),
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                     const SizedBox(width: 8),
                     Expanded(
@@ -757,7 +757,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 _buildQuickStartButton(
                   icon: Icons.bolt_rounded,
                   label: "Action Button Siri Note",
-                  color: const Color(0xFF7D2AE8),
+                  color: Theme.of(context).colorScheme.primary,
                   onTap: _openSiriActionOverlay,
                 ),
               ],

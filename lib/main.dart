@@ -6,6 +6,7 @@ import 'services/note_service.dart';
 import 'ai/config/ai_feature_flags.dart';
 import 'ai/config/ai_runtime_config.dart';
 import 'theme/app_theme.dart';
+import 'theme/app_preferences.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,6 +26,7 @@ Future<void> main() async {
   // Step 2: AI flags
   await AiFeatureFlags.instance.load();
   await AiRuntimeConfig.instance.detect();
+  await AppPreferences.instance.load();
 
   // NOTE: ActionButtonNoteIngestionService.initialize() is intentionally
   // NOT called here. MethodChannels require a live FlutterViewController
@@ -40,11 +42,14 @@ class NoteEchoesApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'notechoes',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.darkTheme,
-      home: const HomeScreen(),
+    return ListenableBuilder(
+      listenable: AppPreferences.instance,
+      builder: (context, _) => MaterialApp(
+        title: 'NoteEchoes',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.darkTheme(AppPreferences.instance.accentColor),
+        home: const HomeScreen(),
+      ),
     );
   }
 }

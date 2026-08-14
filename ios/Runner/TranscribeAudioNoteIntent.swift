@@ -74,8 +74,14 @@ struct TranscribeAudioNoteIntent: AppIntent {
 
         defer { try? FileManager.default.removeItem(at: localTempURL) }
 
-        // Perform chunked speech recognition supporting up to 1-hour audio
-        let transcribedText = await transcribeFullAudio(at: localTempURL)
+        // Use the downloaded multilingual Whisper pack when available. The
+        // Apple Speech chunked path remains the zero-download fallback.
+        let selectedLanguage =
+            UserDefaults.standard.string(forKey: "flutter.speech_language_code") ?? "en"
+        let transcribedText = try? await OfflineSpeechService.shared.transcribeAudio(
+            at: localTempURL,
+            language: selectedLanguage
+        )
 
         let finalNoteText: String
         if let text = transcribedText?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty {

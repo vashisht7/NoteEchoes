@@ -3,8 +3,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
 
 class AppTheme {
-  static ThemeData get darkTheme {
-    final baseTextTheme = GoogleFonts.interTextTheme(ThemeData.dark().textTheme);
+  static ThemeData darkTheme(Color accent) {
+    final baseTextTheme = GoogleFonts.interTextTheme(
+      ThemeData.dark().textTheme,
+    );
 
     return ThemeData(
       useMaterial3: true,
@@ -12,15 +14,15 @@ class AppTheme {
       scaffoldBackgroundColor: AppColors.deepMatteBlack,
       canvasColor: AppColors.deepMatteBlack,
       cardColor: AppColors.elevation1,
-      primaryColor: AppColors.dropletRed,
-      colorScheme: const ColorScheme.dark(
-        primary: AppColors.dropletRed,
+      primaryColor: accent,
+      colorScheme: ColorScheme.dark(
+        primary: accent,
         onPrimary: Colors.white,
         surface: AppColors.elevation1,
         onSurface: AppColors.primaryText,
-        secondary: AppColors.nebulaCyan,
-        onSecondary: Colors.black,
-        tertiary: AppColors.nebulaViolet,
+        secondary: accent,
+        onSecondary: Colors.white,
+        tertiary: accent,
         surfaceContainerHighest: AppColors.elevation2,
         outline: AppColors.glassBorder,
       ),
@@ -67,17 +69,14 @@ class AppTheme {
           letterSpacing: 0.2,
         ),
       ),
-      iconTheme: const IconThemeData(
-        color: AppColors.primaryText,
-        size: 22,
-      ),
+      iconTheme: const IconThemeData(color: AppColors.primaryText, size: 22),
       dividerTheme: const DividerThemeData(
         color: AppColors.glassBorder,
         thickness: 1,
         space: 1,
       ),
       appBarTheme: const AppBarTheme(
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppColors.deepMatteBlack,
         elevation: 0,
         scrolledUnderElevation: 0,
         titleTextStyle: TextStyle(
@@ -86,28 +85,48 @@ class AppTheme {
           fontWeight: FontWeight.bold,
         ),
       ),
+      cardTheme: CardThemeData(
+        color: AppColors.elevation1,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: const BorderSide(color: AppColors.glassBorder),
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: AppColors.elevation1,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.glassBorder),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: accent),
+        ),
+      ),
     );
   }
 
   // Voice Mode Lyric Styles matching design.md
   static TextStyle get activeLyricStyle => GoogleFonts.outfit(
-        fontSize: 28,
-        fontWeight: FontWeight.w800,
-        height: 1.3,
-        letterSpacing: -0.5,
-        color: AppColors.highlightedLyric,
-        shadows: [
-          Shadow(
-            color: AppColors.highlightedLyric.withValues(alpha: 0.6),
-            blurRadius: 16,
-          ),
-        ],
-      );
+    fontSize: 28,
+    fontWeight: FontWeight.w800,
+    height: 1.3,
+    letterSpacing: -0.5,
+    color: AppColors.highlightedLyric,
+    shadows: [
+      Shadow(
+        color: AppColors.highlightedLyric.withValues(alpha: 0.6),
+        blurRadius: 16,
+      ),
+    ],
+  );
 
   static TextStyle get inactiveLyricStyle => GoogleFonts.outfit(
-        fontSize: 22,
-        fontWeight: FontWeight.w500,
-        height: 1.3,
-        color: AppColors.dimmedLyric,
-      );
+    fontSize: 22,
+    fontWeight: FontWeight.w500,
+    height: 1.3,
+    color: AppColors.dimmedLyric,
+  );
 }
