@@ -8,6 +8,8 @@ import '../services/note_service.dart';
 import '../services/voice_assistant_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/voice_visualizer_painter.dart';
+import '../ai/infrastructure/model_availability_service.dart';
+import '../ai/presentation/model_feature_gate.dart';
 
 class VoiceAssistantScreen extends StatefulWidget {
   final VoiceState currentState;
@@ -34,6 +36,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
   int _currentInsideOrbIndex = 0;
   Timer? _orbScanTimer;
   bool _isCopied = false;
+  bool _didCheckAudio = false;
 
   // Thoughts revolving loop dynamically generated from real user notes
   List<String> get _thoughtSuggestions {
@@ -62,6 +65,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
   }
 
   late final FixedExtentScrollController _wheelScrollController;
+  final ScrollController _lyricsScrollController = ScrollController();
 
   @override
   void initState() {
@@ -75,7 +79,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2400),
-    )..repeat();
+    );
 
     _loadCandidateNodes();
 
@@ -84,6 +88,17 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
 
     if (_state == VoiceState.thinking) {
       _startInsideOrbScanning();
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.of(context).disableAnimations) {
+      _animationController.stop();
+      _animationController.value = 0.35;
+    } else if (!_animationController.isAnimating) {
+      _animationController.repeat();
     }
   }
 
@@ -104,8 +119,8 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
       final mappedState = serviceState == VoiceAssistantState.listening
           ? VoiceState.listening
           : serviceState == VoiceAssistantState.thinking
-              ? VoiceState.thinking
-              : VoiceState.speaking;
+          ? VoiceState.thinking
+          : VoiceState.speaking;
 
       if (_state != mappedState) {
         setState(() {
@@ -117,24 +132,89 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
         } else {
           _orbScanTimer?.cancel();
         }
+        if (_state == VoiceState.speaking && !_didCheckAudio) {
+          _didCheckAudio = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) => _checkAudio());
+        }
       } else {
         setState(() {});
       }
+      if (mappedState == VoiceState.speaking) {
+        WidgetsBinding.instance.addPostFrameCallback(
+          (_) => _scrollToActiveLyric(),
+        );
+      }
     }
+  }
+
+  void _scrollToActiveLyric() {
+    if (!_lyricsScrollController.hasClients) return;
+    final target = (_voiceService.activeLyricIndex * 86.0).clamp(
+      0.0,
+      _lyricsScrollController.position.maxScrollExtent,
+    );
+    _lyricsScrollController.animateTo(
+      target,
+      duration: MediaQuery.of(context).disableAnimations
+          ? Duration.zero
+          : const Duration(milliseconds: 320),
+      curve: Curves.easeOutCubic,
+    );
   }
 
   // Inside the Orb note scanner
   void _startInsideOrbScanning() {
     _orbScanTimer?.cancel();
     _currentInsideOrbIndex = 0;
+    if (MediaQuery.of(context).disableAnimations) return;
 
     _orbScanTimer = Timer.periodic(const Duration(milliseconds: 900), (timer) {
-      if (_state == VoiceState.thinking && mounted && _candidateNodes.isNotEmpty) {
+      if (_state == VoiceState.thinking &&
+          mounted &&
+          _candidateNodes.isNotEmpty) {
         setState(() {
-          _currentInsideOrbIndex = (_currentInsideOrbIndex + 1) % _candidateNodes.length;
+          _currentInsideOrbIndex =
+              (_currentInsideOrbIndex + 1) % _candidateNodes.length;
         });
       }
     });
+  }
+
+  Future<void> _checkAudio({bool alwaysShow = false}) async {
+    final status = await _voiceService.audioOutputStatus();
+    if (!mounted) return;
+    final volume = (status['outputVolume'] as num?)?.toDouble() ?? 1;
+    if (!alwaysShow &&
+        volume > 0.02 &&
+        _voiceService.audioOutputError == null) {
+      return;
+    }
+    final route = status['route'] as String? ?? 'iPhone speaker';
+    final voice = status['voice'] as String? ?? 'System voice';
+    final voiceQuality = status['voiceQuality'] as String? ?? 'Standard';
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppColors.elevation2,
+        title: const Text('Can you hear NoteEchoes?'),
+        content: Text(
+          '${volume <= 0.02 ? 'Your media volume is currently at zero. Raise it with the iPhone volume buttons, then test the voice.' : 'Audio is being sent to $route. If you cannot hear it, check the media volume or disconnect Bluetooth.'}\n\n'
+          'Voice: $voice ($voiceQuality).'
+          '${voiceQuality == 'Standard' ? '\n\nFor a more human voice, download an Enhanced or Premium voice in iPhone Settings → Accessibility → Read & Speak or Spoken Content → Voices. iOS stores that voice, so it does not increase the NoteEchoes app size.' : ''}',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Close'),
+          ),
+          FilledButton.icon(
+            onPressed: () => _voiceService.testSpeechOutput(),
+            icon: const Icon(Icons.volume_up_rounded),
+            label: const Text('Test voice'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _copySpokenTranscript() {
@@ -185,16 +265,18 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
   @override
   void dispose() {
     _orbScanTimer?.cancel();
+    _voiceService.removeListener(_onServiceUpdate);
+    _voiceService.stopVoiceSession();
     _animationController.dispose();
     _wheelScrollController.dispose();
-    _voiceService.removeListener(_onServiceUpdate);
+    _lyricsScrollController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0A0C), // Pure Matte Black Canvas
+      backgroundColor: AppColors.deepMatteBlack,
       body: SafeArea(
         child: Stack(
           children: [
@@ -209,6 +291,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
                         animationValue: _animationController.value,
                         state: _state,
                         amplitude: _voiceService.micAmplitude,
+                        accent: Theme.of(context).colorScheme.primary,
                       ),
                     );
                   },
@@ -226,11 +309,31 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
 
                 // Full-Screen Surface (Listening wheel, Thinking overlay, or Gemini Live Karaoke Highlight)
                 Expanded(
-                  child: _state == VoiceState.listening
-                      ? _buildListeningScreen()
-                      : _state == VoiceState.thinking
+                  child: AnimatedSwitcher(
+                    duration: MediaQuery.of(context).disableAnimations
+                        ? Duration.zero
+                        : const Duration(milliseconds: 420),
+                    switchInCurve: Curves.easeOutCubic,
+                    switchOutCurve: Curves.easeInCubic,
+                    transitionBuilder: (child, animation) => FadeTransition(
+                      opacity: animation,
+                      child: SlideTransition(
+                        position: Tween<Offset>(
+                          begin: const Offset(0, 0.018),
+                          end: Offset.zero,
+                        ).animate(animation),
+                        child: child,
+                      ),
+                    ),
+                    child: KeyedSubtree(
+                      key: ValueKey(_state),
+                      child: _state == VoiceState.listening
+                          ? _buildListeningScreen()
+                          : _state == VoiceState.thinking
                           ? _buildThinkingOverlay()
                           : _buildGeminiLiveKaraokeScreen(),
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -244,132 +347,96 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
   // TOP MINIMAL HEADER BAR (Close + [ 📋 Copy ] + [ 💾 Save ])
   // ==========================================================
   Widget _buildMinimalHeader() {
+    final accent = Theme.of(context).colorScheme.primary;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       child: Row(
         children: [
-          // Close button
           IconButton(
-            icon: const Icon(Icons.close_rounded, color: Colors.white, size: 24),
+            tooltip: 'Close conversation',
+            icon: const Icon(
+              Icons.close_rounded,
+              color: Colors.white,
+              size: 24,
+            ),
             onPressed: () {
               _voiceService.stopVoiceSession();
               Navigator.of(context).pop();
             },
           ),
-
           const SizedBox(width: 4),
-
-          // Live State Indicator Badge
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              color: AppColors.elevation1,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.glassBorder),
-            ),
-            child: Row(
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Container(
-                  width: 7,
-                  height: 7,
-                  decoration: BoxDecoration(
-                    color: _state == VoiceState.listening
-                        ? const Color(0xFFFF2D55)
-                        : _state == VoiceState.thinking
-                            ? const Color(0xFF00F2FE)
-                            : AppColors.accentGreen,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: (_state == VoiceState.listening
-                                ? const Color(0xFFFF2D55)
-                                : _state == VoiceState.thinking
-                                    ? const Color(0xFF00F2FE)
-                                    : AppColors.accentGreen)
-                            .withValues(alpha: 0.8),
-                        blurRadius: 6,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 6),
                 Text(
-                  _state == VoiceState.listening
-                      ? "Listening..."
-                      : _state == VoiceState.thinking
-                          ? "Scanning memory..."
-                          : "Gemini Live",
-                  style: GoogleFonts.inter(
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w600,
+                  'Conversation',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.outfit(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
                     color: Colors.white,
                   ),
+                ),
+                Row(
+                  children: [
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: _state == VoiceState.speaking
+                            ? AppColors.accentGreen
+                            : accent,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        _state == VoiceState.listening
+                            ? 'Listening'
+                            : _state == VoiceState.thinking
+                            ? 'Gathering context'
+                            : 'Responding',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          color: AppColors.secondaryText,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
-
-          const Spacer(),
-
-          // Sticky [ 💾 Save ] & [ 📋 Copy ] in Speaking State
-          if (_state == VoiceState.speaking) ...[
-            GestureDetector(
-              onTap: _saveAiResponseAsNote,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
-                margin: const EdgeInsets.only(right: 6),
-                decoration: BoxDecoration(
-                  color: AppColors.elevation2,
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: AppColors.glassBorderBright),
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.bookmark_add_outlined, size: 13, color: AppColors.accentBlue),
-                    SizedBox(width: 4),
-                    Text("Save", style: TextStyle(fontSize: 11.5, color: Colors.white, fontWeight: FontWeight.w600)),
-                  ],
+          if (_state == VoiceState.speaking)
+            IconButton(
+              tooltip: 'Save response as a note',
+              onPressed: _saveAiResponseAsNote,
+              icon: const Icon(
+                Icons.bookmark_add_outlined,
+                color: AppColors.accentBlue,
+                size: 21,
+              ),
+            ),
+          if (_state == VoiceState.speaking)
+            IconButton(
+              tooltip: _isCopied ? 'Copied' : 'Copy response',
+              onPressed: _copySpokenTranscript,
+              icon: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 180),
+                child: Icon(
+                  _isCopied ? Icons.check_rounded : Icons.copy_rounded,
+                  key: ValueKey(_isCopied),
+                  color: _isCopied ? AppColors.accentGreen : Colors.white,
+                  size: 20,
                 ),
               ),
             ),
-
-            GestureDetector(
-              onTap: _copySpokenTranscript,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 250),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: _isCopied ? AppColors.accentGreen : AppColors.elevation2,
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(
-                    color: _isCopied ? AppColors.accentGreen : AppColors.glassBorderBright,
-                    width: 1.0,
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      _isCopied ? Icons.check_rounded : Icons.copy_rounded,
-                      size: 13,
-                      color: _isCopied ? Colors.black : Colors.white,
-                    ),
-                    const SizedBox(width: 5),
-                    Text(
-                      _isCopied ? "Copied!" : "Copy",
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w700,
-                        color: _isCopied ? Colors.black : Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
         ],
       ),
     );
@@ -383,13 +450,38 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
       children: [
         // Center area has the water droplet ripple (no top text!)
         Expanded(
-          child: Center(
-            child: GestureDetector(
-              onTap: () => _voiceService.transitionToThinkingState(),
-              child: Container(
-                color: Colors.transparent,
-                width: double.infinity,
-                height: double.infinity,
+          child: GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onTap: () => _voiceService.transitionToThinkingState(),
+            child: Align(
+              alignment: const Alignment(0, 0.42),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Speak naturally',
+                      style: GoogleFonts.outfit(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _voiceService.currentActiveUserSentence,
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        height: 1.4,
+                        color: AppColors.secondaryText,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -402,8 +494,28 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (!ModelAvailabilityService.instance.qwen.isReady) ...[
+                Semantics(
+                  button: true,
+                  label:
+                      'Basic keyword mode. Download the local AI model for deeper conversational answers.',
+                  child: TextButton.icon(
+                    onPressed: () => requireQwenModel(
+                      context,
+                      featureName: 'deeper conversational answers',
+                      basicAlternative:
+                          'Basic keyword matching remains available without the model.',
+                    ),
+                    icon: const Icon(Icons.info_outline_rounded, size: 15),
+                    label: const Text(
+                      'Basic mode • Download AI for deeper answers',
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 4),
+              ],
               Text(
-                "💭 Revolve thoughts to ask or speak naturally:",
+                "Try asking about your notes",
                 style: GoogleFonts.inter(
                   fontSize: 11.5,
                   fontWeight: FontWeight.w500,
@@ -421,9 +533,6 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
                   perspective: 0.004,
                   diameterRatio: 1.4,
                   physics: const FixedExtentScrollPhysics(),
-                  onSelectedItemChanged: (index) {
-                    HapticFeedback.selectionClick();
-                  },
                   childDelegate: ListWheelChildLoopingListDelegate(
                     children: _thoughtSuggestions.map((thought) {
                       return GestureDetector(
@@ -436,7 +545,9 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
                           decoration: BoxDecoration(
                             color: AppColors.elevation1.withValues(alpha: 0.9),
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: AppColors.glassBorderBright),
+                            border: Border.all(
+                              color: AppColors.glassBorderBright,
+                            ),
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.black.withValues(alpha: 0.4),
@@ -447,7 +558,11 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Text("💭", style: TextStyle(fontSize: 12)),
+                              Icon(
+                                Icons.arrow_upward_rounded,
+                                size: 13,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
                               const SizedBox(width: 8),
                               Flexible(
                                 child: Text(
@@ -483,149 +598,92 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
     final notes = NoteService().allNotes;
     if (notes.isEmpty) return const SizedBox.shrink();
     final activeNote = notes[_currentInsideOrbIndex % notes.length];
-    final hasPdf = activeNote.mediaAssets.any((m) => m.type == MediaAssetType.pdf);
+    final hasPdf = activeNote.mediaAssets.any(
+      (m) => m.type == MediaAssetType.pdf,
+    );
+    final accent = Theme.of(context).colorScheme.primary;
 
-    return Center(
-      child: Container(
-        width: 190,
-        height: 190,
-        decoration: const BoxDecoration(
-          shape: BoxShape.circle,
+    return Align(
+      alignment: const Alignment(0, 0.02),
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 420),
+        transitionBuilder: (child, animation) => FadeTransition(
+          opacity: animation,
+          child: SlideTransition(
+            position:
+                Tween<Offset>(
+                  begin: const Offset(0, -0.08),
+                  end: Offset.zero,
+                ).animate(
+                  CurvedAnimation(parent: animation, curve: Curves.easeOut),
+                ),
+            child: child,
+          ),
         ),
-        child: ClipOval(
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 450),
-            transitionBuilder: (child, animation) {
-              return FadeTransition(
-                opacity: animation,
-                child: ScaleTransition(
-                  scale: Tween<double>(begin: 0.88, end: 1.0).animate(
-                    CurvedAnimation(parent: animation, curve: Curves.easeOutBack),
-                  ),
-                  child: child,
-                ),
-              );
-            },
-            child: Container(
-              key: ValueKey("inside_orb_${activeNote.noteId}"),
-              width: 175,
-              height: 175,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: activeNote.contentType == NoteContentType.richMedia
-                      ? [
-                          const Color(0xFF1E1030),
-                          const Color(0xFF141418),
-                          const Color(0xFF0F172A),
-                        ]
-                      : [
-                          const Color(0xFF1A1A24),
-                          const Color(0xFF121218),
-                          const Color(0xFF0A0A0C),
-                        ],
-                ),
-                border: Border.all(
-                  color: const Color(0xFF00F2FE).withValues(alpha: 0.6),
-                  width: 1.2,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF00F2FE).withValues(alpha: 0.25),
-                    blurRadius: 14,
-                  ),
-                ],
-              ),
-              child: Column(
+        child: Container(
+          key: ValueKey("memory_${activeNote.noteId}"),
+          width: 250,
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 15),
+          decoration: BoxDecoration(
+            color: AppColors.elevation1.withValues(alpha: 0.96),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Mini Artwork / Badge header
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(5),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF00F2FE).withValues(alpha: 0.2),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          activeNote.contentType == NoteContentType.richMedia
-                              ? Icons.auto_awesome_mosaic_rounded
-                              : activeNote.checklist.isNotEmpty
-                                  ? Icons.checklist_rounded
-                                  : Icons.description_rounded,
-                          size: 16,
-                          color: const Color(0xFF00F2FE),
-                        ),
-                      ),
-                      if (hasPdf) ...[
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: AppColors.badgePdf,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: const Text(
-                            "PDF",
-                            style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.white),
-                          ),
-                        ),
-                      ],
-                    ],
+                  Icon(
+                    activeNote.contentType == NoteContentType.richMedia
+                        ? Icons.auto_awesome_mosaic_rounded
+                        : activeNote.checklist.isNotEmpty
+                        ? Icons.checklist_rounded
+                        : Icons.description_outlined,
+                    size: 15,
+                    color: accent,
                   ),
-                  const SizedBox(height: 6),
-
-                  // Note Title
-                  Text(
-                    activeNote.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.outfit(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-
-                  // 2-line snippet preview
-                  Text(
-                    activeNote.summarySnippet.isNotEmpty
-                        ? activeNote.summarySnippet
-                        : activeNote.textContent,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.inter(
-                      fontSize: 9.5,
-                      color: AppColors.secondaryText,
-                      height: 1.25,
-                    ),
-                  ),
-                  const SizedBox(height: 5),
-
-                  // Tags chip
-                  if (activeNote.tags.isNotEmpty)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: AppColors.elevation2,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        "#${activeNote.tags.first}",
-                        style: const TextStyle(fontSize: 8.5, color: Color(0xFF00F2FE), fontWeight: FontWeight.w600),
+                  if (hasPdf) ...[
+                    const SizedBox(width: 6),
+                    const Text(
+                      'PDF',
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.secondaryText,
                       ),
                     ),
+                  ],
                 ],
               ),
-            ),
+              const SizedBox(height: 8),
+              Text(
+                activeNote.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.outfit(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                activeNote.summarySnippet.isNotEmpty
+                    ? activeNote.summarySnippet
+                    : activeNote.textContent,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  color: AppColors.secondaryText,
+                  height: 1.35,
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -633,19 +691,28 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
   }
 
   Widget _buildThinkingOverlay() {
+    final accent = Theme.of(context).colorScheme.primary;
     return Column(
       children: [
         const Spacer(),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Text(
-            "Searching memory inside Dream Bubble...",
+            "Gathering the right memories",
             textAlign: TextAlign.center,
             style: GoogleFonts.outfit(
               fontSize: 15,
               fontWeight: FontWeight.w600,
-              color: const Color(0xFF00F2FE),
+              color: accent,
             ),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Your notes stay on this device',
+          style: GoogleFonts.inter(
+            fontSize: 11.5,
+            color: AppColors.secondaryText,
           ),
         ),
         const SizedBox(height: 32),
@@ -658,6 +725,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
   // ==========================================================
   Widget _buildGeminiLiveKaraokeScreen() {
     final lyricLines = _voiceService.aiLyricLines;
+    final accent = Theme.of(context).colorScheme.primary;
 
     return Stack(
       children: [
@@ -678,7 +746,13 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
           },
           blendMode: BlendMode.dstIn,
           child: ListView.builder(
-            padding: const EdgeInsets.only(left: 24, right: 24, top: 20, bottom: 90),
+            controller: _lyricsScrollController,
+            padding: const EdgeInsets.only(
+              left: 24,
+              right: 24,
+              top: 20,
+              bottom: 90,
+            ),
             itemCount: lyricLines.length,
             itemBuilder: (context, index) {
               final line = lyricLines[index];
@@ -690,10 +764,20 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 350),
                   curve: Curves.easeOutCubic,
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 9,
+                  ),
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    color: isActive ? Colors.white.withValues(alpha: 0.06) : Colors.transparent,
+                    color: isActive
+                        ? accent.withValues(alpha: 0.10)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: isActive
+                          ? accent.withValues(alpha: 0.22)
+                          : Colors.transparent,
+                    ),
                   ),
                   child: AnimatedDefaultTextStyle(
                     duration: const Duration(milliseconds: 300),
@@ -706,22 +790,22 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
                       color: isActive
                           ? Colors.white
                           : isPast
-                              ? AppColors.secondaryText.withValues(alpha: 0.45)
-                              : AppColors.dimmedLyric,
-                      shadows: isActive
-                          ? [
-                              Shadow(
-                                color: Colors.white.withValues(alpha: 0.7),
-                                blurRadius: 18,
-                              ),
-                              Shadow(
-                                color: AppColors.dropletRed.withValues(alpha: 0.35),
-                                blurRadius: 24,
-                              ),
-                            ]
-                          : null,
+                          ? AppColors.secondaryText.withValues(alpha: 0.45)
+                          : AppColors.dimmedLyric,
                     ),
-                    child: Text(line.text),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          width: 2,
+                          height: isActive ? 34 : 0,
+                          margin: const EdgeInsets.only(right: 10, top: 2),
+                          color: isActive ? accent : Colors.transparent,
+                        ),
+                        Expanded(child: Text(line.text)),
+                      ],
+                    ),
                   ),
                 ),
               );
@@ -751,30 +835,48 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 IconButton(
-                  icon: const Icon(Icons.replay_rounded, color: Colors.white, size: 20),
+                  tooltip: 'Replay spoken response',
+                  icon: const Icon(
+                    Icons.replay_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
                   onPressed: () => _voiceService.restartKaraoke(),
                 ),
                 const SizedBox(width: 14),
                 GestureDetector(
                   onTap: () => _voiceService.togglePlayPause(),
-                  child: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Color(0xFFFF2D55),
-                    ),
-                    child: Icon(
-                      _voiceService.isPlayingAudio ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                      color: Colors.white,
-                      size: 22,
+                  child: Semantics(
+                    button: true,
+                    label: _voiceService.isPlayingAudio
+                        ? 'Pause spoken response'
+                        : 'Play spoken response',
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: accent,
+                      ),
+                      child: Icon(
+                        _voiceService.isPlayingAudio
+                            ? Icons.pause_rounded
+                            : Icons.play_arrow_rounded,
+                        color: Colors.white,
+                        size: 22,
+                      ),
                     ),
                   ),
                 ),
                 const SizedBox(width: 14),
-                TextButton.icon(
-                  icon: const Icon(Icons.mic_rounded, color: Color(0xFF00F2FE), size: 15),
-                  label: const Text("New Query", style: TextStyle(color: Color(0xFF00F2FE), fontSize: 12)),
+                IconButton(
+                  tooltip: "Can't hear the voice?",
+                  icon: const Icon(Icons.hearing_rounded, size: 19),
+                  onPressed: () => _checkAudio(alwaysShow: true),
+                ),
+                IconButton(
+                  tooltip: 'Start a new question',
+                  icon: Icon(Icons.mic_rounded, color: accent, size: 20),
                   onPressed: () => _voiceService.transitionToListeningState(),
                 ),
               ],

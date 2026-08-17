@@ -1,7 +1,8 @@
 import Flutter
 import UIKit
+import AVFoundation
 
-class SceneDelegate: FlutterSceneDelegate {
+class SceneDelegate: FlutterSceneDelegate, AVSpeechSynthesizerDelegate {
     private let actionChannelName =
         "com.vashisht.notechoes/action_button"
 
@@ -13,6 +14,12 @@ class SceneDelegate: FlutterSceneDelegate {
     private var actionChannel: FlutterMethodChannel?
     private var mlxChannel: FlutterMethodChannel?
     private var pdfVisionChannel: FlutterMethodChannel?
+    private var speechOutputChannel: FlutterMethodChannel?
+    private var noteBackupChannel: FlutterMethodChannel?
+    private var isChannelRetryScheduled = false
+    private let speechSynthesizer = AVSpeechSynthesizer()
+    private var speechSegmentIndices: [ObjectIdentifier: Int] = [:]
+    private var finalSpeechSegmentIndex: Int?
 
     override func scene(
         _ scene: UIScene,
@@ -55,12 +62,20 @@ class SceneDelegate: FlutterSceneDelegate {
         guard
             let windowScene = scene as? UIWindowScene,
             let flutterViewController = windowScene.windows
-                .compactMap({ $0.rootViewController as? FlutterViewController })
+                .compactMap({ findFlutterViewController(in: $0.rootViewController) })
                 .first
         else {
-            NSLog("notechoes: FlutterViewController unavailable")
+            if !isChannelRetryScheduled {
+                isChannelRetryScheduled = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self, weak scene] in
+                    guard let self, let scene else { return }
+                    self.isChannelRetryScheduled = false
+                    self.configureActionChannel(for: scene)
+                }
+            }
             return
         }
+        isChannelRetryScheduled = false
 
         let channel = FlutterMethodChannel(
             name: actionChannelName,
@@ -68,6 +83,7 @@ class SceneDelegate: FlutterSceneDelegate {
         )
 
         actionChannel = channel
+        OfflineSpeechService.shared.register(with: flutterViewController)
 
         let mlxChannel = FlutterMethodChannel(
             name: "notechoes/mlx_text_generation",
@@ -108,6 +124,25 @@ class SceneDelegate: FlutterSceneDelegate {
             }
         }
 
+        let speechOutputChannel = FlutterMethodChannel(
+            name: "notechoes/speech_output",
+            binaryMessenger: flutterViewController.binaryMessenger
+        )
+        self.speechOutputChannel = speechOutputChannel
+        speechSynthesizer.delegate = self
+        speechOutputChannel.setMethodCallHandler { [weak self] call, result in
+            self?.handleSpeechOutput(call, result: result)
+        }
+
+        let noteBackupChannel = FlutterMethodChannel(
+            name: "notechoes/note_backup",
+            binaryMessenger: flutterViewController.binaryMessenger
+        )
+        self.noteBackupChannel = noteBackupChannel
+        noteBackupChannel.setMethodCallHandler { call, result in
+            Self.handleNoteBackup(call, result: result)
+        }
+
         channel.setMethodCallHandler { [weak self] call, result in
             guard let self else {
                 result(FlutterMethodNotImplemented)
@@ -118,11 +153,245 @@ class SceneDelegate: FlutterSceneDelegate {
         }
     }
 
+    private func findFlutterViewController(
+        in controller: UIViewController?
+    ) -> FlutterViewController? {
+        guard let controller else { return nil }
+        if let flutter = controller as? FlutterViewController {
+            return flutter
+        }
+        if let navigation = controller as? UINavigationController {
+            for child in navigation.viewControllers {
+                if let flutter = findFlutterViewController(in: child) {
+                    return flutter
+                }
+            }
+        }
+        if let tab = controller as? UITabBarController {
+            for child in tab.viewControllers ?? [] {
+                if let flutter = findFlutterViewController(in: child) {
+                    return flutter
+                }
+            }
+        }
+        for child in controller.children {
+            if let flutter = findFlutterViewController(in: child) {
+                return flutter
+            }
+        }
+        return findFlutterViewController(in: controller.presentedViewController)
+    }
+
+    private static func handleNoteBackup(
+        _ call: FlutterMethodCall,
+        result: @escaping FlutterResult
+    ) {
+        let defaultsKey = "notechoes_notes_recovery_backup_v1"
+        let fileName = "notechoes_notes_recovery_backup_v1.json"
+        let defaults = SharedDefaults.suite
+        let fileURL = SharedDefaults.sharedContainerURL?
+            .appendingPathComponent(fileName)
+
+        switch call.method {
+        case "readBackup":
+            if let fileURL,
+               let data = try? Data(contentsOf: fileURL),
+               let payload = String(data: data, encoding: .utf8),
+               !payload.isEmpty {
+                result(payload)
+                return
+            }
+            result(defaults.string(forKey: defaultsKey))
+
+        case "writeBackup":
+            guard let payload = call.arguments as? String else {
+                result(FlutterError(
+                    code: "INVALID_BACKUP",
+                    message: "A JSON note backup is required.",
+                    details: nil
+                ))
+                return
+            }
+            do {
+                if let fileURL {
+                    try payload.data(using: .utf8)?.write(
+                        to: fileURL,
+                        options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication]
+                    )
+                }
+                defaults.set(payload, forKey: defaultsKey)
+                result(nil)
+            } catch {
+                result(FlutterError(
+                    code: "BACKUP_WRITE_FAILED",
+                    message: error.localizedDescription,
+                    details: nil
+                ))
+            }
+
+        default:
+            result(FlutterMethodNotImplemented)
+        }
+    }
+
+    private func handleSpeechOutput(
+        _ call: FlutterMethodCall,
+        result: @escaping FlutterResult
+    ) {
+        switch call.method {
+        case "speak":
+            guard let arguments = call.arguments as? [String: Any],
+                  let text = arguments["text"] as? String,
+                  !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                result(FlutterError(code: "INVALID_SPEECH", message: "Text is required.", details: nil))
+                return
+            }
+            do {
+                let session = AVAudioSession.sharedInstance()
+                try session.setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])
+                try session.setActive(true)
+                speechSynthesizer.stopSpeaking(at: .immediate)
+                let language = arguments["language"] as? String ?? "en-US"
+                let voice = bestInstalledVoice(for: language)
+                let suppliedSegments = arguments["segments"] as? [String]
+                let sentences = suppliedSegments?.filter {
+                    !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                } ?? naturalSpeechSegments(from: text)
+                let startIndex = arguments["startIndex"] as? Int ?? 0
+                speechSegmentIndices.removeAll()
+                finalSpeechSegmentIndex = sentences.isEmpty
+                    ? nil
+                    : startIndex + sentences.count - 1
+
+                for (index, sentence) in sentences.enumerated() {
+                    let utterance = AVSpeechUtterance(string: sentence)
+                    speechSegmentIndices[ObjectIdentifier(utterance)] =
+                        startIndex + index
+                    utterance.voice = voice
+                    utterance.rate = AVSpeechUtteranceDefaultSpeechRate * 0.88
+                    utterance.pitchMultiplier = 0.98
+                    utterance.volume = 1.0
+                    utterance.preUtteranceDelay = index == 0 ? 0.02 : 0.06
+                    utterance.postUtteranceDelay = 0.05
+                    speechSynthesizer.speak(utterance)
+                }
+                result([
+                    "started": true,
+                    "voice": voice?.name ?? "System voice",
+                    "quality": voiceQualityName(voice?.quality)
+                ])
+            } catch {
+                result(FlutterError(code: "SPEECH_OUTPUT_FAILED", message: error.localizedDescription, details: nil))
+            }
+        case "stop":
+            speechSynthesizer.stopSpeaking(at: .immediate)
+            speechSegmentIndices.removeAll()
+            finalSpeechSegmentIndex = nil
+            result(true)
+        case "audioStatus":
+            let session = AVAudioSession.sharedInstance()
+            result([
+                "outputVolume": session.outputVolume,
+                "route": session.currentRoute.outputs.first?.portName ?? "iPhone speaker",
+                "speaking": speechSynthesizer.isSpeaking,
+                "voice": bestInstalledVoice(for: "en-US")?.name ?? "System voice",
+                "voiceQuality": voiceQualityName(bestInstalledVoice(for: "en-US")?.quality)
+            ])
+        default:
+            result(FlutterMethodNotImplemented)
+        }
+    }
+
+    func speechSynthesizer(
+        _ synthesizer: AVSpeechSynthesizer,
+        didStart utterance: AVSpeechUtterance
+    ) {
+        guard let index = speechSegmentIndices[ObjectIdentifier(utterance)] else {
+            return
+        }
+        speechOutputChannel?.invokeMethod(
+            "onSpeechSegment",
+            arguments: ["index": index]
+        )
+    }
+
+    func speechSynthesizer(
+        _ synthesizer: AVSpeechSynthesizer,
+        didFinish utterance: AVSpeechUtterance
+    ) {
+        let identifier = ObjectIdentifier(utterance)
+        guard let index = speechSegmentIndices.removeValue(forKey: identifier) else {
+            return
+        }
+        if index == finalSpeechSegmentIndex {
+            finalSpeechSegmentIndex = nil
+            speechOutputChannel?.invokeMethod(
+                "onSpeechFinished",
+                arguments: nil
+            )
+        }
+    }
+
+    func speechSynthesizer(
+        _ synthesizer: AVSpeechSynthesizer,
+        didCancel utterance: AVSpeechUtterance
+    ) {
+        speechSegmentIndices.removeValue(forKey: ObjectIdentifier(utterance))
+    }
+
+    private func bestInstalledVoice(
+        for requestedLanguage: String
+    ) -> AVSpeechSynthesisVoice? {
+        let normalized = requestedLanguage.lowercased()
+        let languageCode = normalized.split(separator: "-").first.map(String.init)
+            ?? normalized
+        let matching = AVSpeechSynthesisVoice.speechVoices().filter { voice in
+            let candidate = voice.language.lowercased()
+            return candidate == normalized || candidate.hasPrefix("\(languageCode)-")
+        }
+
+        return matching.sorted { first, second in
+            if first.quality.rawValue != second.quality.rawValue {
+                return first.quality.rawValue > second.quality.rawValue
+            }
+            let firstExact = first.language.lowercased() == normalized
+            let secondExact = second.language.lowercased() == normalized
+            if firstExact != secondExact { return firstExact }
+            return first.name.localizedCaseInsensitiveCompare(second.name)
+                == .orderedAscending
+        }.first ?? AVSpeechSynthesisVoice(language: requestedLanguage)
+    }
+
+    private func naturalSpeechSegments(from text: String) -> [String] {
+        var segments: [String] = []
+        text.enumerateSubstrings(
+            in: text.startIndex..<text.endIndex,
+            options: [.bySentences, .substringNotRequired]
+        ) { _, range, _, _ in
+            let sentence = text[range]
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            if !sentence.isEmpty { segments.append(sentence) }
+        }
+        return segments.isEmpty ? [text] : segments
+    }
+
+    private func voiceQualityName(
+        _ quality: AVSpeechSynthesisVoiceQuality?
+    ) -> String {
+        switch quality {
+        case .premium: return "Premium"
+        case .enhanced: return "Enhanced"
+        default: return "Standard"
+        }
+    }
+
     private static func handleMLXMethodCall(
         _ call: FlutterMethodCall,
         result: @escaping FlutterResult
     ) {
         switch call.method {
+        case "status":
+            result(MLXTextGenerationService.installationStatus())
         case "load":
             Task {
                 do {
@@ -170,6 +439,21 @@ class SceneDelegate: FlutterSceneDelegate {
             Task {
                 await MLXTextGenerationService.shared.unload()
                 await MainActor.run { result(nil) }
+            }
+        case "deleteCachedModel":
+            Task {
+                do {
+                    let status = try await MLXTextGenerationService.shared.deleteCachedModel()
+                    await MainActor.run { result(status) }
+                } catch {
+                    await MainActor.run {
+                        result(FlutterError(
+                            code: "MLX_DELETE_FAILED",
+                            message: error.localizedDescription,
+                            details: nil
+                        ))
+                    }
+                }
             }
         default:
             result(FlutterMethodNotImplemented)

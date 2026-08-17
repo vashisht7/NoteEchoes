@@ -3,6 +3,8 @@ import '../models/note_model.dart';
 import 'ai_categorization_engine.dart';
 import 'note_storage_service.dart';
 import '../ai/infrastructure/knowledge_service.dart';
+import '../ai/infrastructure/model_availability_service.dart';
+import '../ai/infrastructure/qwen_llama_provider.dart';
 
 class NoteService extends ChangeNotifier {
   static final NoteService _instance = NoteService._internal();
@@ -51,10 +53,28 @@ class NoteService extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> _persist() {
-    final snapshot = List<NoteModel>.from(_notes);
+  Future<void> reloadRecoveredNotes() async {
+    final loaded = await NoteStorageService().loadNotes();
+    final existingIds = _notes.map((note) => note.noteId).toSet();
+    var changed = false;
+    for (final note in loaded) {
+      if (existingIds.add(note.noteId)) {
+        _notes.add(note);
+        changed = true;
+      }
+    }
+    if (changed) notifyListeners();
+  }
+
+  Future<void> _persistNote(NoteModel note) {
+    final write = _writeTail.then((_) => NoteStorageService().upsertNote(note));
+    _writeTail = write.catchError((Object _) {});
+    return write;
+  }
+
+  Future<void> _deletePersistedNote(String noteId) {
     final write = _writeTail.then(
-      (_) => NoteStorageService().saveNotes(snapshot),
+      (_) => NoteStorageService().deleteNote(noteId),
     );
     _writeTail = write.catchError((Object _) {});
     return write;
@@ -79,6 +99,9 @@ class NoteService extends ChangeNotifier {
     _notes.clear();
     _searchQuery = '';
     _selectedTag = 'All';
+    _isInitialized = false;
+    _storageInitFuture = null;
+    _writeTail = Future<void>.value();
   }
 
   List<NoteModel> get notes {
@@ -136,7 +159,7 @@ class NoteService extends ChangeNotifier {
     _notes.removeWhere((n) => n.noteId == note.noteId);
     _notes.insert(0, note);
     notifyListeners();
-    await _persist();
+    await _persistNote(note);
     try {
       await KnowledgeService.instance.indexNote(note);
     } catch (error) {
@@ -151,15 +174,47 @@ class NoteService extends ChangeNotifier {
     final tagsSet = <String>{'voice-memos', 'voice-memo'};
     tagsSet.addAll(analysis.categories);
 
+    var title = analysis.title;
+    var summary = analysis.summarySnippet;
+    var checklist = analysis.extractedChecklist;
+
+    // A verified Qwen installation upgrades spoken notes from keyword rules to
+    // content-aware titles, topics and action extraction. The lightweight path
+    // remains available when no model is downloaded.
+    if (ModelAvailabilityService.instance.qwen.isReady) {
+      try {
+        final provider = QwenLlamaProvider.instance;
+        if (!provider.isLoaded) await provider.load();
+        final richAnalysis = await provider.generateNoteAnalysis(
+          spokenText,
+          noteId: 'voice-preview-${DateTime.now().microsecondsSinceEpoch}',
+          noteCreatedAt: DateTime.now(),
+        );
+        if (richAnalysis.generatedTitle.trim().isNotEmpty) {
+          title = richAnalysis.generatedTitle.trim();
+        }
+        if (richAnalysis.summary.trim().isNotEmpty) {
+          summary = richAnalysis.summary.trim();
+        }
+        tagsSet.addAll(richAnalysis.topics);
+        tagsSet.addAll(richAnalysis.suggestedTags);
+        checklist = richAnalysis.actionItems
+            .map((item) => CheckListItem(id: item.id, text: item.task))
+            .toList();
+      } catch (error) {
+        debugPrint('Enhanced voice-note categorization fell back: $error');
+      }
+    }
+
     final note = NoteModel(
       noteId: "echo_${DateTime.now().millisecondsSinceEpoch}",
-      title: analysis.title,
+      title: title,
       contentType: NoteContentType.textOnly,
-      summarySnippet: analysis.summarySnippet,
+      summarySnippet: summary,
       textContent: spokenText.trim(),
       createdAt: DateTime.now(),
       tags: tagsSet.toList(),
-      checklist: analysis.extractedChecklist,
+      checklist: checklist,
       isPinned: false,
     );
 
@@ -173,7 +228,7 @@ class NoteService extends ChangeNotifier {
     if (index != -1) {
       _notes[index] = note;
       notifyListeners();
-      await _persist();
+      await _persistNote(note);
       try {
         await KnowledgeService.instance.indexNote(note);
       } catch (error) {
@@ -186,7 +241,7 @@ class NoteService extends ChangeNotifier {
     await initStorage();
     _notes.removeWhere((n) => n.noteId == noteId);
     notifyListeners();
-    await _persist();
+    await _deletePersistedNote(noteId);
     try {
       await KnowledgeService.instance.removeNote(noteId);
     } catch (error) {
@@ -201,7 +256,7 @@ class NoteService extends ChangeNotifier {
       final current = _notes[index];
       _notes[index] = current.copyWith(isPinned: !current.isPinned);
       notifyListeners();
-      await _persist();
+      await _persistNote(_notes[index]);
     }
   }
 
@@ -215,7 +270,7 @@ class NoteService extends ChangeNotifier {
         note.checklist[itemIndex].isCompleted =
             !note.checklist[itemIndex].isCompleted;
         notifyListeners();
-        await _persist();
+        await _persistNote(note);
       }
     }
   }

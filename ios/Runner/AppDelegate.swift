@@ -16,15 +16,9 @@ import AppIntents
             NotechoesShortcuts.updateAppShortcutParameters()
         }
 
-        let launched = super.application(
+        return super.application(
             application,
             didFinishLaunchingWithOptions: launchOptions
         )
-
-        if let controller = window?.rootViewController as? FlutterViewController {
-            OfflineSpeechService.shared.register(with: controller)
-        }
-
-        return launched
     }
 }

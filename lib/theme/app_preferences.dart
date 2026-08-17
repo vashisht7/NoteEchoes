@@ -15,7 +15,7 @@ class AppPreferences extends ChangeNotifier {
   static final AppPreferences instance = AppPreferences._();
 
   static const accents = <AppAccent>[
-    AppAccent('crimson', 'Crimson', Color(0xFFFF375F)),
+    AppAccent('crimson', 'NoteEchoes Crimson', Color(0xFFD7192D)),
     AppAccent('orange', 'Orange', Color(0xFFFF9F0A)),
     AppAccent('blue', 'Blue', Color(0xFF0A84FF)),
     AppAccent('purple', 'Purple', Color(0xFFBF5AF2)),

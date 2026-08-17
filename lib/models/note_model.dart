@@ -2,7 +2,7 @@ enum NoteContentType { richMedia, textOnly }
 
 enum MediaAssetType { image, pdf, audio }
 
-enum NoteBlockType { text, table }
+enum NoteBlockType { text, table, checklist }
 
 /// Durable editor content. Keeping tables as structured cells means they can
 /// be reopened and indexed for search instead of disappearing after "Done".
@@ -10,19 +10,41 @@ class NoteBlockData {
   final NoteBlockType type;
   final String text;
   final List<List<String>> tableCells;
+  final String checklistId;
+  final String checklistText;
+  final bool checklistCompleted;
 
   const NoteBlockData.text(this.text)
     : type = NoteBlockType.text,
-      tableCells = const [];
+      tableCells = const [],
+      checklistId = '',
+      checklistText = '',
+      checklistCompleted = false;
 
   const NoteBlockData.table(this.tableCells)
     : type = NoteBlockType.table,
-      text = '';
+      text = '',
+      checklistId = '',
+      checklistText = '',
+      checklistCompleted = false;
+
+  const NoteBlockData.checklist({
+    required this.checklistId,
+    required this.checklistText,
+    required this.checklistCompleted,
+  }) : type = NoteBlockType.checklist,
+       text = '',
+       tableCells = const [];
 
   Map<String, dynamic> toJson() => {
     'type': type.name,
     if (type == NoteBlockType.text) 'text': text,
     if (type == NoteBlockType.table) 'cells': tableCells,
+    if (type == NoteBlockType.checklist) ...{
+      'id': checklistId,
+      'text': checklistText,
+      'completed': checklistCompleted,
+    },
   };
 
   factory NoteBlockData.fromJson(Map<String, dynamic> json) {
@@ -35,12 +57,22 @@ class NoteBlockData {
           .toList();
       return NoteBlockData.table(rows);
     }
+    if (json['type'] == NoteBlockType.checklist.name) {
+      return NoteBlockData.checklist(
+        checklistId: json['id'] as String? ?? '',
+        checklistText: json['text'] as String? ?? '',
+        checklistCompleted: json['completed'] as bool? ?? false,
+      );
+    }
     return NoteBlockData.text(json['text'] as String? ?? '');
   }
 
   /// Plain-text representation used by summaries, sharing and retrieval.
   String get searchableText {
     if (type == NoteBlockType.text) return text;
+    if (type == NoteBlockType.checklist) {
+      return '${checklistCompleted ? '☑' : '☐'} $checklistText';
+    }
     return tableCells.map((row) => row.join(' | ')).join('\n');
   }
 }

@@ -1,7 +1,7 @@
 # NoteEchoes — Current Handoff Guide
 
-Last updated: 2026-08-14
-Verified commit: `253a09f` on `main`
+Last updated: 2026-08-17
+Release: `v2.7.0`
 
 ## What is working now
 
@@ -13,6 +13,12 @@ Verified commit: `253a09f` on `main`
 - Notes created from voice and Action Button input are persisted and appear at the top of the home feed.
 - The application uses a black, production-style theme. The selected accent colour is shared across the app.
 - Existing PDF/text note, table-editor, local storage, and AI feature code remains in place.
+- Notes now use SQLite with transactional migration from legacy preferences and rolling recovery backups.
+- Qwen and Whisper availability is verified from their physical files on launch/resume; incomplete downloads are reported as needing repair.
+- Core notes, keyword search, checklists, tables, and Apple speech remain available without optional model downloads. Model-dependent features explain the required download before opening.
+- The note editor supports swipe-back, inline cursor-positioned checklists, Return-to-add table rows, and an explicit add-column control.
+- Conversation mode uses installed Apple Premium/Enhanced voices when available, synchronizes highlighted sentences from native speech callbacks, and stops speech on every route exit.
+- Reduce Motion, Dynamic Type, VoiceOver labels/actions, and compact-iPhone layouts are supported.
 
 ## User setup for offline Telugu
 
@@ -37,7 +43,9 @@ English is also supported by the same multilingual model. It is not Telugu-only.
 | `lib/widgets/siri_action_overlay.dart` | In-app microphone UI. Uses the `record` package to capture a complete M4A, then calls native transcription. Do not reintroduce a second live microphone engine while this recorder runs. |
 | `ios/Runner/OfflineSpeechService.swift` | Native Flutter channel `noteechoes/offline_speech`. Downloads/loads WhisperKit Base multilingual and transcribes audio. Falls back to Apple Speech when Whisper is not installed. |
 | `ios/Runner/TranscribeAudioNoteIntent.swift` | Action Button/Shortcut audio-intent path. Delegates transcription to `OfflineSpeechService`. |
-| `ios/Runner/AppDelegate.swift` | Registers `OfflineSpeechService` with Flutter. |
+| `ios/Runner/SceneDelegate.swift` | Registers native model, speech-output, PDF, Action Button, and recovery channels for UIScene launches. |
+| `lib/services/note_storage_service.dart` | SQLite note store, preference migration, and rolling JSON recovery copies. |
+| `lib/ai/infrastructure/model_availability_service.dart` | Physical Qwen/Whisper installation verification and synchronized feature availability. |
 | `lib/theme/app_preferences.dart` | Persisted app accent and voice language (`en`, `te`, `hi`, `auto`). |
 | `lib/theme/app_theme.dart` | Black theme derived from the persisted accent. |
 | `lib/screens/settings_screen.dart` | User-facing appearance and voice language settings. |
@@ -59,15 +67,18 @@ English is also supported by the same multilingual model. It is not Telugu-only.
 4. Press **Cmd + R**.
 5. On first run, grant microphone and speech permissions.
 
-Verification completed for this commit:
+Verification completed for v2.7.0:
 
-- `flutter test`: 15 tests passed.
-- Signed physical-device build: passed.
+- Full Flutter test suite: 22 tests passed.
+- Flutter analyzer: no new errors; 33 existing warnings/information notices remain.
+- Signed Release iPhone build and deep signature verification: passed.
 - Installed and launched on the connected iPhone: passed.
 
 ## Guardrails for future changes
 
 - Preserve the full-file M4A recording → one transcription flow. The old restart/watchdog live-recognition design caused the reported cutoff issue.
+- Never run Flutter physical integration tests against a daily-data installation using `com.vashisht.notechoes`; use an isolated test bundle/device because test deployment can replace the app container.
+- Do not remove the SQLite recovery paths or acknowledge an Action Button queue item before the note commit succeeds.
 - Keep the Whisper model downloadable, not bundled: this keeps the initial app reasonable in size and makes the model optional.
 - Do not claim fully offline Telugu until the Whisper download has completed successfully.
 - Preserve the black surface palette and use `Theme.of(context).colorScheme.primary` for accents instead of hard-coded neon blue/purple.
@@ -76,4 +87,4 @@ Verification completed for this commit:
 ## Repository
 
 - Main repository: https://github.com/vashisht7/NoteEchoes
-- Current verified commit: https://github.com/vashisht7/NoteEchoes/commit/253a09f
+- Current release: https://github.com/vashisht7/NoteEchoes/releases/tag/v2.7.0

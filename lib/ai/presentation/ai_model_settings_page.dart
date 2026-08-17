@@ -6,9 +6,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../config/ai_feature_flags.dart';
 import '../config/ai_runtime_config.dart';
 import '../infrastructure/qwen_llama_provider.dart';
+import '../infrastructure/model_availability_service.dart';
 
 class AiModelSettingsPage extends StatefulWidget {
   const AiModelSettingsPage({super.key});
@@ -22,8 +22,8 @@ class _AiModelSettingsPageState extends State<AiModelSettingsPage>
   late final AnimationController _fadeCtrl;
   late final Animation<double> _fadeAnim;
 
-  final _flags = AiFeatureFlags.instance;
   final _runtime = AiRuntimeConfig.instance;
+  final _models = ModelAvailabilityService.instance;
 
   // Live state tracking for models
   bool _qwenDownloading = false;
@@ -33,6 +33,9 @@ class _AiModelSettingsPageState extends State<AiModelSettingsPage>
   bool _whisperInstalled = false;
   bool _whisperDownloading = false;
   String _whisperStatusText = '';
+  bool _qwenInstalled = false;
+  String? _qwenWarning;
+  String? _whisperWarning;
 
   @override
   void initState() {
@@ -43,7 +46,7 @@ class _AiModelSettingsPageState extends State<AiModelSettingsPage>
     );
     _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut);
     _fadeCtrl.forward();
-    _syncWhisperStatus();
+    _syncModelStatus();
   }
 
   @override
@@ -52,7 +55,14 @@ class _AiModelSettingsPageState extends State<AiModelSettingsPage>
     super.dispose();
   }
 
-  bool get _qwenInstalled => _flags.localLlmEnabled;
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.of(context).disableAnimations) {
+      _fadeCtrl.stop();
+      _fadeCtrl.value = 1;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -82,6 +92,20 @@ class _AiModelSettingsPageState extends State<AiModelSettingsPage>
           children: [
             _DeviceTierCard(tier: _runtime.tier),
             const SizedBox(height: 20),
+            const _SectionHeader('Available Without Downloads'),
+            const SizedBox(height: 8),
+            const _ModelCard(
+              name: 'Core Notes & Keyword Search',
+              description:
+                  'Writing, tables, checklists, automatic basic categories, tags, and exact keyword search always work.',
+              size: '0 MB added',
+              languages: ['No model required', 'Always available'],
+              isInstalled: true,
+              isDownloading: false,
+              downloadProgress: 1,
+              statusText: '',
+            ),
+            const SizedBox(height: 20),
             const _SectionHeader('Offline Speech Recognition'),
             const SizedBox(height: 8),
             _ModelCard(
@@ -108,6 +132,7 @@ class _AiModelSettingsPageState extends State<AiModelSettingsPage>
               isDownloading: _whisperDownloading,
               downloadProgress: _whisperDownloading ? 0.35 : 0,
               statusText: _whisperStatusText,
+              warningText: _whisperWarning,
               onDownload: _whisperDownloading ? null : _startWhisperDownload,
               onDelete: _whisperInstalled ? _disableWhisper : null,
             ),
@@ -125,6 +150,7 @@ class _AiModelSettingsPageState extends State<AiModelSettingsPage>
               isDownloading: _qwenDownloading,
               downloadProgress: _qwenProgress,
               statusText: _qwenStatusText,
+              warningText: _qwenWarning,
               onDownload: _runtime.llmSupported ? _startQwenDownload : null,
               onDelete: _qwenInstalled ? _deleteQwen : null,
               notAvailableReason: _runtime.llmSupported
@@ -144,19 +170,19 @@ class _AiModelSettingsPageState extends State<AiModelSettingsPage>
 
   // ── Download & Lifecycle Orchestration ─────────────────────────────────
 
-  Future<void> _syncWhisperStatus() async {
-    try {
-      final installed =
-          await _speechChannel.invokeMethod<bool>('isWhisperInstalled') ??
-          false;
-      if (!mounted) return;
-      setState(() => _whisperInstalled = installed);
-      await _flags.setWhisperSttEnabled(installed);
-    } catch (_) {
-      if (mounted) {
-        setState(() => _whisperInstalled = _flags.whisperSttEnabled);
-      }
-    }
+  Future<void> _syncModelStatus() async {
+    await _models.refresh();
+    if (!mounted) return;
+    setState(() {
+      _qwenInstalled = _models.qwen.isReady;
+      _whisperInstalled = _models.whisper.isReady;
+      _qwenWarning = _models.qwen.health == ModelHealth.needsRepair
+          ? _models.qwen.reason
+          : null;
+      _whisperWarning = _models.whisper.health == ModelHealth.needsRepair
+          ? _models.whisper.reason
+          : null;
+    });
   }
 
   void _startWhisperDownload() {
@@ -173,10 +199,9 @@ class _AiModelSettingsPageState extends State<AiModelSettingsPage>
         });
         try {
           await _speechChannel.invokeMethod<bool>('downloadWhisperBase');
-          await _flags.setWhisperSttEnabled(true);
+          await _syncModelStatus();
           if (!mounted) return;
           setState(() {
-            _whisperInstalled = true;
             _whisperDownloading = false;
             _whisperStatusText = '';
           });
@@ -196,14 +221,13 @@ class _AiModelSettingsPageState extends State<AiModelSettingsPage>
   Future<void> _disableWhisper() async {
     final confirmed = await _showDeleteDialog(
       'Whisper Base Multilingual',
-      'This disables offline Whisper transcription. Apple Speech will be used instead.',
+      'This removes the offline model files. Apple Speech transcription will continue to work.',
     );
     if (confirmed == true) {
-      await _speechChannel.invokeMethod<bool>('disableWhisper');
-      await _flags.setWhisperSttEnabled(false);
+      await _models.removeWhisper();
       if (!mounted) return;
-      setState(() => _whisperInstalled = false);
-      _showToast('Offline Whisper transcription disabled.');
+      await _syncModelStatus();
+      _showToast('Whisper model files were removed.');
     }
   }
 
@@ -223,12 +247,7 @@ class _AiModelSettingsPageState extends State<AiModelSettingsPage>
 
         try {
           await QwenLlamaProvider.instance.load();
-          await _flags.setLocalLlmEnabled(true);
-          await _flags.setNoteAnalysisEnabled(true);
-          await _flags.setReminderExtractionEnabled(true);
-          await _flags.setPdfIngestionEnabled(true);
-          await _flags.setCrossNoteSearchEnabled(true);
-          await _flags.setDocumentChatEnabled(true);
+          await _syncModelStatus();
           if (!mounted) return;
           setState(() {
             _qwenDownloading = false;
@@ -254,13 +273,13 @@ class _AiModelSettingsPageState extends State<AiModelSettingsPage>
   Future<void> _deleteQwen() async {
     final confirmed = await _showDeleteDialog(
       'Qwen3-0.6B MLX 4-bit',
-      'This disables and unloads the local model. Its cached files remain available for a fast re-enable.',
+      'This removes the downloaded model files. Basic keyword search and Apple transcription will continue to work.',
     );
     if (confirmed == true) {
-      await _flags.setLocalLlmEnabled(false);
-      await QwenLlamaProvider.instance.unload();
-      setState(() {});
-      _showToast('Qwen MLX disabled and unloaded.');
+      await _models.removeQwen();
+      if (!mounted) return;
+      await _syncModelStatus();
+      _showToast('Qwen model files were removed.');
     }
   }
 
@@ -573,6 +592,7 @@ class _ModelCard extends StatelessWidget {
   final bool isDownloading;
   final double downloadProgress;
   final String statusText;
+  final String? warningText;
   final VoidCallback? onDownload;
   final VoidCallback? onDelete;
   final String? notAvailableReason;
@@ -586,6 +606,7 @@ class _ModelCard extends StatelessWidget {
     required this.isDownloading,
     required this.downloadProgress,
     required this.statusText,
+    this.warningText,
     this.onDownload,
     this.onDelete,
     this.notAvailableReason,
@@ -654,7 +675,7 @@ class _ModelCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        'Installed',
+                        'Installed & verified',
                         style: GoogleFonts.inter(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
@@ -708,6 +729,17 @@ class _ModelCard extends StatelessWidget {
               style: GoogleFonts.inter(
                 fontSize: 12,
                 color: const Color(0xFFFBBF24),
+              ),
+            ),
+          ],
+          if (warningText != null) ...[
+            const SizedBox(height: 10),
+            Text(
+              'Needs repair • $warningText',
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: const Color(0xFFFBBF24),
+                height: 1.4,
               ),
             ),
           ],

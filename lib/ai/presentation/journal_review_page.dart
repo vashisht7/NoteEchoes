@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../config/ai_feature_flags.dart';
+import 'model_feature_gate.dart';
 
 class JournalReviewPage extends StatefulWidget {
   const JournalReviewPage({super.key});
@@ -49,9 +50,7 @@ class _JournalReviewPageState extends State<JournalReviewPage> {
               _AiDisabledBanner(),
             ] else if (_isLoading) ...[
               const Center(
-                child: CircularProgressIndicator(
-                  color: Color(0xFF6B5CFF),
-                ),
+                child: CircularProgressIndicator(color: Color(0xFFD7192D)),
               ),
             ] else if (_weeklyReview != null) ...[
               Expanded(child: _ReviewContent(text: _weeklyReview!)),
@@ -101,10 +100,7 @@ class _WeekHeader extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           label,
-          style: GoogleFonts.inter(
-            fontSize: 14,
-            color: Colors.white38,
-          ),
+          style: GoogleFonts.inter(fontSize: 14, color: Colors.white38),
         ),
       ],
     );
@@ -114,31 +110,12 @@ class _WeekHeader extends StatelessWidget {
 class _AiDisabledBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF151518),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white10),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.lock_outline_rounded,
-              size: 20, color: Colors.white38),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              'Install the Qwen AI model from Settings → AI Models '
-              'to enable journal insights.',
-              style: GoogleFonts.inter(
-                fontSize: 13,
-                color: Colors.white54,
-                height: 1.5,
-              ),
-            ),
-          ),
-        ],
-      ),
+    return ModelUpgradeNotice(
+      availableNow: 'Journal notes remain available without a model.',
+      enhancedWithModel:
+          'Download Qwen3 to create private weekly reflections and recurring themes.',
+      onTap: () =>
+          requireQwenModel(context, featureName: 'weekly journal reflections'),
     );
   }
 }
@@ -157,11 +134,14 @@ class _GeneratePrompt extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: const Color(0xFF6B5CFF).withOpacity(0.1),
+              color: const Color(0xFFD7192D).withOpacity(0.1),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.auto_stories_rounded,
-                size: 40, color: Color(0xFF6B5CFF)),
+            child: const Icon(
+              Icons.auto_stories_rounded,
+              size: 40,
+              color: Color(0xFFD7192D),
+            ),
           ),
           const SizedBox(height: 20),
           Text(
@@ -191,9 +171,8 @@ class _GeneratePrompt extends StatelessWidget {
               style: GoogleFonts.inter(fontWeight: FontWeight.w600),
             ),
             style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFF6B5CFF),
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 24, vertical: 14),
+              backgroundColor: const Color(0xFFD7192D),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -217,8 +196,7 @@ class _ReviewContent extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF151518),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-            color: const Color(0xFF6B5CFF).withOpacity(0.2)),
+        border: Border.all(color: const Color(0xFFD7192D).withOpacity(0.2)),
       ),
       child: SingleChildScrollView(
         child: Text(

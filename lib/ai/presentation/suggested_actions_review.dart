@@ -40,8 +40,7 @@ class _SuggestedActionsReviewPageState
   @override
   Widget build(BuildContext context) {
     final pending = widget.actions
-        .where((a) =>
-            !_dismissed.contains(a.id) && !_confirmed.contains(a.id))
+        .where((a) => !_dismissed.contains(a.id) && !_confirmed.contains(a.id))
         .toList();
 
     return Scaffold(
@@ -110,8 +109,11 @@ class _SuggestedActionsReviewPageState
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.check_circle_rounded,
-              size: 48, color: Color(0xFF4ADE80)),
+          const Icon(
+            Icons.check_circle_rounded,
+            size: 48,
+            color: Color(0xFF4ADE80),
+          ),
           const SizedBox(height: 16),
           Text(
             'All actions reviewed',
@@ -150,7 +152,7 @@ class _ActionCard extends StatelessWidget {
   Color get _typeColor {
     switch (action.actionType) {
       case SuggestedActionType.calendarEvent:
-        return const Color(0xFF6B5CFF);
+        return const Color(0xFFD7192D);
       case SuggestedActionType.reminder:
         return const Color(0xFFFBBF24);
       case SuggestedActionType.actionItem:
@@ -205,8 +207,7 @@ class _ActionCard extends StatelessWidget {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: _typeColor.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(6),
@@ -231,10 +232,7 @@ class _ActionCard extends StatelessWidget {
               if (action.confidence < 0.7)
                 Text(
                   '${(action.confidence * 100).round()}% confidence',
-                  style: GoogleFonts.inter(
-                    fontSize: 11,
-                    color: Colors.white38,
-                  ),
+                  style: GoogleFonts.inter(fontSize: 11, color: Colors.white38),
                 ),
             ],
           ),

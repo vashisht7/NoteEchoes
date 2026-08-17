@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_colors.dart';
+import '../ai/infrastructure/model_availability_service.dart';
 
 class ExpandingSearchBar extends StatefulWidget {
   final bool isExpanded;
@@ -69,13 +70,18 @@ class _ExpandingSearchBarState extends State<ExpandingSearchBar> {
         child: Row(
           children: [
             const SizedBox(width: 14),
-            const Icon(Icons.search_rounded, size: 20, color: AppColors.primaryText),
+            const Icon(
+              Icons.search_rounded,
+              size: 20,
+              color: AppColors.primaryText,
+            ),
             const SizedBox(width: 10),
             Expanded(
               child: TextField(
                 controller: _controller,
                 focusNode: _focusNode,
                 onChanged: widget.onChanged,
+                onTapOutside: (_) => widget.onClose(),
                 cursorColor: Colors.white,
                 style: GoogleFonts.inter(
                   fontSize: 14.5,
@@ -83,7 +89,9 @@ class _ExpandingSearchBarState extends State<ExpandingSearchBar> {
                   fontWeight: FontWeight.w500,
                 ),
                 decoration: InputDecoration(
-                  hintText: "Search notes, math, tags...",
+                  hintText: ModelAvailabilityService.instance.qwen.isReady
+                      ? 'Enhanced search across notes…'
+                      : 'Keyword search • AI upgrade available…',
                   hintStyle: GoogleFonts.inter(
                     fontSize: 14,
                     color: AppColors.secondaryText,
@@ -102,7 +110,11 @@ class _ExpandingSearchBarState extends State<ExpandingSearchBar> {
                 },
                 child: const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 8),
-                  child: Icon(Icons.clear_rounded, size: 16, color: AppColors.secondaryText),
+                  child: Icon(
+                    Icons.clear_rounded,
+                    size: 16,
+                    color: AppColors.secondaryText,
+                  ),
                 ),
               ),
             GestureDetector(
@@ -114,7 +126,11 @@ class _ExpandingSearchBarState extends State<ExpandingSearchBar> {
                   color: AppColors.elevation1,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.close_rounded, size: 16, color: AppColors.primaryText),
+                child: const Icon(
+                  Icons.close_rounded,
+                  size: 16,
+                  color: AppColors.primaryText,
+                ),
               ),
             ),
           ],
@@ -135,7 +151,11 @@ class _ExpandingSearchBarState extends State<ExpandingSearchBar> {
         onTap: widget.onToggleExpand,
         borderRadius: BorderRadius.circular(19),
         child: const Center(
-          child: Icon(Icons.search_rounded, size: 18, color: AppColors.primaryText),
+          child: Icon(
+            Icons.search_rounded,
+            size: 18,
+            color: AppColors.primaryText,
+          ),
         ),
       ),
     );

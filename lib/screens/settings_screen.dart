@@ -158,6 +158,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
           const SizedBox(height: 24),
+          _SectionLabel('Accessibility'),
+          const _SettingsCard(
+            child: ListTile(
+              leading: Icon(Icons.accessibility_new_rounded),
+              title: Text('Follows iPhone accessibility settings'),
+              subtitle: Text(
+                'Supports Dynamic Type, VoiceOver labels, and Reduce Motion automatically.',
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
           _SectionLabel('Privacy'),
           const _SettingsCard(
             child: ListTile(

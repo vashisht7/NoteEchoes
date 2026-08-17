@@ -1,117 +1,313 @@
 import 'dart:convert';
 import 'dart:io';
+
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
+import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sqlite3/sqlite3.dart';
+
 import '../models/note_model.dart';
 
+/// Durable SQLite storage for notes. Existing SharedPreferences notes are
+/// imported once in a transaction so upgrades do not lose user content.
 class NoteStorageService {
-  static const String _storageKey = 'notechoes_saved_notes_v1';
+  static const _legacyStorageKey = 'notechoes_saved_notes_v1';
+  static const _migrationKey = 'notechoes_notes_sqlite_migration_v1';
+  static const _backupFileName = 'notechoes_notes_backup_v1.json';
+  static const _backupChannel = MethodChannel('notechoes/note_backup');
   static final NoteStorageService _instance = NoteStorageService._internal();
+
   factory NoteStorageService() => _instance;
   NoteStorageService._internal();
 
-  /// Loads persisted notes from local device storage
+  Database? _databaseInstance;
+  Future<Database>? _opening;
+  bool _usingTestDatabase = false;
+
+  Future<Database> _database() => _opening ??= _openDatabase();
+
+  Future<Database> _openDatabase() async {
+    final directory = await getApplicationSupportDirectory();
+    await directory.create(recursive: true);
+    final databaseFile = File(p.join(directory.path, 'notechoes.sqlite'));
+    final databaseWasMissing = !await databaseFile.exists();
+    final database = sqlite3.open(databaseFile.path);
+    _configure(database);
+    await _migrateLegacyNotes(database);
+    if (databaseWasMissing || _noteCount(database) == 0) {
+      await _recoverFromBackup(database);
+    }
+    await _writeRecoveryBackup(database);
+    _databaseInstance = database;
+    return database;
+  }
+
+  int _noteCount(Database database) =>
+      database.select('SELECT COUNT(*) AS count FROM notes;').first['count']
+          as int;
+
+  void _configure(Database database) {
+    database.execute('PRAGMA journal_mode = WAL;');
+    database.execute('PRAGMA synchronous = NORMAL;');
+    database.execute('''
+      CREATE TABLE IF NOT EXISTS notes (
+        note_id TEXT PRIMARY KEY NOT NULL,
+        payload_json TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
+      );
+    ''');
+    database.execute(
+      'CREATE INDEX IF NOT EXISTS notes_created_at_idx ON notes(created_at DESC);',
+    );
+  }
+
+  Future<void> _migrateLegacyNotes(Database database) async {
+    final preferences = await SharedPreferences.getInstance();
+    final legacyJson = preferences.getString(_legacyStorageKey);
+    if (preferences.getBool(_migrationKey) == true &&
+        (_noteCount(database) > 0 || legacyJson == null)) {
+      return;
+    }
+    if (legacyJson != null && legacyJson.isNotEmpty) {
+      final decoded = jsonDecode(legacyJson) as List<dynamic>;
+      database.execute('BEGIN IMMEDIATE;');
+      try {
+        for (final value in decoded) {
+          final note = NoteModel.fromJson(
+            Map<String, dynamic>.from(value as Map),
+          );
+          _upsert(database, note);
+        }
+        database.execute('COMMIT;');
+      } catch (_) {
+        database.execute('ROLLBACK;');
+        rethrow;
+      }
+    }
+    await preferences.setBool(_migrationKey, true);
+  }
+
+  Future<File> _backupFile() async {
+    final directory = await getApplicationDocumentsDirectory();
+    await directory.create(recursive: true);
+    return File(p.join(directory.path, _backupFileName));
+  }
+
+  Future<int> _recoverFromBackup(Database database) async {
+    final candidates = <String>[];
+    try {
+      final file = await _backupFile();
+      if (await file.exists()) candidates.add(await file.readAsString());
+    } catch (error) {
+      debugPrint('Local note-backup read failed: $error');
+    }
+    try {
+      final shared = await _backupChannel
+          .invokeMethod<String>('readBackup')
+          .timeout(const Duration(seconds: 2));
+      if (shared != null && shared.isNotEmpty) candidates.add(shared);
+    } catch (error) {
+      debugPrint('Shared note-backup read failed: $error');
+    }
+
+    for (final payload in candidates) {
+      try {
+        final decoded = jsonDecode(payload) as List<dynamic>;
+        if (decoded.isEmpty) continue;
+        database.execute('BEGIN IMMEDIATE;');
+        try {
+          for (final value in decoded) {
+            _upsert(
+              database,
+              NoteModel.fromJson(Map<String, dynamic>.from(value as Map)),
+            );
+          }
+          database.execute('COMMIT;');
+          debugPrint('Recovered ${decoded.length} notes from safety backup.');
+          return decoded.length;
+        } catch (_) {
+          database.execute('ROLLBACK;');
+          rethrow;
+        }
+      } catch (error) {
+        debugPrint('Ignored an unreadable note backup: $error');
+      }
+    }
+    return 0;
+  }
+
+  Future<void> _writeRecoveryBackup(Database database) async {
+    if (_usingTestDatabase) {
+      final preferences = await SharedPreferences.getInstance();
+      await preferences.remove(_legacyStorageKey);
+      return;
+    }
+    final rows = database.select(
+      'SELECT payload_json FROM notes ORDER BY created_at DESC;',
+    );
+    final payload = jsonEncode(
+      rows.map((row) => jsonDecode(row['payload_json'] as String)).toList(),
+    );
+
+    var durableCopyWritten = false;
+    try {
+      final file = await _backupFile();
+      final temporary = File('${file.path}.new');
+      await temporary.writeAsString(payload, flush: true);
+      await temporary.rename(file.path);
+      durableCopyWritten = true;
+    } catch (error) {
+      debugPrint('Local note-backup write failed: $error');
+    }
+    try {
+      await _backupChannel
+          .invokeMethod<void>('writeBackup', payload)
+          .timeout(const Duration(seconds: 2));
+      durableCopyWritten = true;
+    } catch (error) {
+      debugPrint('Shared note-backup write failed: $error');
+    }
+
+    if (durableCopyWritten) {
+      try {
+        final preferences = await SharedPreferences.getInstance();
+        await preferences.remove(_legacyStorageKey);
+      } catch (error) {
+        debugPrint('Could not retire legacy note storage: $error');
+      }
+    }
+  }
+
   Future<List<NoteModel>> loadNotes() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final jsonString = prefs.getString(_storageKey);
-      if (jsonString == null || jsonString.isEmpty) {
-        return [];
-      }
-
-      final List<dynamic> decodedList = jsonDecode(jsonString);
-      final notes = decodedList.map((item) {
-        return NoteModel.fromJson(Map<String, dynamic>.from(item));
-      }).toList();
-
-      return notes;
-    } catch (e) {
-      debugPrint("Error loading notes from storage: $e");
+      final database = await _database();
+      final rows = database.select(
+        'SELECT payload_json FROM notes ORDER BY created_at DESC;',
+      );
+      return rows
+          .map(
+            (row) => NoteModel.fromJson(
+              Map<String, dynamic>.from(
+                jsonDecode(row['payload_json'] as String) as Map,
+              ),
+            ),
+          )
+          .toList();
+    } catch (error) {
+      debugPrint('Error loading notes from SQLite: $error');
       return [];
     }
   }
 
-  /// Inserts or replaces one note by noteId.
-  /// Throws if decoding or durable persistence fails.
+  /// Re-syncs the recovery copies after Flutter's native channels are live.
+  /// Startup storage opens before the first frame, which can be too early for
+  /// the App Group bridge on a UIScene-based iOS launch.
+  Future<bool> syncRecoveryBackup() async {
+    final database = await _database();
+    final wasEmpty = _noteCount(database) == 0;
+    final recovered = wasEmpty ? await _recoverFromBackup(database) : 0;
+    await _writeRecoveryBackup(database);
+    return recovered > 0;
+  }
+
   Future<void> upsertNote(NoteModel note) async {
-    final prefs = await SharedPreferences.getInstance();
-    final jsonString = prefs.getString(_storageKey);
-
-    final List<dynamic> decodedList;
-    if (jsonString == null || jsonString.isEmpty) {
-      decodedList = <dynamic>[];
-    } else {
-      decodedList = jsonDecode(jsonString) as List<dynamic>;
-    }
-
-    final notes = decodedList
-        .map(
-          (item) => NoteModel.fromJson(Map<String, dynamic>.from(item as Map)),
-        )
-        .toList();
-
-    final existingIndex = notes.indexWhere(
-      (existing) => existing.noteId == note.noteId,
-    );
-
-    if (existingIndex >= 0) {
-      notes[existingIndex] = note;
-    } else {
-      // Newest voice notes appear first.
-      notes.insert(0, note);
-    }
-
-    final serialized = notes.map((item) => item.toJson()).toList();
-    final didPersist = await prefs.setString(
-      _storageKey,
-      jsonEncode(serialized),
-    );
-
-    if (!didPersist) {
-      throw StateError('Failed to persist note ${note.noteId}');
-    }
+    final database = await _database();
+    _upsert(database, note);
+    await _writeRecoveryBackup(database);
   }
 
-  /// Persists all notes to local device storage
+  void _upsert(Database database, NoteModel note) {
+    database.execute(
+      '''
+      INSERT INTO notes (note_id, payload_json, created_at, updated_at)
+      VALUES (?, ?, ?, ?)
+      ON CONFLICT(note_id) DO UPDATE SET
+        payload_json = excluded.payload_json,
+        created_at = excluded.created_at,
+        updated_at = excluded.updated_at;
+      ''',
+      [
+        note.noteId,
+        jsonEncode(note.toJson()),
+        note.createdAt.millisecondsSinceEpoch,
+        DateTime.now().millisecondsSinceEpoch,
+      ],
+    );
+  }
+
+  Future<void> deleteNote(String noteId) async {
+    final database = await _database();
+    database.execute('DELETE FROM notes WHERE note_id = ?;', [noteId]);
+    await _writeRecoveryBackup(database);
+  }
+
   Future<void> saveNotes(List<NoteModel> notes) async {
-    final prefs = await SharedPreferences.getInstance();
-    final serialized = notes.map((n) => n.toJson()).toList();
-    final jsonString = jsonEncode(serialized);
-    final didPersist = await prefs.setString(_storageKey, jsonString);
-    if (!didPersist) {
-      throw StateError('SharedPreferences rejected the notes write');
+    final database = await _database();
+    database.execute('BEGIN IMMEDIATE;');
+    try {
+      database.execute('DELETE FROM notes;');
+      for (final note in notes) {
+        _upsert(database, note);
+      }
+      database.execute('COMMIT;');
+      await _writeRecoveryBackup(database);
+    } catch (_) {
+      database.execute('ROLLBACK;');
+      rethrow;
     }
   }
 
-  /// Reads and clears any background notes written by Shortcuts or external files
   Future<List<String>> readAndClearPendingFileNotes() async {
     final pendingNotes = <String>[];
     try {
-      final docDir = await getApplicationDocumentsDirectory();
-      final file = File('${docDir.path}/notechoes_pending_notes.txt');
+      final documentDirectory = await getApplicationDocumentsDirectory();
+      final file = File(
+        p.join(documentDirectory.path, 'notechoes_pending_notes.txt'),
+      );
       if (await file.exists()) {
-        final lines = await file.readAsLines();
-        for (final line in lines) {
-          if (line.trim().isNotEmpty) {
-            pendingNotes.add(line.trim());
-          }
+        for (final line in await file.readAsLines()) {
+          if (line.trim().isNotEmpty) pendingNotes.add(line.trim());
         }
         await file.delete();
       }
-    } catch (e) {
-      debugPrint("Error reading pending file notes: $e");
+    } catch (error) {
+      debugPrint('Error reading pending file notes: $error');
     }
     return pendingNotes;
   }
 
-  /// Clears all local storage
   Future<void> clearAll() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove(_storageKey);
-    } catch (e) {
-      debugPrint("Error clearing storage: $e");
+    final database = await _database();
+    database.execute('DELETE FROM notes;');
+    await _writeRecoveryBackup(database);
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.remove(_legacyStorageKey);
+  }
+
+  @visibleForTesting
+  Future<void> useInMemoryDatabaseForTesting({
+    List<NoteModel> seedNotes = const [],
+  }) async {
+    _databaseInstance?.close();
+    _usingTestDatabase = true;
+    final database = sqlite3.openInMemory();
+    _configure(database);
+    for (final note in seedNotes) {
+      _upsert(database, note);
     }
+    _databaseInstance = database;
+    _opening = Future.value(database);
+  }
+
+  @visibleForTesting
+  Future<void> migrateLegacyNotesForTesting() async {
+    final database = await _database();
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.setBool(_migrationKey, false);
+    await _migrateLegacyNotes(database);
+    await _writeRecoveryBackup(database);
   }
 }

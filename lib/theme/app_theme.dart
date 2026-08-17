@@ -26,6 +26,11 @@ class AppTheme {
         surfaceContainerHighest: AppColors.elevation2,
         outline: AppColors.glassBorder,
       ),
+      textSelectionTheme: TextSelectionThemeData(
+        cursorColor: accent,
+        selectionColor: accent.withValues(alpha: 0.26),
+        selectionHandleColor: accent,
+      ),
       textTheme: baseTextTheme.copyWith(
         displayLarge: GoogleFonts.outfit(
           color: AppColors.primaryText,
@@ -94,16 +99,11 @@ class AppTheme {
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: AppColors.elevation1,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.glassBorder),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: accent),
-        ),
+        filled: false,
+        fillColor: Colors.transparent,
+        border: InputBorder.none,
+        enabledBorder: InputBorder.none,
+        focusedBorder: InputBorder.none,
       ),
     );
   }

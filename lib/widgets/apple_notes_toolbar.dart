@@ -27,7 +27,8 @@ class AppleNotesToolbar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0 || isKeyboardVisible;
+    final isKeyboardOpen =
+        MediaQuery.of(context).viewInsets.bottom > 0 || isKeyboardVisible;
 
     return Container(
       decoration: BoxDecoration(
@@ -42,7 +43,9 @@ class AppleNotesToolbar extends StatelessWidget {
           child: Padding(
             // Only add safe area bottom padding when the keyboard is NOT open
             padding: EdgeInsets.only(
-              bottom: isKeyboardOpen ? 0 : MediaQuery.of(context).padding.bottom,
+              bottom: isKeyboardOpen
+                  ? 0
+                  : MediaQuery.of(context).padding.bottom,
             ),
             child: SizedBox(
               height: 46,
@@ -67,7 +70,9 @@ class AppleNotesToolbar extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 10),
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFFD60A).withValues(alpha: 0.12),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.primary.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
@@ -75,7 +80,7 @@ class AppleNotesToolbar extends StatelessWidget {
                         style: GoogleFonts.inter(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
-                          color: const Color(0xFFFFD60A),
+                          color: Theme.of(context).colorScheme.primary,
                         ),
                       ),
                     ),

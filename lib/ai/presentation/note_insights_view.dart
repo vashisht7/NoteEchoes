@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../domain/note_analysis.dart';
 import '../config/ai_feature_flags.dart';
+import 'model_feature_gate.dart';
 
 class NoteInsightsView extends StatefulWidget {
   final String noteId;
@@ -33,7 +34,9 @@ class _NoteInsightsViewState extends State<NoteInsightsView>
   void initState() {
     super.initState();
     _ctrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 300));
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
     _expandAnim = CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut);
   }
 
@@ -41,6 +44,14 @@ class _NoteInsightsViewState extends State<NoteInsightsView>
   void dispose() {
     _ctrl.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _ctrl.duration = MediaQuery.of(context).disableAnimations
+        ? Duration.zero
+        : const Duration(milliseconds: 300);
   }
 
   void _toggle() {
@@ -55,7 +66,22 @@ class _NoteInsightsViewState extends State<NoteInsightsView>
   @override
   Widget build(BuildContext context) {
     final flags = AiFeatureFlags.instance;
-    if (!flags.noteAnalysisEnabled) return const SizedBox.shrink();
+    if (!flags.noteAnalysisEnabled) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: ModelUpgradeNotice(
+          availableNow: 'Your note is saved and searchable without a model.',
+          enhancedWithModel:
+              'Download Qwen3 for summaries, topics, people, places, and action extraction.',
+          onTap: () => requireQwenModel(
+            context,
+            featureName: 'AI note insights',
+            basicAlternative:
+                'Saving, tags, checklists, and keyword search remain available.',
+          ),
+        ),
+      );
+    }
 
     final analysis = widget.analysis;
 
@@ -64,7 +90,7 @@ class _NoteInsightsViewState extends State<NoteInsightsView>
       decoration: BoxDecoration(
         color: const Color(0xFF151518),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFF6B5CFF).withOpacity(0.3)),
+        border: Border.all(color: const Color(0xFFD7192D).withOpacity(0.3)),
       ),
       child: Column(
         children: [
@@ -79,11 +105,14 @@ class _NoteInsightsViewState extends State<NoteInsightsView>
                   Container(
                     padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF6B5CFF).withOpacity(0.15),
+                      color: const Color(0xFFD7192D).withOpacity(0.15),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(Icons.auto_awesome_rounded,
-                        size: 14, color: Color(0xFF6B5CFF)),
+                    child: const Icon(
+                      Icons.auto_awesome_rounded,
+                      size: 14,
+                      color: Color(0xFFD7192D),
+                    ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -101,15 +130,21 @@ class _NoteInsightsViewState extends State<NoteInsightsView>
                   if (widget.onRegenerate != null)
                     GestureDetector(
                       onTap: widget.onRegenerate,
-                      child: const Icon(Icons.refresh_rounded,
-                          size: 16, color: Colors.white38),
+                      child: const Icon(
+                        Icons.refresh_rounded,
+                        size: 16,
+                        color: Colors.white38,
+                      ),
                     ),
                   const SizedBox(width: 6),
                   AnimatedRotation(
                     turns: _expanded ? 0.5 : 0,
                     duration: const Duration(milliseconds: 300),
-                    child: const Icon(Icons.expand_more_rounded,
-                        size: 18, color: Colors.white38),
+                    child: const Icon(
+                      Icons.expand_more_rounded,
+                      size: 18,
+                      color: Colors.white38,
+                    ),
                   ),
                 ],
               ),
@@ -119,9 +154,7 @@ class _NoteInsightsViewState extends State<NoteInsightsView>
           // Expanded content
           SizeTransition(
             sizeFactor: _expandAnim,
-            child: analysis == null
-                ? _buildLoading()
-                : _buildContent(analysis),
+            child: analysis == null ? _buildLoading() : _buildContent(analysis),
           ),
         ],
       ),
@@ -133,7 +166,7 @@ class _NoteInsightsViewState extends State<NoteInsightsView>
       padding: EdgeInsets.fromLTRB(14, 0, 14, 14),
       child: LinearProgressIndicator(
         backgroundColor: Color(0xFF1E1E22),
-        valueColor: AlwaysStoppedAnimation(Color(0xFF6B5CFF)),
+        valueColor: AlwaysStoppedAnimation(Color(0xFFD7192D)),
       ),
     );
   }
@@ -147,10 +180,7 @@ class _NoteInsightsViewState extends State<NoteInsightsView>
           const Divider(color: Colors.white10, height: 1),
           const SizedBox(height: 12),
           if (analysis.summary.isNotEmpty) ...[
-            _InsightRow(
-              label: 'Summary',
-              content: analysis.summary,
-            ),
+            _InsightRow(label: 'Summary', content: analysis.summary),
             const SizedBox(height: 10),
           ],
           if (analysis.topics.isNotEmpty) ...[
@@ -239,18 +269,14 @@ class _ChipRow extends StatelessWidget {
           runSpacing: 4,
           children: items.take(6).map((item) {
             return Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.06),
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(
                 item,
-                style: GoogleFonts.inter(
-                  fontSize: 12,
-                  color: Colors.white54,
-                ),
+                style: GoogleFonts.inter(fontSize: 12, color: Colors.white54),
               ),
             );
           }).toList(),
@@ -279,7 +305,9 @@ class _ActionItemsList extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 6),
-        ...items.take(5).map(
+        ...items
+            .take(5)
+            .map(
               (item) => Padding(
                 padding: const EdgeInsets.only(bottom: 4),
                 child: Row(
@@ -287,8 +315,11 @@ class _ActionItemsList extends StatelessWidget {
                   children: [
                     const Padding(
                       padding: EdgeInsets.only(top: 4),
-                      child: Icon(Icons.radio_button_unchecked_rounded,
-                          size: 12, color: Color(0xFF6B5CFF)),
+                      child: Icon(
+                        Icons.radio_button_unchecked_rounded,
+                        size: 12,
+                        color: Color(0xFFD7192D),
+                      ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
@@ -313,15 +344,18 @@ class _ActionItemsList extends StatelessWidget {
 class _SuggestedEventsRow extends StatelessWidget {
   final List<CalendarEvent> events;
   final List<Reminder> reminders;
-  const _SuggestedEventsRow(
-      {required this.events, required this.reminders});
+  const _SuggestedEventsRow({required this.events, required this.reminders});
 
   @override
   Widget build(BuildContext context) {
     final count = events.length + reminders.length;
     return Row(
       children: [
-        const Icon(Icons.event_note_rounded, size: 14, color: Color(0xFFFBBF24)),
+        const Icon(
+          Icons.event_note_rounded,
+          size: 14,
+          color: Color(0xFFFBBF24),
+        ),
         const SizedBox(width: 6),
         Text(
           '$count suggested event${count == 1 ? '' : 's'} / reminder${count == 1 ? '' : 's'}',
@@ -335,7 +369,7 @@ class _SuggestedEventsRow extends StatelessWidget {
           'Review →',
           style: GoogleFonts.inter(
             fontSize: 12,
-            color: const Color(0xFF6B5CFF),
+            color: const Color(0xFFD7192D),
             fontWeight: FontWeight.w600,
           ),
         ),

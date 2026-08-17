@@ -56,20 +56,24 @@ class _DocumentChatPageState extends State<DocumentChatPage> {
     try {
       final response = await widget.onAsk(question);
       setState(() {
-        _messages.add(_ChatMessage(
-          role: _MessageRole.assistant,
-          text: response.displayText,
-          citations: response.orderedCitations,
-        ));
+        _messages.add(
+          _ChatMessage(
+            role: _MessageRole.assistant,
+            text: response.displayText,
+            citations: response.orderedCitations,
+          ),
+        );
         _isLoading = false;
       });
     } catch (e) {
       setState(() {
-        _messages.add(_ChatMessage(
-          role: _MessageRole.assistant,
-          text: 'Sorry, something went wrong. Please try again.',
-          isError: true,
-        ));
+        _messages.add(
+          _ChatMessage(
+            role: _MessageRole.assistant,
+            text: 'Sorry, something went wrong. Please try again.',
+            isError: true,
+          ),
+        );
         _isLoading = false;
       });
     }
@@ -115,10 +119,7 @@ class _DocumentChatPageState extends State<DocumentChatPage> {
             ),
             Text(
               widget.isDocument ? 'Document Chat' : 'Notebook Q&A',
-              style: GoogleFonts.inter(
-                fontSize: 11,
-                color: Colors.white38,
-              ),
+              style: GoogleFonts.inter(fontSize: 11, color: Colors.white38),
             ),
           ],
         ),
@@ -157,11 +158,14 @@ class _DocumentChatPageState extends State<DocumentChatPage> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: const Color(0xFF6B5CFF).withOpacity(0.1),
+                color: const Color(0xFFD7192D).withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.chat_bubble_outline_rounded,
-                  size: 36, color: Color(0xFF6B5CFF)),
+              child: const Icon(
+                Icons.chat_bubble_outline_rounded,
+                size: 36,
+                color: Color(0xFFD7192D),
+              ),
             ),
             const SizedBox(height: 20),
             Text(
@@ -198,19 +202,21 @@ class _DocumentChatPageState extends State<DocumentChatPage> {
             width: 28,
             height: 28,
             decoration: BoxDecoration(
-              color: const Color(0xFF6B5CFF).withOpacity(0.15),
+              color: const Color(0xFFD7192D).withOpacity(0.15),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.auto_awesome_rounded,
-                size: 14, color: Color(0xFF6B5CFF)),
+            child: const Icon(
+              Icons.auto_awesome_rounded,
+              size: 14,
+              color: Color(0xFFD7192D),
+            ),
           ),
           const SizedBox(width: 10),
           const SizedBox(
             width: 40,
             child: LinearProgressIndicator(
               backgroundColor: Color(0xFF1E1E22),
-              valueColor:
-                  AlwaysStoppedAnimation(Color(0xFF6B5CFF)),
+              valueColor: AlwaysStoppedAnimation(Color(0xFFD7192D)),
             ),
           ),
         ],
@@ -221,7 +227,11 @@ class _DocumentChatPageState extends State<DocumentChatPage> {
   Widget _buildInputBar() {
     return Container(
       padding: EdgeInsets.fromLTRB(
-          16, 12, 16, MediaQuery.of(context).padding.bottom + 12),
+        16,
+        12,
+        16,
+        MediaQuery.of(context).padding.bottom + 12,
+      ),
       decoration: const BoxDecoration(
         color: Color(0xFF0D0D10),
         border: Border(top: BorderSide(color: Colors.white10)),
@@ -238,7 +248,7 @@ class _DocumentChatPageState extends State<DocumentChatPage> {
               child: TextField(
                 controller: _controller,
                 style: GoogleFonts.inter(fontSize: 14, color: Colors.white),
-                cursorColor: const Color(0xFF6B5CFF),
+                cursorColor: const Color(0xFFD7192D),
                 maxLines: 4,
                 minLines: 1,
                 textInputAction: TextInputAction.send,
@@ -246,10 +256,14 @@ class _DocumentChatPageState extends State<DocumentChatPage> {
                 decoration: InputDecoration(
                   hintText: 'Ask a question…',
                   hintStyle: GoogleFonts.inter(
-                      fontSize: 14, color: Colors.white30),
+                    fontSize: 14,
+                    color: Colors.white30,
+                  ),
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 12),
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                 ),
               ),
             ),
@@ -261,9 +275,7 @@ class _DocumentChatPageState extends State<DocumentChatPage> {
               width: 42,
               height: 42,
               decoration: BoxDecoration(
-                color: _isLoading
-                    ? Colors.white12
-                    : const Color(0xFF6B5CFF),
+                color: _isLoading ? Colors.white12 : const Color(0xFFD7192D),
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -301,10 +313,7 @@ class _MessageBubble extends StatelessWidget {
   final _ChatMessage message;
   final void Function(SourceCitation)? onCitationTapped;
 
-  const _MessageBubble({
-    required this.message,
-    this.onCitationTapped,
-  });
+  const _MessageBubble({required this.message, this.onCitationTapped});
 
   @override
   Widget build(BuildContext context) {
@@ -314,19 +323,23 @@ class _MessageBubble extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 16),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment:
-            isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisAlignment: isUser
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
         children: [
           if (!isUser) ...[
             Container(
               width: 28,
               height: 28,
               decoration: BoxDecoration(
-                color: const Color(0xFF6B5CFF).withOpacity(0.15),
+                color: const Color(0xFFD7192D).withOpacity(0.15),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.auto_awesome_rounded,
-                  size: 14, color: Color(0xFF6B5CFF)),
+              child: const Icon(
+                Icons.auto_awesome_rounded,
+                size: 14,
+                color: Color(0xFFD7192D),
+              ),
             ),
             const SizedBox(width: 10),
           ],
@@ -338,13 +351,15 @@ class _MessageBubble extends StatelessWidget {
               children: [
                 Container(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 14, vertical: 10),
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
                     color: isUser
-                        ? const Color(0xFF6B5CFF).withOpacity(0.2)
+                        ? const Color(0xFFD7192D).withOpacity(0.2)
                         : message.isError
-                            ? const Color(0xFFFF6B6B).withOpacity(0.1)
-                            : const Color(0xFF151518),
+                        ? const Color(0xFFFF6B6B).withOpacity(0.1)
+                        : const Color(0xFF151518),
                     borderRadius: BorderRadius.only(
                       topLeft: const Radius.circular(14),
                       topRight: const Radius.circular(14),
@@ -353,7 +368,7 @@ class _MessageBubble extends StatelessWidget {
                     ),
                     border: Border.all(
                       color: isUser
-                          ? const Color(0xFF6B5CFF).withOpacity(0.3)
+                          ? const Color(0xFFD7192D).withOpacity(0.3)
                           : Colors.white10,
                     ),
                   ),
@@ -378,26 +393,30 @@ class _MessageBubble extends StatelessWidget {
                         onTap: () => onCitationTapped?.call(c),
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 4),
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF6B5CFF).withOpacity(0.1),
+                            color: const Color(0xFFD7192D).withOpacity(0.1),
                             borderRadius: BorderRadius.circular(6),
                             border: Border.all(
-                              color:
-                                  const Color(0xFF6B5CFF).withOpacity(0.3),
+                              color: const Color(0xFFD7192D).withOpacity(0.3),
                             ),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.link_rounded,
-                                  size: 10, color: Color(0xFF6B5CFF)),
+                              const Icon(
+                                Icons.link_rounded,
+                                size: 10,
+                                color: Color(0xFFD7192D),
+                              ),
                               const SizedBox(width: 4),
                               Text(
                                 '[${c.citationKey}] ${c.sourceTitle}',
                                 style: GoogleFonts.inter(
                                   fontSize: 11,
-                                  color: const Color(0xFF6B5CFF),
+                                  color: const Color(0xFFD7192D),
                                 ),
                               ),
                               if (c.hasPageLocation) ...[

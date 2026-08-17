@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -8,8 +10,7 @@ import '../models/note_node.dart';
 import '../services/action_button_note_ingestion_service.dart';
 import '../services/note_service.dart';
 import '../services/note_storage_service.dart';
-import '../ai/infrastructure/knowledge_service.dart';
-import '../ai/presentation/document_chat_page.dart';
+import '../ai/infrastructure/model_availability_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/apple_music_media_card.dart';
 import '../widgets/auth_sign_in_sheet.dart';
@@ -32,6 +33,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final NoteService _noteService = NoteService();
   bool _isSearchExpanded = false;
+  Timer? _recoverySyncTimer;
 
   static const MethodChannel _actionChannel = MethodChannel(
     'com.vashisht.notechoes/action_button',
@@ -47,6 +49,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     // live after the first frame, so this is the earliest safe moment.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ActionButtonNoteIngestionService.instance.initialize();
+      ModelAvailabilityService.instance.refresh();
+      _recoverySyncTimer = Timer(const Duration(seconds: 1), () async {
+        final recovered = await NoteStorageService().syncRecoveryBackup();
+        if (recovered) await _noteService.reloadRecoveredNotes();
+      });
     });
   }
 
@@ -54,6 +61,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       _fetchPendingVoiceNotes();
+      ModelAvailabilityService.instance.refresh();
     }
   }
 
@@ -146,16 +154,24 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (mounted) setState(() {});
   }
 
+  void _closeSearch() {
+    if (!_isSearchExpanded && _noteService.searchQuery.isEmpty) return;
+    FocusManager.instance.primaryFocus?.unfocus();
+    setState(() => _isSearchExpanded = false);
+    _noteService.setSearchQuery('');
+  }
+
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _recoverySyncTimer?.cancel();
     _noteService.removeListener(_onServiceChange);
     super.dispose();
   }
 
   void _openNoteEditor([NoteModel? note]) {
     Navigator.of(context).push(
-      MaterialPageRoute(
+      CupertinoPageRoute(
         builder: (context) => NoteDetailScreen(existingNote: note),
       ),
     );
@@ -163,7 +179,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   void _openVoiceAssistant() {
     Navigator.of(context).push(
-      MaterialPageRoute(
+      CupertinoPageRoute(
         builder: (context) =>
             const VoiceAssistantScreen(currentState: VoiceState.listening),
       ),
@@ -171,16 +187,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   void _openNotesChat() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => DocumentChatPage(
-          title: 'My Notes',
-          sourceId: 'all-notes',
-          isDocument: false,
-          onAsk: KnowledgeService.instance.askNotes,
-        ),
-      ),
-    );
+    _openVoiceAssistant();
   }
 
   void _openSiriActionOverlay() {
@@ -190,7 +197,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void _openSettings() {
     Navigator.of(
       context,
-    ).push(MaterialPageRoute(builder: (context) => const SettingsScreen()));
+    ).push(CupertinoPageRoute(builder: (context) => const SettingsScreen()));
   }
 
   void _openSignInSheet() {
@@ -520,9 +527,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               child: FloatingGlassNavBar(
                 onAddNote: () => _openNoteEditor(),
                 onSearch: () {
-                  setState(() {
-                    _isSearchExpanded = !_isSearchExpanded;
-                  });
+                  if (_isSearchExpanded) {
+                    _closeSearch();
+                  } else {
+                    setState(() => _isSearchExpanded = true);
+                  }
                 },
                 onTranscribeVoice: _openSiriActionOverlay,
                 onDiscuss: _openNotesChat,
@@ -548,10 +557,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 onChanged: (query) => _noteService.setSearchQuery(query),
                 onToggleExpand: () {},
                 onClose: () {
-                  setState(() {
-                    _isSearchExpanded = false;
-                    _noteService.setSearchQuery('');
-                  });
+                  _closeSearch();
                 },
               ),
             )
@@ -693,13 +699,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   color: AppColors.dropletRed.withValues(alpha: 0.6),
                   width: 2,
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.dropletRed.withValues(alpha: 0.3),
-                    blurRadius: 28,
-                    spreadRadius: 4,
-                  ),
-                ],
               ),
               child: ClipOval(
                 child: Image.asset(
@@ -753,12 +752,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   label: "Voice Mode",
                   color: AppColors.dropletRed,
                   onTap: _openVoiceAssistant,
-                ),
-                _buildQuickStartButton(
-                  icon: Icons.bolt_rounded,
-                  label: "Action Button Siri Note",
-                  color: Theme.of(context).colorScheme.primary,
-                  onTap: _openSiriActionOverlay,
                 ),
               ],
             ),
@@ -815,11 +808,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       slivers: [
         const SliverToBoxAdapter(child: SizedBox(height: 8)),
         SliverPadding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 10),
           sliver: SliverMasonryGrid.count(
             crossAxisCount: 2,
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
+            mainAxisSpacing: 6,
+            crossAxisSpacing: 6,
             itemBuilder: (context, index) {
               final note = notes[index];
               if (note.contentType == NoteContentType.richMedia &&

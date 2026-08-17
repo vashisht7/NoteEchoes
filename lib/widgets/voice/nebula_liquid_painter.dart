@@ -34,7 +34,9 @@ class NebulaLiquidPainter extends CustomPainter {
     // 2. Multi-blob Liquid Morphing (Layer 1: Violet/Indigo)
     _drawBlob(
       canvas: canvas,
-      center: center + Offset(sin(progress * 2 * pi) * 14, cos(progress * 2 * pi) * 12),
+      center:
+          center +
+          Offset(sin(progress * 2 * pi) * 14, cos(progress * 2 * pi) * 12),
       radius: baseRadius * 1.05,
       color: AppColors.nebulaViolet,
       secondaryColor: AppColors.nebulaIndigo,
@@ -46,7 +48,12 @@ class NebulaLiquidPainter extends CustomPainter {
     // 3. Multi-blob Liquid Morphing (Layer 2: Cyan/Teal Swirl)
     _drawBlob(
       canvas: canvas,
-      center: center + Offset(cos(progress * 2 * pi * 1.3) * -16, sin(progress * 2 * pi * 1.3) * 14),
+      center:
+          center +
+          Offset(
+            cos(progress * 2 * pi * 1.3) * -16,
+            sin(progress * 2 * pi * 1.3) * 14,
+          ),
       radius: baseRadius * 0.92,
       color: AppColors.nebulaCyan,
       secondaryColor: const Color(0xFF0072FF),
@@ -59,10 +66,15 @@ class NebulaLiquidPainter extends CustomPainter {
     // 4. Multi-blob Liquid Morphing (Layer 3: Vivid Pink/Magenta Core)
     _drawBlob(
       canvas: canvas,
-      center: center + Offset(sin(progress * 2 * pi * 0.9) * 10, -cos(progress * 2 * pi * 0.9) * 12),
+      center:
+          center +
+          Offset(
+            sin(progress * 2 * pi * 0.9) * 10,
+            -cos(progress * 2 * pi * 0.9) * 12,
+          ),
       radius: baseRadius * 0.78,
       color: AppColors.nebulaMagenta,
-      secondaryColor: const Color(0xFFFF2D55),
+      secondaryColor: const Color(0xFFD7192D),
       phaseOffset: pi,
       complexity: 5,
       wobblePower: 18.0,
@@ -71,14 +83,17 @@ class NebulaLiquidPainter extends CustomPainter {
 
     // 5. Luminescent Swirling Core Center
     final coreGlow = Paint()
-      ..shader = RadialGradient(
-        colors: [
-          Colors.white.withValues(alpha: 0.95),
-          AppColors.nebulaCyan.withValues(alpha: 0.6),
-          Colors.transparent,
-        ],
-        stops: const [0.0, 0.45, 1.0],
-      ).createShader(Rect.fromCircle(center: center, radius: baseRadius * 0.45));
+      ..shader =
+          RadialGradient(
+            colors: [
+              Colors.white.withValues(alpha: 0.95),
+              AppColors.nebulaCyan.withValues(alpha: 0.6),
+              Colors.transparent,
+            ],
+            stops: const [0.0, 0.45, 1.0],
+          ).createShader(
+            Rect.fromCircle(center: center, radius: baseRadius * 0.45),
+          );
     canvas.drawCircle(center, baseRadius * 0.45, coreGlow);
 
     // 6. Floating Energy Sparkles/Stars
@@ -89,7 +104,11 @@ class NebulaLiquidPainter extends CustomPainter {
       final pX = center.dx + dist * cos(angle);
       final pY = center.dy + dist * sin(angle);
       final starSize = 1.8 + 1.2 * sin(progress * 6 * pi + i * 2).abs();
-      canvas.drawCircle(Offset(pX, pY), starSize, sparklePaint..color = Colors.white.withValues(alpha: 0.85));
+      canvas.drawCircle(
+        Offset(pX, pY),
+        starSize,
+        sparklePaint..color = Colors.white.withValues(alpha: 0.85),
+      );
     }
   }
 
@@ -110,8 +129,12 @@ class NebulaLiquidPainter extends CustomPainter {
     for (int i = 0; i <= segments; i++) {
       final angle = (i / segments) * 2 * pi;
       // Multi-harmonic fluid wiggling physics
-      final harmonic1 = sin(angle * complexity + (progress * 2 * pi) + phaseOffset);
-      final harmonic2 = cos(angle * (complexity - 2) - (progress * 2 * pi * 1.5) + phaseOffset);
+      final harmonic1 = sin(
+        angle * complexity + (progress * 2 * pi) + phaseOffset,
+      );
+      final harmonic2 = cos(
+        angle * (complexity - 2) - (progress * 2 * pi * 1.5) + phaseOffset,
+      );
       final r = radius + (harmonic1 * 0.6 + harmonic2 * 0.4) * wobblePower;
 
       final x = center.dx + r * cos(angle);

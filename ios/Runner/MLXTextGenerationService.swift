@@ -12,6 +12,12 @@ actor MLXTextGenerationService {
     static let modelID = "mlx-community/Qwen3-0.6B-4bit"
     private var container: ModelContainer?
 
+    nonisolated static func installationStatus() -> [String: Any] {
+        let configuration = ModelConfiguration(id: modelID)
+        let directory = configuration.modelDirectory(hub: defaultHubApi)
+        return inspectCache(at: directory)
+    }
+
     func load() async throws {
         guard container == nil else { return }
         Memory.cacheLimit = 20 * 1024 * 1024
@@ -46,6 +52,56 @@ actor MLXTextGenerationService {
     func unload() {
         container = nil
         Memory.clearCache()
+    }
+
+    func deleteCachedModel() throws -> [String: Any] {
+        unload()
+        let configuration = ModelConfiguration(id: Self.modelID)
+        let directory = configuration.modelDirectory(hub: defaultHubApi)
+        if FileManager.default.fileExists(atPath: directory.path) {
+            try FileManager.default.removeItem(at: directory)
+        }
+        return Self.installationStatus()
+    }
+
+    nonisolated private static func inspectCache(at directory: URL) -> [String: Any] {
+        let manager = FileManager.default
+        guard manager.fileExists(atPath: directory.path) else {
+            return [
+                "installed": false, "verified": false,
+                "path": directory.path, "sizeBytes": Int64(0),
+                "reason": "Model files are not downloaded."
+            ]
+        }
+
+        var names = Set<String>()
+        var extensions = Set<String>()
+        var sizeBytes: Int64 = 0
+        let keys: Set<URLResourceKey> = [.isRegularFileKey, .fileSizeKey]
+        if let enumerator = manager.enumerator(
+            at: directory,
+            includingPropertiesForKeys: Array(keys),
+            options: [.skipsHiddenFiles]
+        ) {
+            for case let url as URL in enumerator {
+                guard let values = try? url.resourceValues(forKeys: keys),
+                      values.isRegularFile == true else { continue }
+                names.insert(url.lastPathComponent)
+                extensions.insert(url.pathExtension.lowercased())
+                sizeBytes += Int64(values.fileSize ?? 0)
+            }
+        }
+        let verified = names.contains("config.json")
+            && names.contains("tokenizer_config.json")
+            && extensions.contains("safetensors")
+            && sizeBytes > 0
+        return [
+            "installed": sizeBytes > 0,
+            "verified": verified,
+            "path": directory.path,
+            "sizeBytes": sizeBytes,
+            "reason": verified ? "" : "The model cache is incomplete. Remove it and download it again."
+        ]
     }
 }
 

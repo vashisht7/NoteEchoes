@@ -27,6 +27,7 @@ dependencies:
   # Drift: SQLite ORM for the AI job queue, transcript store, document chunks.
   drift: ^2.22.0
   sqlite3_flutter_libs: ^0.5.29
+  sqlite3: ^3.5.1
   path: ^1.9.0
 
   # Networking: resumable model downloads.
@@ -59,6 +60,8 @@ dependencies:
 
 dev_dependencies:
   flutter_test:
+    sdk: flutter
+  integration_test:
     sdk: flutter
   flutter_lints: ^6.0.0
   # Drift code generation.

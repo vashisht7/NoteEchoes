@@ -33,7 +33,9 @@ class SiriActionOverlay extends StatefulWidget {
       barrierDismissible: true,
       barrierLabel: "SiriActionOverlay",
       barrierColor: Colors.black.withValues(alpha: 0.78),
-      transitionDuration: const Duration(milliseconds: 250),
+      transitionDuration: MediaQuery.of(context).disableAnimations
+          ? Duration.zero
+          : const Duration(milliseconds: 250),
       pageBuilder: (context, anim1, anim2) {
         return SiriActionOverlay(
           autoStartRecording: autoStart,

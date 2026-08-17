@@ -7,11 +7,7 @@ class MathMarkdownViewer extends StatelessWidget {
   final String content;
   final TextStyle? baseStyle;
 
-  const MathMarkdownViewer({
-    super.key,
-    required this.content,
-    this.baseStyle,
-  });
+  const MathMarkdownViewer({super.key, required this.content, this.baseStyle});
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +25,11 @@ class MathMarkdownViewer extends StatelessWidget {
       // 1. Table Detection
       if (line.trim().startsWith('|') && line.trim().endsWith('|')) {
         inTable = true;
-        final cells = line.split('|').map((c) => c.trim()).where((c) => c.isNotEmpty).toList();
+        final cells = line
+            .split('|')
+            .map((c) => c.trim())
+            .where((c) => c.isNotEmpty)
+            .toList();
         if (!line.contains('---')) {
           tableRows.add(cells);
         }
@@ -42,64 +42,98 @@ class MathMarkdownViewer extends StatelessWidget {
       }
 
       // 2. Block Display Math: $$ ... $$
-      if (line.trim().startsWith(r'$$') && line.trim().endsWith(r'$$') && line.trim().length > 4) {
-        final mathEquation = line.trim().substring(2, line.trim().length - 2).trim();
+      if (line.trim().startsWith(r'$$') &&
+          line.trim().endsWith(r'$$') &&
+          line.trim().length > 4) {
+        final mathEquation = line
+            .trim()
+            .substring(2, line.trim().length - 2)
+            .trim();
         widgets.add(_buildDisplayMath(mathEquation));
         continue;
       }
 
       // 3. Headings (#, ##, ###)
       if (line.startsWith('# ')) {
-        widgets.add(Padding(
-          padding: const EdgeInsets.only(top: 14, bottom: 6),
-          child: Text(
-            line.substring(2),
-            style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+        widgets.add(
+          Padding(
+            padding: const EdgeInsets.only(top: 14, bottom: 6),
+            child: Text(
+              line.substring(2),
+              style: GoogleFonts.outfit(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
           ),
-        ));
+        );
         continue;
       } else if (line.startsWith('## ')) {
-        widgets.add(Padding(
-          padding: const EdgeInsets.only(top: 10, bottom: 4),
-          child: Text(
-            line.substring(3),
-            style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.primaryText),
+        widgets.add(
+          Padding(
+            padding: const EdgeInsets.only(top: 10, bottom: 4),
+            child: Text(
+              line.substring(3),
+              style: GoogleFonts.outfit(
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                color: AppColors.primaryText,
+              ),
+            ),
           ),
-        ));
+        );
         continue;
       } else if (line.startsWith('### ')) {
-        widgets.add(Padding(
-          padding: const EdgeInsets.only(top: 8, bottom: 4),
-          child: Text(
-            line.substring(4),
-            style: GoogleFonts.inter(fontSize: 14.5, fontWeight: FontWeight.w600, color: AppColors.primaryText),
+        widgets.add(
+          Padding(
+            padding: const EdgeInsets.only(top: 8, bottom: 4),
+            child: Text(
+              line.substring(4),
+              style: GoogleFonts.inter(
+                fontSize: 14.5,
+                fontWeight: FontWeight.w600,
+                color: AppColors.primaryText,
+              ),
+            ),
           ),
-        ));
+        );
         continue;
       }
 
       // 4. Bullet list items
       if (line.trim().startsWith('- ') || line.trim().startsWith('• ')) {
         final bulletText = line.trim().substring(2);
-        widgets.add(Padding(
-          padding: const EdgeInsets.only(bottom: 4),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text("• ", style: TextStyle(color: AppColors.dropletRed, fontSize: 14, fontWeight: FontWeight.bold)),
-              Expanded(child: _buildInlineRichText(bulletText)),
-            ],
+        widgets.add(
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "• ",
+                  style: TextStyle(
+                    color: AppColors.dropletRed,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Expanded(child: _buildInlineRichText(bulletText)),
+              ],
+            ),
           ),
-        ));
+        );
         continue;
       }
 
       // 5. Standard line with potential inline math
       if (line.trim().isNotEmpty) {
-        widgets.add(Padding(
-          padding: const EdgeInsets.only(bottom: 6),
-          child: _buildInlineRichText(line),
-        ));
+        widgets.add(
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: _buildInlineRichText(line),
+          ),
+        );
       }
     }
 
@@ -121,14 +155,19 @@ class MathMarkdownViewer extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.elevation2.withValues(alpha: 0.7),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF00F2FE).withValues(alpha: 0.35)),
+        border: Border.all(
+          color: AppColors.logoCrimson.withValues(alpha: 0.35),
+        ),
       ),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Center(
           child: Math.tex(
             equation,
-            textStyle: const TextStyle(fontSize: 17, color: Color(0xFF00F2FE)),
+            textStyle: const TextStyle(
+              fontSize: 17,
+              color: AppColors.logoCrimson,
+            ),
             mathStyle: MathStyle.display,
           ),
         ),
@@ -145,27 +184,35 @@ class MathMarkdownViewer extends StatelessWidget {
       for (int i = 0; i < parts.length; i++) {
         if (i % 2 == 1 && parts[i].trim().isNotEmpty) {
           // Math span
-          spans.add(WidgetSpan(
-            alignment: PlaceholderAlignment.middle,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 3),
-              child: Math.tex(
-                parts[i].trim(),
-                textStyle: const TextStyle(fontSize: 13.5, color: Color(0xFF00F2FE)),
-                mathStyle: MathStyle.text,
+          spans.add(
+            WidgetSpan(
+              alignment: PlaceholderAlignment.middle,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 3),
+                child: Math.tex(
+                  parts[i].trim(),
+                  textStyle: const TextStyle(
+                    fontSize: 13.5,
+                    color: AppColors.logoCrimson,
+                  ),
+                  mathStyle: MathStyle.text,
+                ),
               ),
             ),
-          ));
+          );
         } else {
-          spans.add(TextSpan(
-            text: parts[i],
-            style: baseStyle ??
-                GoogleFonts.inter(
-                  fontSize: 13.5,
-                  height: 1.45,
-                  color: AppColors.primaryText,
-                ),
-          ));
+          spans.add(
+            TextSpan(
+              text: parts[i],
+              style:
+                  baseStyle ??
+                  GoogleFonts.inter(
+                    fontSize: 13.5,
+                    height: 1.45,
+                    color: AppColors.primaryText,
+                  ),
+            ),
+          );
         }
       }
 
@@ -174,7 +221,8 @@ class MathMarkdownViewer extends StatelessWidget {
 
     return Text(
       text,
-      style: baseStyle ??
+      style:
+          baseStyle ??
           GoogleFonts.inter(
             fontSize: 13.5,
             height: 1.45,
@@ -205,11 +253,16 @@ class MathMarkdownViewer extends StatelessWidget {
 
             return TableRow(
               decoration: BoxDecoration(
-                color: isHeader ? AppColors.elevation3.withValues(alpha: 0.8) : Colors.transparent,
+                color: isHeader
+                    ? AppColors.elevation3.withValues(alpha: 0.8)
+                    : Colors.transparent,
               ),
               children: cells.map((cell) {
                 return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   child: Text(
                     cell,
                     style: TextStyle(

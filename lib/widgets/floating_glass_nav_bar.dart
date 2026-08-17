@@ -90,9 +90,9 @@ class FloatingGlassNavBar extends StatelessWidget {
                         color: accent,
                         boxShadow: [
                           BoxShadow(
-                            color: accent.withValues(alpha: 0.28),
-                            blurRadius: 10,
-                            offset: const Offset(0, 3),
+                            color: Colors.black.withValues(alpha: 0.32),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
                           ),
                         ],
                       ),
@@ -143,20 +143,23 @@ class FloatingGlassNavBar extends StatelessWidget {
     required String tooltip,
     required VoidCallback onTap,
   }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: AppColors.glassmorphicTint,
-          ),
-          child: Center(
-            child: Icon(icon, color: AppColors.primaryText, size: 20),
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.glassmorphicTint,
+            ),
+            child: Center(
+              child: Icon(icon, color: AppColors.primaryText, size: 20),
+            ),
           ),
         ),
       ),
