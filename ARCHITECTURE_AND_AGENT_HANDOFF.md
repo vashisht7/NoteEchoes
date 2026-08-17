@@ -1,7 +1,7 @@
 # NoteEchoes — Current Handoff Guide
 
 Last updated: 2026-08-17
-Release: `v2.9.1`
+Release: `v2.9.1` plus unreleased fixes on `main` through commit `399c585`
 
 ## What is working now
 
@@ -22,8 +22,19 @@ Release: `v2.9.1`
 - The note editor supports swipe-back, inline cursor-positioned checklists, Return-to-add table rows, and an explicit add-column control.
 - Conversation mode uses installed Apple Premium/Enhanced voices when available, synchronizes highlighted sentences from native speech callbacks, and stops speech on every route exit.
 - Reduce Motion, Dynamic Type, VoiceOver labels/actions, and compact-iPhone layouts are supported.
-- PDF attachments open in a dedicated local reader with pinch zoom, text selection, page controls, accessible loading/error states, and a separate optional document-chat action. Back returns to the note; the note remains one step above the home page.
+- PDF attachments on iPhone now use Apple's native PDFKit reader rather than the third-party Flutter renderer. They open in a dedicated matte-black reader with pinch zoom, selectable clean text, per-page Markdown copying, accessible loading/error states, and a separate optional document-chat action. Back returns to the note; the note remains one step above the home page.
 - Attachment references are stored relative to Documents and legacy absolute iOS-container paths are repaired automatically. PDF notes show a rendered first-page cover on the home card and inside the editor. The reader can switch to a clean selectable Markdown view, copy all extracted text, and use on-device Vision OCR for scanned pages.
+- The note editor has a stable-width Done action. Done persists the note first, returns directly to the home page, and lets AI indexing continue in the background so the top bar does not twitch or delay navigation.
+
+## Known installation limitation — must not be described as a permanent install
+
+The current app installed from Xcode has been reported not to keep running after the iPhone is disconnected. Treat this as an unresolved distribution/signing issue, not as confirmed daily-use installation behavior.
+
+- An Xcode Run session is a development/debug deployment. Disconnecting can terminate the debugger-launched process; the user should then try launching NoteEchoes directly from the iPhone Home Screen.
+- Do **not** promise that a development-signed build will remain usable indefinitely. Its provisioning profile is temporary and can expire or become invalid.
+- Before declaring this fixed, physically verify this exact sequence: install; stop Xcode; unplug the cable; force-close NoteEchoes; launch it from the iPhone Home Screen; create and save a note; restart the phone; launch again; confirm the note remains.
+- For dependable testing away from the Mac, distribute through TestFlight using a paid Apple Developer account. For permanent public use, use an App Store release. A locally shared IPA is not a general-install solution unless every test device is included in a valid provisioning profile.
+- Never replace the user's existing daily-data app/container merely to test this. Back up notes first and use a separate test bundle identifier when testing installation persistence.
 
 ## User setup for offline Telugu
 
@@ -85,6 +96,13 @@ Verification completed for v2.9.1:
 - Signed Release iPhone build and deep signature verification: passed.
 - Installed and launched on the connected iPhone: passed.
 
+Verification completed for the unreleased `399c585` PDF/save fixes:
+
+- Full Flutter test suite: 27 tests passed.
+- Analyzer on all modified Dart files: no issues.
+- Native iOS Release compilation with code signing disabled: passed.
+- A persistent disconnected-phone installation has **not** passed and remains required before the next release/IPA is claimed ready.
+
 ## Guardrails for future changes
 
 - Preserve the full-file M4A recording → one transcription flow. The old restart/watchdog live-recognition design caused the reported cutoff issue.
@@ -94,6 +112,7 @@ Verification completed for v2.9.1:
 - Do not claim fully offline Telugu until the Whisper download has completed successfully.
 - Preserve the black surface palette and use `Theme.of(context).colorScheme.primary` for accents instead of hard-coded neon blue/purple.
 - `WhisperKit` currently produces Swift Sendable warnings under the present Xcode configuration, but the signed device build succeeds. Address them if Swift 6 strict-concurrency becomes enabled.
+- Do not report “installed for daily use” merely because the app launches while attached to Xcode. The unplugged/restart persistence checklist above is a release gate.
 
 ## Repository
 
