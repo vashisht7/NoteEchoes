@@ -34,8 +34,24 @@ class E5EmbeddingService extends ChangeNotifier {
   double downloadProgress = 0;
 
   Future<Directory> get _directory async {
+    final cache = await getApplicationCacheDirectory();
+    final preferred = Directory(p.join(cache.path, 'models', modelVersion));
+
+    // Model weights can always be downloaded again, so they must not consume
+    // the user's iCloud backup quota. Migrate the brief v2.8.0 location while
+    // preserving a completed or partially resumable download.
     final support = await getApplicationSupportDirectory();
-    return Directory(p.join(support.path, 'models', modelVersion));
+    final legacy = Directory(p.join(support.path, 'models', modelVersion));
+    if (!await preferred.exists() && await legacy.exists()) {
+      await preferred.parent.create(recursive: true);
+      try {
+        await legacy.rename(preferred.path);
+      } on FileSystemException {
+        // A failed migration is harmless; use the cache and redownload while
+        // leaving the legacy copy untouched rather than risking data loss.
+      }
+    }
+    return preferred;
   }
 
   Future<LocalModelStatus> status({bool verifyHashes = false}) async {
@@ -109,6 +125,7 @@ class E5EmbeddingService extends ChangeNotifier {
       await partialMarker.writeAsString('$_modelSha\n$_tokenizerSha');
       if (await marker.exists()) await marker.delete();
       await partialMarker.rename(marker.path);
+      await _removeLegacyDirectory();
       downloadProgress = 1;
     } finally {
       isDownloading = false;
@@ -120,6 +137,7 @@ class E5EmbeddingService extends ChangeNotifier {
     await unload();
     final directory = await _directory;
     if (await directory.exists()) await directory.delete(recursive: true);
+    await _removeLegacyDirectory();
     downloadProgress = 0;
     notifyListeners();
   }
@@ -247,4 +265,10 @@ class E5EmbeddingService extends ChangeNotifier {
 
   Future<String> _sha(File file) async =>
       (await sha256.bind(file.openRead()).first).toString();
+
+  Future<void> _removeLegacyDirectory() async {
+    final support = await getApplicationSupportDirectory();
+    final legacy = Directory(p.join(support.path, 'models', modelVersion));
+    if (await legacy.exists()) await legacy.delete(recursive: true);
+  }
 }

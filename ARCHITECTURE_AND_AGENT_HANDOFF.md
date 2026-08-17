@@ -1,7 +1,7 @@
 # NoteEchoes — Current Handoff Guide
 
 Last updated: 2026-08-17
-Release: `v2.8.0`
+Release: `v2.8.1`
 
 ## What is working now
 
@@ -73,7 +73,7 @@ English is also supported by the same multilingual model. It is not Telugu-only.
 4. Press **Cmd + R**.
 5. On first run, grant microphone and speech permissions.
 
-Verification completed for v2.8.0:
+Verification completed for v2.8.1:
 
 - Full Flutter test suite: 24 tests passed.
 - Flutter analyzer: no new errors; 33 existing warnings/information notices remain.
@@ -93,4 +93,4 @@ Verification completed for v2.8.0:
 ## Repository
 
 - Main repository: https://github.com/vashisht7/NoteEchoes
-- Current release: https://github.com/vashisht7/NoteEchoes/releases/tag/v2.8.0
+- Current release: https://github.com/vashisht7/NoteEchoes/releases/tag/v2.8.1
