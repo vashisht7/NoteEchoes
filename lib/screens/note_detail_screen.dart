@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
@@ -23,6 +24,7 @@ import '../widgets/apple_notes_toolbar.dart';
 import '../widgets/apple_text_format_sheet.dart';
 import '../widgets/inline_note_table.dart';
 import '../widgets/math_markdown_viewer.dart';
+import 'pdf_reader_screen.dart';
 
 class NoteDetailScreen extends StatefulWidget {
   final NoteModel? existingNote;
@@ -242,7 +244,11 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
         if (pop) _allowPop = true;
       });
       if (pop) {
-        Navigator.of(context).pop(note);
+        // PopScope must rebuild with canPop=true before the route is popped.
+        // Popping in this same frame can be rejected using its stale value.
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) Navigator.of(context).pop(note);
+        });
       } else if (showConfirmation) {
         HapticFeedback.lightImpact();
         ScaffoldMessenger.of(context).showSnackBar(
@@ -686,6 +692,22 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
     );
   }
 
+  void _openPdfReader(MediaAsset asset) {
+    HapticFeedback.lightImpact();
+    Navigator.of(context).push(
+      CupertinoPageRoute(
+        builder: (_) => PdfReaderScreen(
+          filePath: asset.url,
+          title: asset.caption ?? 'PDF',
+          knownPageCount: asset.pageCount,
+          onAskPdf: asset.documentId == null
+              ? null
+              : () => _openDocumentChat(asset),
+        ),
+      ),
+    );
+  }
+
   void _shareNote() {
     final title = _titleController.text.trim().isEmpty
         ? "Untitled Note"
@@ -905,29 +927,40 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
               backgroundColor: const Color(0xFF000000),
               elevation: 0,
               leadingWidth: 90,
-              leading: GestureDetector(
-                onTap: () async {
-                  HapticFeedback.lightImpact();
-                  await _saveNote(pop: true);
-                },
-                child: Row(
-                  children: [
-                    const SizedBox(width: 8),
-                    Icon(
-                      Icons.arrow_back_ios_new_rounded,
-                      color: Theme.of(context).colorScheme.primary,
-                      size: 18,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      "Notes",
-                      style: GoogleFonts.inter(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+              leading: Semantics(
+                button: true,
+                label: 'Save and return to notes',
+                child: GestureDetector(
+                  key: const ValueKey('note_back_button'),
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () async {
+                    HapticFeedback.lightImpact();
+                    await _saveNote(pop: true);
+                  },
+                  child: Row(
+                    children: [
+                      const SizedBox(width: 8),
+                      Icon(
+                        Icons.arrow_back_ios_new_rounded,
                         color: Theme.of(context).colorScheme.primary,
+                        size: 18,
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          "Notes",
+                          maxLines: 1,
+                          overflow: TextOverflow.fade,
+                          softWrap: false,
+                          style: GoogleFonts.inter(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
               actions: [
@@ -1086,74 +1119,88 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
                                 final isSketch =
                                     asset.visualPreset == "sketch_markup";
 
-                                return GestureDetector(
-                                  onTap: isPdf && asset.documentId != null
-                                      ? () => _openDocumentChat(asset)
+                                return Semantics(
+                                  button: isPdf,
+                                  label: isPdf
+                                      ? 'Open ${asset.caption ?? 'PDF'}'
                                       : null,
-                                  child: Container(
-                                    width: 150,
-                                    margin: const EdgeInsets.only(right: 12),
-                                    padding: const EdgeInsets.all(10),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF1C1C1E),
-                                      borderRadius: BorderRadius.circular(14),
-                                      border: Border.all(
-                                        color: const Color(0xFF2C2C2E),
+                                  child: GestureDetector(
+                                    key: isPdf
+                                        ? ValueKey(
+                                            'pdf_attachment_${asset.url}',
+                                          )
+                                        : null,
+                                    onTap: isPdf
+                                        ? () => _openPdfReader(asset)
+                                        : null,
+                                    child: Container(
+                                      width: 150,
+                                      margin: const EdgeInsets.only(right: 12),
+                                      padding: const EdgeInsets.all(10),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF1C1C1E),
+                                        borderRadius: BorderRadius.circular(14),
+                                        border: Border.all(
+                                          color: const Color(0xFF2C2C2E),
+                                        ),
                                       ),
-                                    ),
-                                    child: Stack(
-                                      children: [
-                                        Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            Icon(
-                                              isPdf
-                                                  ? Icons.picture_as_pdf_rounded
-                                                  : (isSketch
-                                                        ? Icons.draw_rounded
-                                                        : Icons.image_rounded),
-                                              color: isPdf
-                                                  ? AppColors.badgePdf
-                                                  : (isSketch
-                                                        ? const Color(
-                                                            0xFFFF9F0A,
-                                                          )
-                                                        : Theme.of(context)
-                                                              .colorScheme
-                                                              .primary),
-                                              size: 28,
-                                            ),
-                                            const SizedBox(height: 6),
-                                            Text(
-                                              asset.caption ?? "Attachment",
-                                              maxLines: 2,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: const TextStyle(
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.w600,
-                                                color: Colors.white,
+                                      child: Stack(
+                                        children: [
+                                          Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              Icon(
+                                                isPdf
+                                                    ? Icons
+                                                          .picture_as_pdf_rounded
+                                                    : (isSketch
+                                                          ? Icons.draw_rounded
+                                                          : Icons
+                                                                .image_rounded),
+                                                color: isPdf
+                                                    ? AppColors.badgePdf
+                                                    : (isSketch
+                                                          ? const Color(
+                                                              0xFFFF9F0A,
+                                                            )
+                                                          : Theme.of(context)
+                                                                .colorScheme
+                                                                .primary),
+                                                size: 28,
+                                              ),
+                                              const SizedBox(height: 6),
+                                              Text(
+                                                asset.caption ?? "Attachment",
+                                                maxLines: 2,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: const TextStyle(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Colors.white,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          Positioned(
+                                            top: -4,
+                                            right: -4,
+                                            child: GestureDetector(
+                                              onTap: () => setState(
+                                                () =>
+                                                    _mediaAssets.removeAt(idx),
+                                              ),
+                                              child: const Icon(
+                                                Icons.cancel_rounded,
+                                                size: 18,
+                                                color: Colors.white38,
                                               ),
                                             ),
-                                          ],
-                                        ),
-                                        Positioned(
-                                          top: -4,
-                                          right: -4,
-                                          child: GestureDetector(
-                                            onTap: () => setState(
-                                              () => _mediaAssets.removeAt(idx),
-                                            ),
-                                            child: const Icon(
-                                              Icons.cancel_rounded,
-                                              size: 18,
-                                              color: Colors.white38,
-                                            ),
                                           ),
-                                        ),
-                                      ],
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 );
