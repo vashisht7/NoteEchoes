@@ -52,11 +52,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     // live after the first frame, so this is the earliest safe moment.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ActionButtonNoteIngestionService.instance.initialize();
-      ModelAvailabilityService.instance.refresh().then((_) {
-        if (ModelAvailabilityService.instance.embedding.isReady) {
-          SemanticKnowledgeService.instance.indexAll(_noteService.allNotes);
-        }
-      });
+      unawaited(_refreshModelsAndIndex());
       _recoverySyncTimer = Timer(const Duration(seconds: 1), () async {
         final recovered = await NoteStorageService().syncRecoveryBackup();
         if (recovered) await _noteService.reloadRecoveredNotes();
@@ -68,11 +64,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       _fetchPendingVoiceNotes();
-      ModelAvailabilityService.instance.refresh().then((_) {
-        if (ModelAvailabilityService.instance.embedding.isReady) {
-          SemanticKnowledgeService.instance.indexAll(_noteService.allNotes);
-        }
-      });
+      unawaited(_refreshModelsAndIndex());
+    }
+  }
+
+  Future<void> _refreshModelsAndIndex() async {
+    try {
+      await ModelAvailabilityService.instance.refresh();
+      if (ModelAvailabilityService.instance.embedding.isReady) {
+        await SemanticKnowledgeService.instance.indexAll(_noteService.allNotes);
+      }
+    } catch (error) {
+      debugPrint('Model availability refresh failed: $error');
     }
   }
 

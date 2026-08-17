@@ -3,6 +3,24 @@ import PDFKit
 import Vision
 
 enum PDFVisionExtractionService {
+    static func renderFirstPage(at path: String) throws -> Data {
+        guard let document = PDFDocument(url: URL(fileURLWithPath: path)),
+              let page = document.page(at: 0) else {
+            throw PDFVisionError.cannotOpen
+        }
+        let bounds = page.bounds(for: .mediaBox)
+        let width: CGFloat = 600
+        let height = max(1, width * bounds.height / max(1, bounds.width))
+        let image = page.thumbnail(
+            of: CGSize(width: width, height: height),
+            for: .mediaBox
+        )
+        guard let data = image.pngData() else {
+            throw PDFVisionError.cannotOpen
+        }
+        return data
+    }
+
     static func extractPages(at path: String) async throws -> [String] {
         try await Task.detached(priority: .userInitiated) {
             guard let document = PDFDocument(url: URL(fileURLWithPath: path)) else {

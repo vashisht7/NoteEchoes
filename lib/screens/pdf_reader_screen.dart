@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pdfrx/pdfrx.dart';
@@ -33,6 +34,7 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
   bool _showCleanText = false;
   bool _isLoadingText = false;
   String? _cleanMarkdown;
+  List<String> _cleanPages = const [];
   String? _textError;
 
   @override
@@ -79,21 +81,19 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
 
     PdfDocument? document;
     try {
-      document = await PdfDocument.openFile(path);
       final pages = <String>[];
-      for (final page in document.pages) {
-        pages.add((await page.loadText()).fullText.trim());
-      }
-
-      if (pages.every((text) => text.length < 20)) {
+      if (defaultTargetPlatform == TargetPlatform.iOS) {
         final recognized = await _visionChannel.invokeMethod<List<dynamic>>(
           'extractPages',
           {'path': path},
         );
         if (recognized != null) {
-          pages
-            ..clear()
-            ..addAll(recognized.map((page) => page.toString().trim()));
+          pages.addAll(recognized.map((page) => page.toString().trim()));
+        }
+      } else {
+        document = await PdfDocument.openFile(path);
+        for (final page in document.pages) {
+          pages.add((await page.loadText()).fullText.trim());
         }
       }
 
@@ -102,7 +102,10 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
         throw const FormatException('No readable text was found in this PDF.');
       }
       if (!mounted) return;
-      setState(() => _cleanMarkdown = markdown);
+      setState(() {
+        _cleanPages = pages;
+        _cleanMarkdown = markdown;
+      });
     } catch (_) {
       if (!mounted) return;
       setState(() {
@@ -121,13 +124,19 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
       final text = pages[index].trim();
       if (text.isEmpty) continue;
       if (pages.length > 1) output.writeln('## Page ${index + 1}\n');
-      for (final rawLine in text.split(RegExp(r'[\r\n]+'))) {
-        var line = rawLine.replaceAll(RegExp(r'[ \t]+'), ' ').trim();
-        if (line.isEmpty) continue;
-        if (line.startsWith('• ')) line = '- ${line.substring(2)}';
-        output.writeln(line);
-      }
+      output.writeln(_cleanPageText(text));
       output.writeln();
+    }
+    return output.toString().trim();
+  }
+
+  String _cleanPageText(String text) {
+    final output = StringBuffer();
+    for (final rawLine in text.split(RegExp(r'[\r\n]+'))) {
+      var line = rawLine.replaceAll(RegExp(r'[ \t]+'), ' ').trim();
+      if (line.isEmpty) continue;
+      if (line.startsWith('• ')) line = '- ${line.substring(2)}';
+      output.writeln(line);
     }
     return output.toString().trim();
   }
@@ -141,6 +150,18 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
       const SnackBar(
         behavior: SnackBarBehavior.floating,
         content: Text('PDF text copied'),
+      ),
+    );
+  }
+
+  void _copyPageSection(int pageIndex, String text) {
+    final section = '## Page ${pageIndex + 1}\n\n${_cleanPageText(text)}';
+    Clipboard.setData(ClipboardData(text: section));
+    HapticFeedback.selectionClick();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        content: Text('Page ${pageIndex + 1} copied as Markdown'),
       ),
     );
   }
@@ -214,6 +235,19 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
   }
 
   Widget _buildViewer(String path) {
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      return ColoredBox(
+        color: const Color(0xFF080808),
+        child: UiKitView(
+          key: ValueKey('native_pdf_view_$path'),
+          viewType: 'noteechoes/pdf_view',
+          creationParams: {'path': path},
+          creationParamsCodec: const StandardMessageCodec(),
+          gestureRecognizers: const {},
+        ),
+      );
+    }
+
     return Stack(
       children: [
         Positioned.fill(
@@ -337,17 +371,49 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
       );
     }
 
+    final readablePages = _cleanPages.asMap().entries.where(
+      (entry) => entry.value.trim().isNotEmpty,
+    );
     return Container(
       color: const Color(0xFF080808),
-      child: SelectionArea(
-        child: SingleChildScrollView(
-          key: const ValueKey('pdf_clean_text_view'),
-          padding: const EdgeInsets.fromLTRB(22, 18, 22, 48),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 760),
+      child: ListView(
+        key: const ValueKey('pdf_clean_text_view'),
+        padding: const EdgeInsets.fromLTRB(22, 18, 22, 48),
+        children: [
+          Text(
+            widget.title,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 25,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 22),
+          for (final entry in readablePages) ...[
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Page ${entry.key + 1}',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Copy page ${entry.key + 1} as Markdown',
+                  visualDensity: VisualDensity.compact,
+                  icon: const Icon(Icons.copy_rounded, size: 18),
+                  onPressed: () => _copyPageSection(entry.key, entry.value),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            SelectionArea(
               child: MathMarkdownViewer(
-                content: _cleanMarkdown ?? '',
+                content: _cleanPageText(entry.value),
                 baseStyle: const TextStyle(
                   color: Color(0xFFE8E8ED),
                   fontSize: 16,
@@ -355,8 +421,12 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
                 ),
               ),
             ),
-          ),
-        ),
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 20),
+              child: Divider(color: Colors.white12, height: 1),
+            ),
+          ],
+        ],
       ),
     );
   }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import '../models/note_model.dart';
 import 'ai_categorization_engine.dart';
@@ -21,6 +23,8 @@ class NoteService extends ChangeNotifier {
   String? _userEmail;
   String? _authProvider; // "apple" or "google"
   bool _isInitialized = false;
+  bool _backgroundIndexingEnabled = true;
+  Future<void> _lastIndexingTask = Future<void>.value();
 
   bool get isSignedIn => _isSignedIn;
   String? get userEmail => _userEmail;
@@ -161,12 +165,7 @@ class NoteService extends ChangeNotifier {
     _notes.insert(0, note);
     notifyListeners();
     await _persistNote(note);
-    try {
-      await KnowledgeService.instance.indexNote(note);
-    } catch (error) {
-      debugPrint('Could not index note ${note.noteId}: $error');
-    }
-    await SemanticKnowledgeService.instance.indexNote(note);
+    _scheduleNoteIndexing(note);
   }
 
   /// Creates and saves a note directly from voice transcription or speech
@@ -231,13 +230,33 @@ class NoteService extends ChangeNotifier {
       _notes[index] = note;
       notifyListeners();
       await _persistNote(note);
+      _scheduleNoteIndexing(note);
+    }
+  }
+
+  void _scheduleNoteIndexing(NoteModel note) {
+    if (!_backgroundIndexingEnabled) return;
+    _lastIndexingTask = _lastIndexingTask.then((_) async {
       try {
         await KnowledgeService.instance.indexNote(note);
       } catch (error) {
         debugPrint('Could not index note ${note.noteId}: $error');
       }
-      await SemanticKnowledgeService.instance.indexNote(note);
-    }
+      try {
+        await SemanticKnowledgeService.instance.indexNote(note);
+      } catch (error) {
+        debugPrint('Could not semantically index note ${note.noteId}: $error');
+      }
+    });
+    unawaited(_lastIndexingTask);
+  }
+
+  @visibleForTesting
+  Future<void> waitForPendingIndexingForTesting() => _lastIndexingTask;
+
+  @visibleForTesting
+  void setBackgroundIndexingForTesting(bool enabled) {
+    _backgroundIndexingEnabled = enabled;
   }
 
   Future<void> deleteNote(String noteId) async {

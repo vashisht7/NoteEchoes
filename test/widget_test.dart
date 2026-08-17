@@ -1,7 +1,7 @@
-import 'dart:ui';
-
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:notechoes_app/main.dart';
+import 'package:notechoes_app/screens/home_screen.dart';
 import 'package:notechoes_app/services/ai_categorization_engine.dart';
 import 'package:notechoes_app/services/note_service.dart';
 import 'package:notechoes_app/models/note_model.dart';
@@ -12,6 +12,7 @@ void main() {
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
     NoteService().clearNotesForTesting();
+    NoteService().setBackgroundIndexingForTesting(false);
     await NoteStorageService().useInMemoryDatabaseForTesting();
   });
 
@@ -67,6 +68,7 @@ void main() {
         expect(service.allNotes.length, equals(initialCount + 1));
         expect(note.tags.contains('ideas'), isTrue);
         expect(note.title.isNotEmpty, isTrue);
+        await service.waitForPendingIndexingForTesting();
       },
     );
 
@@ -136,6 +138,44 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Topics'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('Done saves a note and returns to a stable compact home page', (
+      WidgetTester tester,
+    ) async {
+      tester.view.physicalSize = const Size(320, 640);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(const NoteEchoesApp());
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Write Note'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const ValueKey('note_title_field')),
+        'Saved from Done',
+      );
+      expect(tester.takeException(), isNull);
+
+      await tester.tap(find.byKey(const ValueKey('note_done_button')));
+      for (var attempt = 0; attempt < 30; attempt++) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 10)),
+        );
+        await tester.pump(const Duration(milliseconds: 50));
+        if (find.byType(HomeScreen).evaluate().isNotEmpty &&
+            find.byKey(const ValueKey('note_done_button')).evaluate().isEmpty) {
+          break;
+        }
+      }
+
+      expect(find.byType(HomeScreen), findsOneWidget);
+      expect(find.text('notechoes'), findsOneWidget);
+      expect(find.text('Saved from Done'), findsOneWidget);
+      expect(find.byKey(const ValueKey('note_done_button')), findsNothing);
       expect(tester.takeException(), isNull);
     });
   });

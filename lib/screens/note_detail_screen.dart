@@ -978,81 +978,87 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
                   tooltip: 'Related Notes',
                   onPressed: _showRelatedNotes,
                 ),
-                // Preview Markdown & LaTeX Toggle
-                IconButton(
-                  icon: Icon(
-                    _isPreviewMode
-                        ? Icons.edit_note_rounded
-                        : Icons.visibility_rounded,
-                    color: _isPreviewMode
-                        ? Theme.of(context).colorScheme.primary
-                        : Colors.white70,
-                    size: 22,
-                  ),
-                  tooltip: _isPreviewMode
-                      ? "Edit Mode"
-                      : "Math & Markdown Preview",
-                  onPressed: () =>
-                      setState(() => _isPreviewMode = !_isPreviewMode),
-                ),
-
-                // Share button
-                IconButton(
+                PopupMenuButton<String>(
+                  tooltip: 'More note actions',
+                  color: const Color(0xFF1C1C1E),
                   icon: const Icon(
-                    Icons.ios_share_rounded,
+                    Icons.more_horiz_rounded,
                     color: Colors.white70,
-                    size: 21,
                   ),
-                  tooltip: "Share Note",
-                  onPressed: _shareNote,
-                ),
-
-                // Pin toggle
-                IconButton(
-                  icon: Icon(
-                    _isPinned
-                        ? Icons.push_pin_rounded
-                        : Icons.push_pin_outlined,
-                    color: _isPinned
-                        ? Theme.of(context).colorScheme.primary
-                        : Colors.white70,
-                    size: 21,
-                  ),
-                  tooltip: _isPinned ? "Unpin" : "Pin",
-                  onPressed: () => setState(() => _isPinned = !_isPinned),
-                ),
-
-                // Delete Note
-                if (widget.existingNote != null)
-                  IconButton(
-                    icon: const Icon(
-                      Icons.delete_outline_rounded,
-                      color: Colors.redAccent,
-                      size: 21,
+                  onSelected: (action) async {
+                    switch (action) {
+                      case 'preview':
+                        setState(() => _isPreviewMode = !_isPreviewMode);
+                        break;
+                      case 'share':
+                        _shareNote();
+                        break;
+                      case 'pin':
+                        setState(() => _isPinned = !_isPinned);
+                        break;
+                      case 'delete':
+                        final existingNote = widget.existingNote;
+                        if (existingNote == null) return;
+                        await NoteService().deleteNote(existingNote.noteId);
+                        if (!mounted) return;
+                        setState(() => _allowPop = true);
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (mounted) Navigator.of(context).pop();
+                        });
+                        break;
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    PopupMenuItem(
+                      value: 'preview',
+                      child: _NoteMenuLabel(
+                        icon: _isPreviewMode
+                            ? Icons.edit_note_rounded
+                            : Icons.visibility_rounded,
+                        label: _isPreviewMode
+                            ? 'Return to editing'
+                            : 'Preview Markdown',
+                      ),
                     ),
-                    tooltip: "Delete Note",
-                    onPressed: () async {
-                      await NoteService().deleteNote(
-                        widget.existingNote!.noteId,
-                      );
-                      if (!context.mounted) return;
-                      setState(() => _allowPop = true);
-                      Navigator.of(context).pop();
-                    },
-                  ),
-
-                // Done Button
-                Padding(
-                  padding: const EdgeInsets.only(right: 12, left: 4),
+                    const PopupMenuItem(
+                      value: 'share',
+                      child: _NoteMenuLabel(
+                        icon: Icons.ios_share_rounded,
+                        label: 'Copy note text',
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'pin',
+                      child: _NoteMenuLabel(
+                        icon: _isPinned
+                            ? Icons.push_pin_rounded
+                            : Icons.push_pin_outlined,
+                        label: _isPinned ? 'Unpin note' : 'Pin note',
+                      ),
+                    ),
+                    if (widget.existingNote != null)
+                      const PopupMenuItem(
+                        value: 'delete',
+                        child: _NoteMenuLabel(
+                          icon: Icons.delete_outline_rounded,
+                          label: 'Delete note',
+                          color: Colors.redAccent,
+                        ),
+                      ),
+                  ],
+                ),
+                SizedBox(
+                  width: 66,
                   child: TextButton(
+                    key: const ValueKey('note_done_button'),
                     onPressed: _isSaving
                         ? null
                         : () async {
                             FocusScope.of(context).unfocus();
-                            await _saveNote(pop: false, showConfirmation: true);
+                            await _saveNote(pop: true);
                           },
                     child: Text(
-                      _isSaving ? "Saving…" : "Done",
+                      "Done",
                       style: GoogleFonts.inter(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -1061,6 +1067,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
                     ),
                   ),
                 ),
+                const SizedBox(width: 6),
               ],
             ),
             body: Padding(
@@ -1469,5 +1476,28 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
         ), // end swipe gesture
       ), // end Semantics
     ); // end PopScope
+  }
+}
+
+class _NoteMenuLabel extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  const _NoteMenuLabel({
+    required this.icon,
+    required this.label,
+    this.color = Colors.white,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, color: color, size: 20),
+        const SizedBox(width: 12),
+        Text(label, style: TextStyle(color: color)),
+      ],
+    );
   }
 }

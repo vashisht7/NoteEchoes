@@ -1,6 +1,9 @@
+import 'dart:async';
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:pdfrx/pdfrx.dart';
 
 import '../services/attachment_path_service.dart';
@@ -20,6 +23,7 @@ class PdfCoverThumbnail extends StatefulWidget {
 }
 
 class _PdfCoverThumbnailState extends State<PdfCoverThumbnail> {
+  static const _nativePdfChannel = MethodChannel('notechoes/pdf_vision');
   ui.Image? _image;
   bool _failed = false;
 
@@ -48,6 +52,24 @@ class _PdfCoverThumbnailState extends State<PdfCoverThumbnail> {
     PdfDocument? document;
     PdfImage? rendered;
     try {
+      if (defaultTargetPlatform == TargetPlatform.iOS) {
+        final bytes = await _nativePdfChannel.invokeMethod<Uint8List>(
+          'renderFirstPage',
+          {'path': path},
+        );
+        if (bytes != null && bytes.isNotEmpty) {
+          final imageCompleter = Completer<ui.Image>();
+          ui.decodeImageFromList(bytes, imageCompleter.complete);
+          final image = await imageCompleter.future;
+          if (!mounted) {
+            image.dispose();
+            return;
+          }
+          setState(() => _image = image);
+          return;
+        }
+      }
+
       document = await PdfDocument.openFile(path);
       if (document.pages.isEmpty) throw const FormatException('Empty PDF');
       final page = document.pages.first;

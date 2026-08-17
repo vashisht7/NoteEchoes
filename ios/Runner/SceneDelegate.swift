@@ -100,27 +100,44 @@ class SceneDelegate: FlutterSceneDelegate, AVSpeechSynthesizerDelegate {
         )
         self.pdfVisionChannel = pdfVisionChannel
         pdfVisionChannel.setMethodCallHandler { call, result in
-            guard call.method == "extractPages",
-                  let arguments = call.arguments as? [String: Any],
+            guard let arguments = call.arguments as? [String: Any],
                   let path = arguments["path"] as? String else {
                 result(FlutterMethodNotImplemented)
                 return
             }
-            Task {
-                do {
-                    let pages = try await PDFVisionExtractionService.extractPages(
-                        at: path
-                    )
-                    await MainActor.run { result(pages) }
-                } catch {
-                    await MainActor.run {
-                        result(FlutterError(
-                            code: "PDF_VISION_FAILED",
-                            message: error.localizedDescription,
-                            details: nil
-                        ))
+            switch call.method {
+            case "extractPages":
+                Task {
+                    do {
+                        let pages = try await PDFVisionExtractionService.extractPages(
+                            at: path
+                        )
+                        await MainActor.run { result(pages) }
+                    } catch {
+                        await MainActor.run {
+                            result(FlutterError(
+                                code: "PDF_VISION_FAILED",
+                                message: error.localizedDescription,
+                                details: nil
+                            ))
+                        }
                     }
                 }
+            case "renderFirstPage":
+                do {
+                    let data = try PDFVisionExtractionService.renderFirstPage(
+                        at: path
+                    )
+                    result(FlutterStandardTypedData(bytes: data))
+                } catch {
+                    result(FlutterError(
+                        code: "PDF_RENDER_FAILED",
+                        message: error.localizedDescription,
+                        details: nil
+                    ))
+                }
+            default:
+                result(FlutterMethodNotImplemented)
             }
         }
 
