@@ -1,8 +1,9 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pdfrx/pdfrx.dart';
+
+import '../services/attachment_path_service.dart';
+import '../widgets/math_markdown_viewer.dart';
 
 class PdfReaderScreen extends StatefulWidget {
   final String filePath;
@@ -23,14 +24,31 @@ class PdfReaderScreen extends StatefulWidget {
 }
 
 class _PdfReaderScreenState extends State<PdfReaderScreen> {
+  static const _visionChannel = MethodChannel('notechoes/pdf_vision');
   final PdfViewerController _controller = PdfViewerController();
   int _currentPage = 1;
   int? _pageCount;
+  String? _resolvedPath;
+  bool _isResolving = true;
+  bool _showCleanText = false;
+  bool _isLoadingText = false;
+  String? _cleanMarkdown;
+  String? _textError;
 
   @override
   void initState() {
     super.initState();
     _pageCount = widget.knownPageCount;
+    _resolvePath();
+  }
+
+  Future<void> _resolvePath() async {
+    final path = await AttachmentPathService.resolve(widget.filePath);
+    if (!mounted) return;
+    setState(() {
+      _resolvedPath = path;
+      _isResolving = false;
+    });
   }
 
   Future<void> _goToPage(int page) async {
@@ -40,10 +58,95 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
     await _controller.goToPage(pageNumber: page);
   }
 
+  Future<void> _toggleCleanText() async {
+    if (_showCleanText) {
+      setState(() => _showCleanText = false);
+      return;
+    }
+    setState(() => _showCleanText = true);
+    if (_cleanMarkdown == null && !_isLoadingText) {
+      await _loadCleanText();
+    }
+  }
+
+  Future<void> _loadCleanText() async {
+    final path = _resolvedPath;
+    if (path == null) return;
+    setState(() {
+      _isLoadingText = true;
+      _textError = null;
+    });
+
+    PdfDocument? document;
+    try {
+      document = await PdfDocument.openFile(path);
+      final pages = <String>[];
+      for (final page in document.pages) {
+        pages.add((await page.loadText()).fullText.trim());
+      }
+
+      if (pages.every((text) => text.length < 20)) {
+        final recognized = await _visionChannel.invokeMethod<List<dynamic>>(
+          'extractPages',
+          {'path': path},
+        );
+        if (recognized != null) {
+          pages
+            ..clear()
+            ..addAll(recognized.map((page) => page.toString().trim()));
+        }
+      }
+
+      final markdown = _pagesToMarkdown(pages);
+      if (markdown.trim().isEmpty) {
+        throw const FormatException('No readable text was found in this PDF.');
+      }
+      if (!mounted) return;
+      setState(() => _cleanMarkdown = markdown);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _textError =
+            'Clean text is unavailable for this PDF. You can still read every page in the original view.';
+      });
+    } finally {
+      await document?.dispose();
+      if (mounted) setState(() => _isLoadingText = false);
+    }
+  }
+
+  String _pagesToMarkdown(List<String> pages) {
+    final output = StringBuffer('# ${widget.title}\n\n');
+    for (var index = 0; index < pages.length; index++) {
+      final text = pages[index].trim();
+      if (text.isEmpty) continue;
+      if (pages.length > 1) output.writeln('## Page ${index + 1}\n');
+      for (final rawLine in text.split(RegExp(r'[\r\n]+'))) {
+        var line = rawLine.replaceAll(RegExp(r'[ \t]+'), ' ').trim();
+        if (line.isEmpty) continue;
+        if (line.startsWith('• ')) line = '- ${line.substring(2)}';
+        output.writeln(line);
+      }
+      output.writeln();
+    }
+    return output.toString().trim();
+  }
+
+  void _copyCleanText() {
+    final text = _cleanMarkdown;
+    if (text == null || text.isEmpty) return;
+    Clipboard.setData(ClipboardData(text: text));
+    HapticFeedback.lightImpact();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        behavior: SnackBarBehavior.floating,
+        content: Text('PDF text copied'),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final fileExists = File(widget.filePath).existsSync();
-
     return Scaffold(
       key: const ValueKey('pdf_reader_screen'),
       backgroundColor: Colors.black,
@@ -68,6 +171,25 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
         ),
         actions: [
+          if (_resolvedPath != null)
+            IconButton(
+              key: const ValueKey('pdf_clean_text_button'),
+              tooltip: _showCleanText ? 'Show original PDF' : 'Read clean text',
+              icon: Icon(
+                _showCleanText
+                    ? Icons.picture_as_pdf_outlined
+                    : Icons.article_outlined,
+                size: 22,
+              ),
+              onPressed: _toggleCleanText,
+            ),
+          if (_showCleanText && _cleanMarkdown != null)
+            IconButton(
+              key: const ValueKey('copy_pdf_text_button'),
+              tooltip: 'Copy PDF text',
+              icon: const Icon(Icons.copy_all_rounded, size: 21),
+              onPressed: _copyCleanText,
+            ),
           if (widget.onAskPdf != null)
             IconButton(
               key: const ValueKey('ask_pdf_button'),
@@ -80,27 +202,32 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
       ),
       body: SafeArea(
         top: false,
-        child: fileExists ? _buildViewer() : _buildMissingFile(),
+        child: _isResolving
+            ? _buildResolving()
+            : _resolvedPath == null
+            ? _buildMissingFile()
+            : _showCleanText
+            ? _buildCleanText()
+            : _buildViewer(_resolvedPath!),
       ),
     );
   }
 
-  Widget _buildViewer() {
+  Widget _buildViewer(String path) {
     return Stack(
       children: [
         Positioned.fill(
           child: Semantics(
             label: 'PDF document. Pinch to zoom and swipe vertically to read.',
             child: PdfViewer.file(
-              widget.filePath,
-              key: ValueKey('pdf_viewer_${widget.filePath}'),
+              path,
+              key: ValueKey('pdf_viewer_$path'),
               controller: _controller,
               params: PdfViewerParams(
-                backgroundColor: Colors.black,
-                margin: 12,
+                backgroundColor: const Color(0xFF080808),
+                margin: 10,
                 enableTextSelection: true,
-                useAlternativeFitScaleAsMinScale: false,
-                maxImageBytesCachedOnMemory: 64 * 1024 * 1024,
+                maxImageBytesCachedOnMemory: 96 * 1024 * 1024,
                 pageDropShadow: const BoxShadow(
                   color: Color(0x66000000),
                   blurRadius: 12,
@@ -184,6 +311,56 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
     );
   }
 
+  Widget _buildResolving() {
+    return Center(
+      child: CircularProgressIndicator(
+        color: Theme.of(context).colorScheme.primary,
+        strokeWidth: 2.5,
+      ),
+    );
+  }
+
+  Widget _buildCleanText() {
+    if (_isLoadingText) {
+      return _ReaderMessage(
+        icon: Icons.auto_awesome_rounded,
+        title: 'Making a clean reading view',
+        message: 'Extracting text and preserving page order…',
+        progressColor: Theme.of(context).colorScheme.primary,
+      );
+    }
+    if (_textError != null) {
+      return _ReaderMessage(
+        icon: Icons.text_snippet_outlined,
+        title: 'Clean text unavailable',
+        message: _textError!,
+      );
+    }
+
+    return Container(
+      color: const Color(0xFF080808),
+      child: SelectionArea(
+        child: SingleChildScrollView(
+          key: const ValueKey('pdf_clean_text_view'),
+          padding: const EdgeInsets.fromLTRB(22, 18, 22, 48),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 760),
+              child: MathMarkdownViewer(
+                content: _cleanMarkdown ?? '',
+                baseStyle: const TextStyle(
+                  color: Color(0xFFE8E8ED),
+                  fontSize: 16,
+                  height: 1.58,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildMissingFile() {
     return const _ReaderMessage(
       icon: Icons.insert_drive_file_outlined,
@@ -197,11 +374,13 @@ class _ReaderMessage extends StatelessWidget {
   final IconData icon;
   final String title;
   final String message;
+  final Color? progressColor;
 
   const _ReaderMessage({
     required this.icon,
     required this.title,
     required this.message,
+    this.progressColor,
   });
 
   @override
@@ -212,7 +391,17 @@ class _ReaderMessage extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: Colors.white38, size: 42),
+            if (progressColor != null)
+              SizedBox(
+                width: 34,
+                height: 34,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  color: progressColor,
+                ),
+              )
+            else
+              Icon(icon, color: Colors.white38, size: 42),
             const SizedBox(height: 16),
             Text(
               title,

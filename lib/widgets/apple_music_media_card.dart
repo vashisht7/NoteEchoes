@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../models/note_model.dart';
 import '../theme/app_colors.dart';
 import '../utils/date_formatter.dart';
+import 'pdf_cover_thumbnail.dart';
 
 class AppleMusicMediaCard extends StatelessWidget {
   final NoteModel note;
@@ -94,7 +95,9 @@ class AppleMusicMediaCard extends StatelessWidget {
                     if (note.isPinned)
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.dropletRed.withValues(alpha: 0.9),
                           borderRadius: BorderRadius.circular(12),
@@ -108,8 +111,11 @@ class AppleMusicMediaCard extends StatelessWidget {
                         child: const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.push_pin_rounded,
-                                size: 11, color: Colors.white),
+                            Icon(
+                              Icons.push_pin_rounded,
+                              size: 11,
+                              color: Colors.white,
+                            ),
                             SizedBox(width: 4),
                             Text(
                               "PINNED",
@@ -130,7 +136,9 @@ class AppleMusicMediaCard extends StatelessWidget {
                     if (hasPdf)
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 9, vertical: 4),
+                          horizontal: 9,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.badgePdf.withValues(alpha: 0.95),
                           borderRadius: BorderRadius.circular(8),
@@ -144,8 +152,11 @@ class AppleMusicMediaCard extends StatelessWidget {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.picture_as_pdf_rounded,
-                                size: 12, color: Colors.white),
+                            const Icon(
+                              Icons.picture_as_pdf_rounded,
+                              size: 12,
+                              color: Colors.white,
+                            ),
                             const SizedBox(width: 4),
                             Text(
                               "PDF • ${note.mediaAssets.firstWhere((m) => m.type == MediaAssetType.pdf).pageCount ?? 1}P",
@@ -186,8 +197,11 @@ class AppleMusicMediaCard extends StatelessWidget {
                           // Timestamp Header
                           Row(
                             children: [
-                              const Icon(Icons.access_time_rounded,
-                                  size: 11, color: AppColors.secondaryText),
+                              const Icon(
+                                Icons.access_time_rounded,
+                                size: 11,
+                                color: AppColors.secondaryText,
+                              ),
                               const SizedBox(width: 4),
                               Text(
                                 formatNoteTimestamp(note.createdAt),
@@ -232,23 +246,29 @@ class AppleMusicMediaCard extends StatelessWidget {
                           // Tags and metadata
                           Row(
                             children: [
-                              ...note.tags.take(2).map((tag) => Container(
-                                    margin: const EdgeInsets.only(right: 6),
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 7, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.badgeTag,
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Text(
-                                      "#$tag",
-                                      style: const TextStyle(
-                                        fontSize: 10.5,
-                                        fontWeight: FontWeight.w500,
-                                        color: AppColors.primaryText,
+                              ...note.tags
+                                  .take(2)
+                                  .map(
+                                    (tag) => Container(
+                                      margin: const EdgeInsets.only(right: 6),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 7,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.badgeTag,
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        "#$tag",
+                                        style: const TextStyle(
+                                          fontSize: 10.5,
+                                          fontWeight: FontWeight.w500,
+                                          color: AppColors.primaryText,
+                                        ),
                                       ),
                                     ),
-                                  )),
+                                  ),
                               const Spacer(),
                               const Icon(
                                 Icons.arrow_forward_ios_rounded,
@@ -271,6 +291,19 @@ class AppleMusicMediaCard extends StatelessWidget {
   }
 
   Widget _buildArtworkBackground(NoteModel note) {
+    final pdfAssets = note.mediaAssets
+        .where((asset) => asset.type == MediaAssetType.pdf)
+        .toList();
+    if (pdfAssets.isNotEmpty) {
+      return ColoredBox(
+        color: const Color(0xFF080808),
+        child: PdfCoverThumbnail(
+          filePath: pdfAssets.first.url,
+          borderRadius: BorderRadius.zero,
+        ),
+      );
+    }
+
     final firstPreset = note.mediaAssets.isNotEmpty
         ? note.mediaAssets.first.visualPreset
         : null;
@@ -300,11 +333,15 @@ class AppleMusicMediaCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: Colors.white.withValues(alpha: 0.15),
-                  border:
-                      Border.all(color: Colors.white.withValues(alpha: 0.3)),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.3),
+                  ),
                 ),
-                child: const Icon(Icons.auto_awesome_rounded,
-                    color: Colors.white, size: 34),
+                child: const Icon(
+                  Icons.auto_awesome_rounded,
+                  color: Colors.white,
+                  size: 34,
+                ),
               ),
               const SizedBox(height: 8),
               Text(
@@ -319,52 +356,6 @@ class AppleMusicMediaCard extends StatelessWidget {
           ),
         ),
       );
-    } else if (firstPreset == "pdf_doc") {
-      return Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF2C1018),
-              Color(0xFF141418),
-              Color(0xFF1A1A22),
-            ],
-          ),
-        ),
-        child: Center(
-          child: Container(
-            margin: const EdgeInsets.only(bottom: 50),
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: AppColors.elevation2,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.glassBorderBright),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.5),
-                  blurRadius: 14,
-                ),
-              ],
-            ),
-            child: const Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.description_rounded,
-                    size: 36, color: AppColors.badgePdf),
-                SizedBox(height: 6),
-                Text(
-                  "Architecture Specs V2.4",
-                  style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
     }
 
     return Container(
@@ -372,11 +363,7 @@ class AppleMusicMediaCard extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF1B2838),
-            Color(0xFF131722),
-            Color(0xFF0A0A0C),
-          ],
+          colors: [Color(0xFF1B2838), Color(0xFF131722), Color(0xFF0A0A0C)],
         ),
       ),
       child: Center(
@@ -391,10 +378,14 @@ class AppleMusicMediaCard extends StatelessWidget {
                   color: AppColors.accentBlue.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
                   border: Border.all(
-                      color: AppColors.accentBlue.withValues(alpha: 0.4)),
+                    color: AppColors.accentBlue.withValues(alpha: 0.4),
+                  ),
                 ),
-                child: const Icon(Icons.architecture_rounded,
-                    size: 34, color: AppColors.accentBlue),
+                child: const Icon(
+                  Icons.architecture_rounded,
+                  size: 34,
+                  color: AppColors.accentBlue,
+                ),
               ),
               const SizedBox(height: 10),
               Text(

@@ -16,6 +16,7 @@ import '../ai/domain/semantic_models.dart';
 import '../ai/presentation/model_feature_gate.dart';
 import '../ai/presentation/document_chat_page.dart';
 import '../models/note_model.dart';
+import '../services/attachment_path_service.dart';
 import '../services/note_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/date_formatter.dart';
@@ -24,6 +25,7 @@ import '../widgets/apple_notes_toolbar.dart';
 import '../widgets/apple_text_format_sheet.dart';
 import '../widgets/inline_note_table.dart';
 import '../widgets/math_markdown_viewer.dart';
+import '../widgets/pdf_cover_thumbnail.dart';
 import 'pdf_reader_screen.dart';
 
 class NoteDetailScreen extends StatefulWidget {
@@ -611,6 +613,9 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
           throw StateError('The selected file has no path.');
         }
         final storedPath = await _copyAttachment(sourcePath, file.name);
+        final storedReference = await AttachmentPathService.toStoredReference(
+          storedPath,
+        );
 
         String? documentId;
         int? pageCount;
@@ -636,7 +641,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
           _mediaAssets.add(
             MediaAsset(
               type: isPdf ? MediaAssetType.pdf : MediaAssetType.image,
-              url: storedPath,
+              url: storedReference,
               pageCount: pageCount,
               caption: file.name,
               visualPreset: isPdf ? "pdf_doc" : "nebula_art",
@@ -1136,7 +1141,10 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
                                     child: Container(
                                       width: 150,
                                       margin: const EdgeInsets.only(right: 12),
-                                      padding: const EdgeInsets.all(10),
+                                      padding: isPdf
+                                          ? EdgeInsets.zero
+                                          : const EdgeInsets.all(10),
+                                      clipBehavior: Clip.antiAlias,
                                       decoration: BoxDecoration(
                                         color: const Color(0xFF1C1C1E),
                                         borderRadius: BorderRadius.circular(14),
@@ -1146,56 +1154,99 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
                                       ),
                                       child: Stack(
                                         children: [
-                                          Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                            children: [
-                                              Icon(
-                                                isPdf
-                                                    ? Icons
-                                                          .picture_as_pdf_rounded
-                                                    : (isSketch
-                                                          ? Icons.draw_rounded
-                                                          : Icons
-                                                                .image_rounded),
-                                                color: isPdf
-                                                    ? AppColors.badgePdf
-                                                    : (isSketch
-                                                          ? const Color(
-                                                              0xFFFF9F0A,
-                                                            )
-                                                          : Theme.of(context)
-                                                                .colorScheme
-                                                                .primary),
-                                                size: 28,
+                                          if (isPdf) ...[
+                                            Positioned.fill(
+                                              child: PdfCoverThumbnail(
+                                                filePath: asset.url,
                                               ),
-                                              const SizedBox(height: 6),
-                                              Text(
-                                                asset.caption ?? "Attachment",
-                                                maxLines: 2,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: const TextStyle(
-                                                  fontSize: 11,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: Colors.white,
+                                            ),
+                                            const Positioned.fill(
+                                              child: DecoratedBox(
+                                                decoration: BoxDecoration(
+                                                  gradient: LinearGradient(
+                                                    begin: Alignment.topCenter,
+                                                    end: Alignment.bottomCenter,
+                                                    colors: [
+                                                      Colors.transparent,
+                                                      Color(0x22000000),
+                                                      Color(0xE6000000),
+                                                    ],
+                                                    stops: [0.35, 0.62, 1],
+                                                  ),
                                                 ),
                                               ),
-                                            ],
-                                          ),
+                                            ),
+                                            Positioned(
+                                              left: 10,
+                                              right: 28,
+                                              bottom: 8,
+                                              child: Text(
+                                                asset.caption ?? 'PDF',
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w700,
+                                                  shadows: [
+                                                    Shadow(
+                                                      color: Colors.black,
+                                                      blurRadius: 5,
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                          ] else
+                                            Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: [
+                                                Icon(
+                                                  isSketch
+                                                      ? Icons.draw_rounded
+                                                      : Icons.image_rounded,
+                                                  color: isSketch
+                                                      ? const Color(0xFFFF9F0A)
+                                                      : Theme.of(
+                                                          context,
+                                                        ).colorScheme.primary,
+                                                  size: 28,
+                                                ),
+                                                const SizedBox(height: 6),
+                                                Text(
+                                                  asset.caption ?? "Attachment",
+                                                  maxLines: 2,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  style: const TextStyle(
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: Colors.white,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
                                           Positioned(
-                                            top: -4,
-                                            right: -4,
+                                            top: isPdf ? 6 : -4,
+                                            right: isPdf ? 6 : -4,
                                             child: GestureDetector(
                                               onTap: () => setState(
                                                 () =>
                                                     _mediaAssets.removeAt(idx),
                                               ),
-                                              child: const Icon(
-                                                Icons.cancel_rounded,
-                                                size: 18,
-                                                color: Colors.white38,
+                                              child: Container(
+                                                decoration: const BoxDecoration(
+                                                  color: Color(0xAA000000),
+                                                  shape: BoxShape.circle,
+                                                ),
+                                                child: const Icon(
+                                                  Icons.cancel_rounded,
+                                                  size: 18,
+                                                  color: Colors.white70,
+                                                ),
                                               ),
                                             ),
                                           ),

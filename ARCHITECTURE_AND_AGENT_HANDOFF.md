@@ -1,7 +1,7 @@
 # NoteEchoes — Current Handoff Guide
 
 Last updated: 2026-08-17
-Release: `v2.9.0`
+Release: `v2.9.1`
 
 ## What is working now
 
@@ -23,6 +23,7 @@ Release: `v2.9.0`
 - Conversation mode uses installed Apple Premium/Enhanced voices when available, synchronizes highlighted sentences from native speech callbacks, and stops speech on every route exit.
 - Reduce Motion, Dynamic Type, VoiceOver labels/actions, and compact-iPhone layouts are supported.
 - PDF attachments open in a dedicated local reader with pinch zoom, text selection, page controls, accessible loading/error states, and a separate optional document-chat action. Back returns to the note; the note remains one step above the home page.
+- Attachment references are stored relative to Documents and legacy absolute iOS-container paths are repaired automatically. PDF notes show a rendered first-page cover on the home card and inside the editor. The reader can switch to a clean selectable Markdown view, copy all extracted text, and use on-device Vision OCR for scanned pages.
 
 ## User setup for offline Telugu
 
@@ -54,6 +55,8 @@ English is also supported by the same multilingual model. It is not Telugu-only.
 | `lib/ai/infrastructure/semantic_knowledge_service.dart` | Incremental indexing, calibrated similarity links, clustering, Qwen topic enrichment, and review decisions. |
 | `lib/screens/topics_screen.dart` | Accessible Topics interface with note drill-down and confirm/dismiss controls. |
 | `lib/screens/pdf_reader_screen.dart` | Full-page local PDF reader, page navigation, zoom/text selection, missing-file handling, and optional Ask PDF action. |
+| `lib/services/attachment_path_service.dart` | Stable attachment references and recovery from stale iOS app-container paths. |
+| `lib/widgets/pdf_cover_thumbnail.dart` | Cached-in-widget first-page PDF rendering used by home and editor attachment cards. |
 | `lib/theme/app_preferences.dart` | Persisted app accent and voice language (`en`, `te`, `hi`, `auto`). |
 | `lib/theme/app_theme.dart` | Black theme derived from the persisted accent. |
 | `lib/screens/settings_screen.dart` | User-facing appearance and voice language settings. |
@@ -75,9 +78,9 @@ English is also supported by the same multilingual model. It is not Telugu-only.
 4. Press **Cmd + R**.
 5. On first run, grant microphone and speech permissions.
 
-Verification completed for v2.9.0:
+Verification completed for v2.9.1:
 
-- Full Flutter test suite: 25 tests passed.
+- Full Flutter test suite: 26 tests passed.
 - Flutter analyzer: no new errors; 27 existing warnings/information notices remain.
 - Signed Release iPhone build and deep signature verification: passed.
 - Installed and launched on the connected iPhone: passed.
@@ -95,4 +98,4 @@ Verification completed for v2.9.0:
 ## Repository
 
 - Main repository: https://github.com/vashisht7/NoteEchoes
-- Current release: https://github.com/vashisht7/NoteEchoes/releases/tag/v2.9.0
+- Current release: https://github.com/vashisht7/NoteEchoes/releases/tag/v2.9.1
