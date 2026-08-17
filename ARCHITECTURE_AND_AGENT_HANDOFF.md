@@ -1,7 +1,7 @@
 # NoteEchoes — Current Handoff Guide
 
 Last updated: 2026-08-17
-Release: `v2.7.0`
+Release: `v2.8.0`
 
 ## What is working now
 
@@ -15,6 +15,9 @@ Release: `v2.7.0`
 - Existing PDF/text note, table-editor, local storage, and AI feature code remains in place.
 - Notes now use SQLite with transactional migration from legacy preferences and rolling recovery backups.
 - Qwen and Whisper availability is verified from their physical files on launch/resume; incomplete downloads are reported as needing repair.
+- Multilingual E5 Small is an optional 123 MB, SHA-256-verified ONNX download for 384-dimensional semantic embeddings across 94 languages. It powers related-note suggestions and topic sections without uploading notes.
+- Semantic vectors, relationships, topic clusters, membership confidence, and user confirmations/dismissals live in schema-v2 tables in `notechoes_ai.sqlite`.
+- The Topics screen presents conservative on-device clusters; Qwen optionally assigns grounded names and summaries after E5 forms the clusters.
 - Core notes, keyword search, checklists, tables, and Apple speech remain available without optional model downloads. Model-dependent features explain the required download before opening.
 - The note editor supports swipe-back, inline cursor-positioned checklists, Return-to-add table rows, and an explicit add-column control.
 - Conversation mode uses installed Apple Premium/Enhanced voices when available, synchronizes highlighted sentences from native speech callbacks, and stops speech on every route exit.
@@ -46,6 +49,9 @@ English is also supported by the same multilingual model. It is not Telugu-only.
 | `ios/Runner/SceneDelegate.swift` | Registers native model, speech-output, PDF, Action Button, and recovery channels for UIScene launches. |
 | `lib/services/note_storage_service.dart` | SQLite note store, preference migration, and rolling JSON recovery copies. |
 | `lib/ai/infrastructure/model_availability_service.dart` | Physical Qwen/Whisper installation verification and synchronized feature availability. |
+| `lib/ai/infrastructure/e5_embedding_service.dart` | Resumable E5 download, SHA-256 verification, SentencePiece tokenization, ONNX inference, mean pooling, and normalized embeddings. |
+| `lib/ai/infrastructure/semantic_knowledge_service.dart` | Incremental indexing, calibrated similarity links, clustering, Qwen topic enrichment, and review decisions. |
+| `lib/screens/topics_screen.dart` | Accessible Topics interface with note drill-down and confirm/dismiss controls. |
 | `lib/theme/app_preferences.dart` | Persisted app accent and voice language (`en`, `te`, `hi`, `auto`). |
 | `lib/theme/app_theme.dart` | Black theme derived from the persisted accent. |
 | `lib/screens/settings_screen.dart` | User-facing appearance and voice language settings. |
@@ -67,9 +73,9 @@ English is also supported by the same multilingual model. It is not Telugu-only.
 4. Press **Cmd + R**.
 5. On first run, grant microphone and speech permissions.
 
-Verification completed for v2.7.0:
+Verification completed for v2.8.0:
 
-- Full Flutter test suite: 22 tests passed.
+- Full Flutter test suite: 24 tests passed.
 - Flutter analyzer: no new errors; 33 existing warnings/information notices remain.
 - Signed Release iPhone build and deep signature verification: passed.
 - Installed and launched on the connected iPhone: passed.
@@ -87,4 +93,4 @@ Verification completed for v2.7.0:
 ## Repository
 
 - Main repository: https://github.com/vashisht7/NoteEchoes
-- Current release: https://github.com/vashisht7/NoteEchoes/releases/tag/v2.7.0
+- Current release: https://github.com/vashisht7/NoteEchoes/releases/tag/v2.8.0

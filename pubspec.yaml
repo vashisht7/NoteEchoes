@@ -2,7 +2,7 @@ name: notechoes_app
 description: "A new Flutter project."
 publish_to: 'none'
 
-version: 2.7.0+1
+version: 2.8.0+2
 
 environment:
   sdk: ^3.12.0
@@ -28,6 +28,8 @@ dependencies:
   drift: ^2.22.0
   sqlite3_flutter_libs: ^0.5.29
   sqlite3: ^3.5.1
+  flutter_onnxruntime: ^1.8.3
+  dart_sentencepiece_tokenizer: ^1.3.2
   path: ^1.9.0
 
   # Networking: resumable model downloads.
@@ -69,6 +71,10 @@ dev_dependencies:
   build_runner: ^2.4.14
 
 flutter:
+  # CocoaPods keeps all iOS plugins aligned with this app's iOS 17 target.
+  # The MLX Qwen packages remain managed directly by the Xcode project.
+  config:
+    enable-swift-package-manager: false
   uses-material-design: true
   assets:
     - assets/images/

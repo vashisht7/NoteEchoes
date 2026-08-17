@@ -9,6 +9,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import '../ai/infrastructure/knowledge_service.dart';
+import '../ai/infrastructure/model_availability_service.dart';
+import '../ai/infrastructure/semantic_knowledge_service.dart';
+import '../ai/domain/semantic_models.dart';
 import '../ai/presentation/model_feature_gate.dart';
 import '../ai/presentation/document_chat_page.dart';
 import '../models/note_model.dart';
@@ -716,6 +719,147 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
     );
   }
 
+  Future<void> _showRelatedNotes() async {
+    final note = widget.existingNote;
+    if (note == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Save this note first to discover related notes.'),
+        ),
+      );
+      return;
+    }
+    if (!ModelAvailabilityService.instance.embedding.isReady) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Download Semantic Topics in Settings → AI Models to find related notes.',
+          ),
+        ),
+      );
+      return;
+    }
+    await _saveNote(pop: false);
+    final service = SemanticKnowledgeService.instance;
+    final related = await service.relatedNotes(
+      note.noteId,
+      NoteService().allNotes,
+    );
+    if (!mounted) return;
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.elevation1,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(18, 4, 18, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Related Notes',
+                style: GoogleFonts.outfit(
+                  color: Colors.white,
+                  fontSize: 21,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                'Meaning-based suggestions created privately on this device.',
+                style: GoogleFonts.inter(
+                  color: AppColors.secondaryText,
+                  fontSize: 12.5,
+                ),
+              ),
+              const SizedBox(height: 14),
+              if (related.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24),
+                  child: Center(
+                    child: Text('No strong relationships found yet.'),
+                  ),
+                )
+              else
+                ...related
+                    .take(8)
+                    .map(
+                      (item) => ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: Icon(
+                          item.status == SemanticSuggestionStatus.confirmed
+                              ? Icons.link_rounded
+                              : Icons.auto_awesome_rounded,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                        title: Text(
+                          item.note.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        subtitle: Text(
+                          '${(item.similarity * 100).round()}% match · ${item.explanation}',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: AppColors.secondaryText,
+                            fontSize: 11.5,
+                          ),
+                        ),
+                        onTap: () {
+                          Navigator.pop(sheetContext);
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  NoteDetailScreen(existingNote: item.note),
+                            ),
+                          );
+                        },
+                        trailing:
+                            item.status == SemanticSuggestionStatus.confirmed
+                            ? const Icon(
+                                Icons.check_circle_rounded,
+                                color: Colors.greenAccent,
+                                size: 18,
+                              )
+                            : PopupMenuButton<SemanticSuggestionStatus>(
+                                tooltip: 'Review relationship',
+                                onSelected: (status) async {
+                                  await service.setRelationshipStatus(
+                                    note.noteId,
+                                    item.note.noteId,
+                                    status,
+                                  );
+                                  if (sheetContext.mounted) {
+                                    Navigator.pop(sheetContext);
+                                  }
+                                },
+                                itemBuilder: (_) => const [
+                                  PopupMenuItem(
+                                    value: SemanticSuggestionStatus.confirmed,
+                                    child: Text('Confirm relationship'),
+                                  ),
+                                  PopupMenuItem(
+                                    value: SemanticSuggestionStatus.dismissed,
+                                    child: Text('Not related'),
+                                  ),
+                                ],
+                              ),
+                      ),
+                    ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   void _handleHorizontalDragEnd(DragEndDetails details) {
     final velocity = details.primaryVelocity?.abs() ?? 0;
     if (_horizontalDragDistance.abs() < 85 || velocity < 250 || _isSaving) {
@@ -787,6 +931,15 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
                 ),
               ),
               actions: [
+                IconButton(
+                  icon: const Icon(
+                    Icons.hub_rounded,
+                    color: Colors.white70,
+                    size: 21,
+                  ),
+                  tooltip: 'Related Notes',
+                  onPressed: _showRelatedNotes,
+                ),
                 // Preview Markdown & LaTeX Toggle
                 IconButton(
                   icon: Icon(

@@ -5,6 +5,7 @@ import 'note_storage_service.dart';
 import '../ai/infrastructure/knowledge_service.dart';
 import '../ai/infrastructure/model_availability_service.dart';
 import '../ai/infrastructure/qwen_llama_provider.dart';
+import '../ai/infrastructure/semantic_knowledge_service.dart';
 
 class NoteService extends ChangeNotifier {
   static final NoteService _instance = NoteService._internal();
@@ -165,6 +166,7 @@ class NoteService extends ChangeNotifier {
     } catch (error) {
       debugPrint('Could not index note ${note.noteId}: $error');
     }
+    await SemanticKnowledgeService.instance.indexNote(note);
   }
 
   /// Creates and saves a note directly from voice transcription or speech
@@ -234,6 +236,7 @@ class NoteService extends ChangeNotifier {
       } catch (error) {
         debugPrint('Could not index note ${note.noteId}: $error');
       }
+      await SemanticKnowledgeService.instance.indexNote(note);
     }
   }
 
@@ -247,6 +250,7 @@ class NoteService extends ChangeNotifier {
     } catch (error) {
       debugPrint('Could not remove note $noteId from search: $error');
     }
+    await SemanticKnowledgeService.instance.removeNote(noteId);
   }
 
   Future<void> togglePin(String noteId) async {

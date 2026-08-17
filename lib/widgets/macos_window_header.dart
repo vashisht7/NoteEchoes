@@ -23,16 +23,18 @@ class MacOSWindowHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final showDesktopChrome =
+        isDesktopPlatform && MediaQuery.sizeOf(context).width >= 600;
     return Container(
       padding: EdgeInsets.only(
-        top: isDesktopPlatform ? 14 : 6,
+        top: showDesktopChrome ? 14 : 6,
         bottom: 8,
         left: 16,
         right: 16,
       ),
       child: Row(
         children: [
-          if (isDesktopPlatform) ...[
+          if (showDesktopChrome) ...[
             // macOS Red, Yellow, Green Traffic Lights
             Row(
               children: [
@@ -55,7 +57,10 @@ class MacOSWindowHeader extends StatelessWidget {
               margin: const EdgeInsets.only(right: 10),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: AppColors.dropletRed.withValues(alpha: 0.6), width: 1.4),
+                border: Border.all(
+                  color: AppColors.dropletRed.withValues(alpha: 0.6),
+                  width: 1.4,
+                ),
                 boxShadow: [
                   BoxShadow(
                     color: AppColors.dropletRed.withValues(alpha: 0.35),
@@ -79,17 +84,20 @@ class MacOSWindowHeader extends StatelessWidget {
           ),
 
           // App Name: NoteEchoes (Single word, No space)
-          Text(
-            title,
-            style: GoogleFonts.outfit(
-              fontSize: 23,
-              fontWeight: FontWeight.w800,
-              color: Colors.white,
-              letterSpacing: -0.5,
+          Expanded(
+            child: Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.fade,
+              softWrap: false,
+              style: GoogleFonts.outfit(
+                fontSize: 23,
+                fontWeight: FontWeight.w800,
+                color: Colors.white,
+                letterSpacing: -0.5,
+              ),
             ),
           ),
-
-          const Spacer(),
 
           ?trailing,
         ],
@@ -105,10 +113,7 @@ class MacOSWindowHeader extends StatelessWidget {
         color: color,
         shape: BoxShape.circle,
         boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: 0.4),
-            blurRadius: 4,
-          ),
+          BoxShadow(color: color.withValues(alpha: 0.4), blurRadius: 4),
         ],
       ),
     );

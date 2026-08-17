@@ -7,7 +7,11 @@ import 'package:notechoes_app/widgets/keep_text_note_card.dart';
 import 'package:notechoes_app/screens/voice_assistant_screen.dart';
 import 'package:notechoes_app/services/voice_assistant_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:drift/drift.dart' show Value;
+import 'package:drift/native.dart';
+import 'package:notechoes_app/ai/infrastructure/ai_database.dart';
 import 'dart:convert';
+import 'dart:typed_data';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -59,6 +63,66 @@ void main() {
       restored.singleWhere((note) => note.noteId == 'note-400').title,
       'Updated title',
     );
+  });
+
+  test('semantic relationships and topic decisions persist locally', () async {
+    final database = AiDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(database.close);
+    final now = DateTime.utc(2026, 8, 17).millisecondsSinceEpoch;
+    await database.upsertNoteEmbedding(
+      NoteEmbeddingsTableCompanion.insert(
+        noteId: 'fitness-plan',
+        modelVersion: 'e5-test',
+        sourceHash: 'hash-a',
+        vector: Uint8List.fromList([0, 0, 128, 63]),
+        dimensions: 1,
+        updatedAt: now,
+      ),
+    );
+    await database.replaceRelationshipsForNote('fitness-plan', [
+      NoteRelationshipsTableCompanion.insert(
+        sourceNoteId: 'fitness-plan',
+        targetNoteId: 'workout-dashboard',
+        similarity: 0.88,
+        explanation: const Value('Both discuss workout tracking.'),
+        updatedAt: now,
+      ),
+    ]);
+    await database.replaceGeneratedTopics(
+      [
+        TopicClustersTableCompanion.insert(
+          id: 'topic-fitness',
+          label: 'Fitness App',
+          createdAt: now,
+          updatedAt: now,
+        ),
+      ],
+      [
+        TopicMembershipsTableCompanion.insert(
+          clusterId: 'topic-fitness',
+          noteId: 'fitness-plan',
+          confidence: 0.88,
+          updatedAt: now,
+        ),
+        TopicMembershipsTableCompanion.insert(
+          clusterId: 'topic-fitness',
+          noteId: 'workout-dashboard',
+          confidence: 0.88,
+          updatedAt: now,
+        ),
+      ],
+    );
+    await database.setTopicStatus('topic-fitness', 'confirmed');
+    await database.setRelationshipStatus(
+      'fitness-plan',
+      'workout-dashboard',
+      'confirmed',
+    );
+
+    expect((await database.getAllNoteEmbeddings()).single.dimensions, 1);
+    expect((await database.getAllRelationships()).single.status, 'confirmed');
+    expect((await database.getAllTopicClusters()).single.status, 'confirmed');
+    expect(await database.getAllTopicMemberships(), hasLength(2));
   });
 
   testWidgets('table Return creates a row and exposes cell semantics', (

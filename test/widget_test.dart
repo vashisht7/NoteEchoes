@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:notechoes_app/main.dart';
 import 'package:notechoes_app/services/ai_categorization_engine.dart';
@@ -120,6 +122,21 @@ void main() {
       await tester.pumpAndSettle();
       expect(NoteService().searchQuery, isEmpty);
       expect(find.textContaining('Keyword search'), findsNothing);
+    });
+
+    testWidgets('Topics entry fits a compact iPhone home screen', (
+      WidgetTester tester,
+    ) async {
+      tester.view.physicalSize = const Size(320, 640);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(const NoteEchoesApp());
+      await tester.pumpAndSettle();
+
+      expect(find.text('Topics'), findsOneWidget);
+      expect(tester.takeException(), isNull);
     });
   });
 }

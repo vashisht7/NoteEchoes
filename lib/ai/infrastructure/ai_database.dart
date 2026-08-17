@@ -109,8 +109,7 @@ class SuggestedActionsTable extends Table {
   IntColumn get sourceEndMs => integer().nullable()();
   IntColumn get sourcePage => integer().nullable()();
   RealColumn get confidence => real()();
-  TextColumn get status =>
-      text().withDefault(const Constant('pending'))();
+  TextColumn get status => text().withDefault(const Constant('pending'))();
   IntColumn get createdAt => integer()();
 
   @override
@@ -142,11 +141,9 @@ class AiJobsTable extends Table {
   TextColumn get sourceId => text()();
   TextColumn get sourceHash => text()();
   TextColumn get modelVersion => text()();
-  TextColumn get status =>
-      text().withDefault(const Constant('queued'))();
+  TextColumn get status => text().withDefault(const Constant('queued'))();
   RealColumn get progress => real().withDefault(const Constant(0.0))();
-  IntColumn get attemptCount =>
-      integer().withDefault(const Constant(0))();
+  IntColumn get attemptCount => integer().withDefault(const Constant(0))();
   TextColumn get errorCode => text().nullable()();
   IntColumn get createdAt => integer()();
   IntColumn get startedAt => integer().nullable()();
@@ -174,6 +171,64 @@ class ModelInstallationsTable extends Table {
   Set<Column> get primaryKey => {modelId};
 }
 
+class NoteEmbeddingsTable extends Table {
+  @override
+  String get tableName => 'note_embeddings';
+
+  TextColumn get noteId => text()();
+  TextColumn get modelVersion => text()();
+  TextColumn get sourceHash => text()();
+  BlobColumn get vector => blob()();
+  IntColumn get dimensions => integer()();
+  IntColumn get updatedAt => integer()();
+
+  @override
+  Set<Column> get primaryKey => {noteId};
+}
+
+class NoteRelationshipsTable extends Table {
+  @override
+  String get tableName => 'note_relationships';
+
+  TextColumn get sourceNoteId => text()();
+  TextColumn get targetNoteId => text()();
+  RealColumn get similarity => real()();
+  TextColumn get status => text().withDefault(const Constant('suggested'))();
+  TextColumn get explanation => text().nullable()();
+  IntColumn get updatedAt => integer()();
+
+  @override
+  Set<Column> get primaryKey => {sourceNoteId, targetNoteId};
+}
+
+class TopicClustersTable extends Table {
+  @override
+  String get tableName => 'topic_clusters';
+
+  TextColumn get id => text()();
+  TextColumn get label => text()();
+  TextColumn get summary => text().nullable()();
+  TextColumn get status => text().withDefault(const Constant('suggested'))();
+  IntColumn get createdAt => integer()();
+  IntColumn get updatedAt => integer()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+class TopicMembershipsTable extends Table {
+  @override
+  String get tableName => 'topic_memberships';
+
+  TextColumn get clusterId => text()();
+  TextColumn get noteId => text()();
+  RealColumn get confidence => real()();
+  IntColumn get updatedAt => integer()();
+
+  @override
+  Set<Column> get primaryKey => {clusterId, noteId};
+}
+
 // ── Database class ────────────────────────────────────────────────────────────
 
 @DriftDatabase(
@@ -186,29 +241,37 @@ class ModelInstallationsTable extends Table {
     PersonalMemoriesTable,
     AiJobsTable,
     ModelInstallationsTable,
+    NoteEmbeddingsTable,
+    NoteRelationshipsTable,
+    TopicClustersTable,
+    TopicMembershipsTable,
   ],
 )
 class AiDatabase extends _$AiDatabase {
   AiDatabase() : super(_openConnection());
-  AiDatabase.forTesting(QueryExecutor executor) : super(executor);
+  AiDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-        onCreate: (Migrator m) async {
-          await m.createAll();
-          await _createFtsTables();
-        },
-        onUpgrade: (Migrator m, int from, int to) async {
-          // Future migrations go here.
-        },
-      );
+    onCreate: (Migrator m) async {
+      await m.createAll();
+      await _createFtsTables();
+    },
+    onUpgrade: (Migrator m, int from, int to) async {
+      if (from < 2) {
+        await m.createTable(noteEmbeddingsTable);
+        await m.createTable(noteRelationshipsTable);
+        await m.createTable(topicClustersTable);
+        await m.createTable(topicMembershipsTable);
+      }
+    },
+  );
 
   Future<void> _createFtsTables() async {
-    await customStatement(
-      '''
+    await customStatement('''
       CREATE VIRTUAL TABLE IF NOT EXISTS content_fts USING fts5(
         source_id UNINDEXED,
         source_type UNINDEXED,
@@ -221,37 +284,33 @@ class AiDatabase extends _$AiDatabase {
         dates,
         tokenize = 'unicode61'
       )
-      ''',
-    );
+      ''');
   }
 
   // ── Note analysis ─────────────────────────────────────────────
 
-  Future<AiNoteAnalysisTableData?> getAnalysisForNote(String noteId) =>
-      (select(aiNoteAnalysisTable)
-            ..where((t) => t.noteId.equals(noteId)))
-          .getSingleOrNull();
+  Future<AiNoteAnalysisTableData?> getAnalysisForNote(String noteId) => (select(
+    aiNoteAnalysisTable,
+  )..where((t) => t.noteId.equals(noteId))).getSingleOrNull();
 
   Future<void> upsertAnalysis(AiNoteAnalysisTableCompanion data) =>
       into(aiNoteAnalysisTable).insertOnConflictUpdate(data);
 
   // ── Transcript segments ───────────────────────────────────────
 
-  Future<List<TranscriptSegmentsTableData>> getSegmentsForNote(
-      String noteId) =>
+  Future<List<TranscriptSegmentsTableData>> getSegmentsForNote(String noteId) =>
       (select(transcriptSegmentsTable)
             ..where((t) => t.noteId.equals(noteId))
             ..orderBy([(t) => OrderingTerm.asc(t.sequenceNumber)]))
           .get();
 
-  Future<void> insertSegment(TranscriptSegmentsTableCompanion segment) =>
-      into(transcriptSegmentsTable).insert(segment,
-          mode: InsertMode.insertOrReplace);
+  Future<void> insertSegment(TranscriptSegmentsTableCompanion segment) => into(
+    transcriptSegmentsTable,
+  ).insert(segment, mode: InsertMode.insertOrReplace);
 
-  Future<void> deleteSegmentsForNote(String noteId) =>
-      (delete(transcriptSegmentsTable)
-            ..where((t) => t.noteId.equals(noteId)))
-          .go();
+  Future<void> deleteSegmentsForNote(String noteId) => (delete(
+    transcriptSegmentsTable,
+  )..where((t) => t.noteId.equals(noteId))).go();
 
   // ── Documents ─────────────────────────────────────────────────
 
@@ -259,14 +318,16 @@ class AiDatabase extends _$AiDatabase {
       select(documentsTable).get();
 
   Future<DocumentsTableData?> getDocument(String id) =>
-      (select(documentsTable)..where((t) => t.id.equals(id)))
-          .getSingleOrNull();
+      (select(documentsTable)..where((t) => t.id.equals(id))).getSingleOrNull();
 
   Future<void> upsertDocument(DocumentsTableCompanion data) =>
       into(documentsTable).insertOnConflictUpdate(data);
 
-  Future<void> updateDocumentState(String id, String state,
-      [String? error]) async {
+  Future<void> updateDocumentState(
+    String id,
+    String state, [
+    String? error,
+  ]) async {
     await (update(documentsTable)..where((t) => t.id.equals(id))).write(
       DocumentsTableCompanion(
         processingState: Value(state),
@@ -283,37 +344,35 @@ class AiDatabase extends _$AiDatabase {
   // ── Document chunks ───────────────────────────────────────────
 
   Future<List<DocumentChunksTableData>> getChunksForDocument(
-      String documentId) =>
+    String documentId,
+  ) =>
       (select(documentChunksTable)
             ..where((t) => t.documentId.equals(documentId))
             ..orderBy([(t) => OrderingTerm.asc(t.sourceOrder)]))
           .get();
 
   Future<void> insertChunk(DocumentChunksTableCompanion chunk) =>
-      into(documentChunksTable).insert(chunk,
-          mode: InsertMode.insertOrReplace);
+      into(documentChunksTable).insert(chunk, mode: InsertMode.insertOrReplace);
 
-  Future<void> deleteChunksForDocument(String documentId) =>
-      (delete(documentChunksTable)
-            ..where((t) => t.documentId.equals(documentId)))
-          .go();
+  Future<void> deleteChunksForDocument(String documentId) => (delete(
+    documentChunksTable,
+  )..where((t) => t.documentId.equals(documentId))).go();
 
   // ── Suggested actions ─────────────────────────────────────────
 
   Future<List<SuggestedActionsTableData>> getPendingActionsForNote(
-      String noteId) =>
-      (select(suggestedActionsTable)
-            ..where((t) =>
-                t.noteId.equals(noteId) & t.status.equals('pending')))
-          .get();
+    String noteId,
+  ) => (select(
+    suggestedActionsTable,
+  )..where((t) => t.noteId.equals(noteId) & t.status.equals('pending'))).get();
 
-  Future<void> upsertSuggestedAction(
-          SuggestedActionsTableCompanion data) =>
+  Future<void> upsertSuggestedAction(SuggestedActionsTableCompanion data) =>
       into(suggestedActionsTable).insertOnConflictUpdate(data);
 
   Future<void> updateActionStatus(String id, String status) =>
-      (update(suggestedActionsTable)..where((t) => t.id.equals(id)))
-          .write(SuggestedActionsTableCompanion(status: Value(status)));
+      (update(suggestedActionsTable)..where((t) => t.id.equals(id))).write(
+        SuggestedActionsTableCompanion(status: Value(status)),
+      );
 
   // ── AI jobs ───────────────────────────────────────────────────
 
@@ -324,12 +383,16 @@ class AiDatabase extends _$AiDatabase {
           .get();
 
   Future<AiJobsTableData?> findExistingJob(
-      String sourceId, String sourceHash, String modelVersion) =>
-      (select(aiJobsTable)
-            ..where((t) =>
+    String sourceId,
+    String sourceHash,
+    String modelVersion,
+  ) =>
+      (select(aiJobsTable)..where(
+            (t) =>
                 t.sourceId.equals(sourceId) &
                 t.sourceHash.equals(sourceHash) &
-                t.modelVersion.equals(modelVersion)))
+                t.modelVersion.equals(modelVersion),
+          ))
           .getSingleOrNull();
 
   Future<void> upsertJob(AiJobsTableCompanion data) =>
@@ -355,17 +418,14 @@ class AiDatabase extends _$AiDatabase {
     await (update(aiJobsTable)..where((t) => t.id.equals(id))).write(companion);
   }
 
-
   // ── Model installations ───────────────────────────────────────
 
-  Future<ModelInstallationsTableData?> getModelInstallation(
-      String modelId) =>
-      (select(modelInstallationsTable)
-            ..where((t) => t.modelId.equals(modelId)))
-          .getSingleOrNull();
+  Future<ModelInstallationsTableData?> getModelInstallation(String modelId) =>
+      (select(
+        modelInstallationsTable,
+      )..where((t) => t.modelId.equals(modelId))).getSingleOrNull();
 
-  Future<void> upsertModelInstallation(
-          ModelInstallationsTableCompanion data) =>
+  Future<void> upsertModelInstallation(ModelInstallationsTableCompanion data) =>
       into(modelInstallationsTable).insertOnConflictUpdate(data);
 
   // ── FTS5 helpers ──────────────────────────────────────────────
@@ -381,8 +441,9 @@ class AiDatabase extends _$AiDatabase {
     String? places,
     String? dates,
   }) async {
-    await customStatement(
-        'DELETE FROM content_fts WHERE source_id = ?', [sourceId]);
+    await customStatement('DELETE FROM content_fts WHERE source_id = ?', [
+      sourceId,
+    ]);
     await customStatement(
       'INSERT INTO content_fts (source_id, source_type, title, '
       'original_text, english_retrieval_text, keywords, people, '
@@ -401,8 +462,7 @@ class AiDatabase extends _$AiDatabase {
     );
   }
 
-  Future<List<Map<String, Object?>>> ftsSearch(
-      String query, int limit) async {
+  Future<List<Map<String, Object?>>> ftsSearch(String query, int limit) async {
     final rows = await customSelect(
       "SELECT source_id, source_type, title, original_text, "
       "english_retrieval_text, keywords, people, places, dates, "
@@ -415,21 +475,140 @@ class AiDatabase extends _$AiDatabase {
   }
 
   Future<void> ftsDelete(String sourceId) async {
-    await customStatement(
-        'DELETE FROM content_fts WHERE source_id = ?', [sourceId]);
+    await customStatement('DELETE FROM content_fts WHERE source_id = ?', [
+      sourceId,
+    ]);
   }
 
   // ── Missing helpers used by application layer ─────────────────
 
   /// Update a model installation status (called by ModelDownloadService).
   Future<void> updateModelInstallationStatus(
-      String modelId, String status) async {
-    await (update(modelInstallationsTable)
-          ..where((t) => t.modelId.equals(modelId)))
-        .write(ModelInstallationsTableCompanion(
-      installationState: Value(status),
-    ));
+    String modelId,
+    String status,
+  ) async {
+    await (update(
+      modelInstallationsTable,
+    )..where((t) => t.modelId.equals(modelId))).write(
+      ModelInstallationsTableCompanion(installationState: Value(status)),
+    );
   }
+
+  Future<void> deleteSemanticDataForNote(String noteId) async {
+    await transaction(() async {
+      await (delete(
+        noteEmbeddingsTable,
+      )..where((t) => t.noteId.equals(noteId))).go();
+      await (delete(noteRelationshipsTable)..where(
+            (t) =>
+                t.sourceNoteId.equals(noteId) | t.targetNoteId.equals(noteId),
+          ))
+          .go();
+      await (delete(
+        topicMembershipsTable,
+      )..where((t) => t.noteId.equals(noteId))).go();
+    });
+  }
+
+  Future<NoteEmbeddingsTableData?> getNoteEmbedding(String noteId) => (select(
+    noteEmbeddingsTable,
+  )..where((t) => t.noteId.equals(noteId))).getSingleOrNull();
+
+  Future<List<NoteEmbeddingsTableData>> getAllNoteEmbeddings() =>
+      select(noteEmbeddingsTable).get();
+
+  Future<void> upsertNoteEmbedding(NoteEmbeddingsTableCompanion value) =>
+      into(noteEmbeddingsTable).insertOnConflictUpdate(value);
+
+  Future<void> replaceRelationshipsForNote(
+    String noteId,
+    List<NoteRelationshipsTableCompanion> relationships,
+  ) async {
+    await transaction(() async {
+      await (delete(noteRelationshipsTable)..where(
+            (t) =>
+                (t.sourceNoteId.equals(noteId) |
+                    t.targetNoteId.equals(noteId)) &
+                t.status.equals('suggested'),
+          ))
+          .go();
+      for (final relationship in relationships) {
+        await into(noteRelationshipsTable).insertOnConflictUpdate(relationship);
+      }
+    });
+  }
+
+  Future<List<NoteRelationshipsTableData>> getAllRelationships() =>
+      select(noteRelationshipsTable).get();
+
+  Future<void> setRelationshipStatus(
+    String sourceId,
+    String targetId,
+    String status,
+  ) =>
+      (update(noteRelationshipsTable)..where(
+            (t) =>
+                t.sourceNoteId.equals(sourceId) &
+                t.targetNoteId.equals(targetId),
+          ))
+          .write(NoteRelationshipsTableCompanion(status: Value(status)));
+
+  Future<List<TopicClustersTableData>> getAllTopicClusters() =>
+      select(topicClustersTable).get();
+
+  Future<List<TopicMembershipsTableData>> getAllTopicMemberships() =>
+      select(topicMembershipsTable).get();
+
+  Future<void> replaceGeneratedTopics(
+    List<TopicClustersTableCompanion> clusters,
+    List<TopicMembershipsTableCompanion> memberships,
+  ) async {
+    await transaction(() async {
+      final retained = await (select(
+        topicClustersTable,
+      )..where((t) => t.status.isNotIn(const ['suggested']))).get();
+      await delete(topicMembershipsTable).go();
+      await delete(topicClustersTable).go();
+      for (final cluster in retained) {
+        await into(topicClustersTable).insertOnConflictUpdate(
+          TopicClustersTableCompanion.insert(
+            id: cluster.id,
+            label: cluster.label,
+            summary: Value(cluster.summary),
+            status: Value(cluster.status),
+            createdAt: cluster.createdAt,
+            updatedAt: cluster.updatedAt,
+          ),
+        );
+      }
+      for (final cluster in clusters) {
+        await into(topicClustersTable).insertOnConflictUpdate(cluster);
+      }
+      for (final membership in memberships) {
+        await into(topicMembershipsTable).insertOnConflictUpdate(membership);
+      }
+    });
+  }
+
+  Future<void> setTopicStatus(String id, String status) =>
+      (update(topicClustersTable)..where((t) => t.id.equals(id))).write(
+        TopicClustersTableCompanion(
+          status: Value(status),
+          updatedAt: Value(DateTime.now().millisecondsSinceEpoch),
+        ),
+      );
+
+  Future<void> updateTopicContent(
+    String id, {
+    required String label,
+    required String summary,
+  }) => (update(topicClustersTable)..where((t) => t.id.equals(id))).write(
+    TopicClustersTableCompanion(
+      label: Value(label),
+      summary: Value(summary),
+      updatedAt: Value(DateTime.now().millisecondsSinceEpoch),
+    ),
+  );
 
   /// Get expected SHA-256 for a model (called by ModelIntegrityService).
   Future<String?> getExpectedSha256(String modelId) async {
@@ -437,7 +616,6 @@ class AiDatabase extends _$AiDatabase {
     return row?.expectedSha256;
   }
 }
-
 
 // ── Connection factory ────────────────────────────────────────────────────────
 

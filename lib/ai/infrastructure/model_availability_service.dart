@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import '../config/ai_feature_flags.dart';
+import 'e5_embedding_service.dart';
 
 enum ModelHealth { checking, missing, ready, needsRepair, unavailable }
 
@@ -58,6 +59,9 @@ class ModelAvailabilityService extends ChangeNotifier {
 
   LocalModelStatus qwen = const LocalModelStatus.checking('qwen3-0.6b');
   LocalModelStatus whisper = const LocalModelStatus.checking('whisper-base');
+  LocalModelStatus embedding = const LocalModelStatus.checking(
+    E5EmbeddingService.modelVersion,
+  );
   bool _refreshing = false;
 
   bool get isRefreshing => _refreshing;
@@ -65,6 +69,7 @@ class ModelAvailabilityService extends ChangeNotifier {
   bool get documentChatAvailable => qwen.isReady;
   bool get noteInsightsAvailable => qwen.isReady;
   bool get offlineMultilingualSpeechAvailable => whisper.isReady;
+  bool get semanticTopicsAvailable => embedding.isReady;
 
   Future<void> refresh() async {
     if (_refreshing) return;
@@ -73,6 +78,7 @@ class ModelAvailabilityService extends ChangeNotifier {
     try {
       qwen = await _readStatus(_mlxChannel, 'status', qwen.id);
       whisper = await _readStatus(_speechChannel, 'whisperStatus', whisper.id);
+      embedding = await E5EmbeddingService.instance.status();
       await _synchronizeFeatureFlags();
     } finally {
       _refreshing = false;
@@ -132,6 +138,11 @@ class ModelAvailabilityService extends ChangeNotifier {
 
   Future<void> removeWhisper() async {
     await _speechChannel.invokeMethod<Object?>('deleteWhisperBase');
+    await refresh();
+  }
+
+  Future<void> removeEmbedding() async {
+    await E5EmbeddingService.instance.remove();
     await refresh();
   }
 }

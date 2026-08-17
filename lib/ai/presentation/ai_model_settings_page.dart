@@ -9,6 +9,9 @@ import 'package:google_fonts/google_fonts.dart';
 import '../config/ai_runtime_config.dart';
 import '../infrastructure/qwen_llama_provider.dart';
 import '../infrastructure/model_availability_service.dart';
+import '../infrastructure/e5_embedding_service.dart';
+import '../infrastructure/semantic_knowledge_service.dart';
+import '../../services/note_service.dart';
 
 class AiModelSettingsPage extends StatefulWidget {
   const AiModelSettingsPage({super.key});
@@ -24,6 +27,8 @@ class _AiModelSettingsPageState extends State<AiModelSettingsPage>
 
   final _runtime = AiRuntimeConfig.instance;
   final _models = ModelAvailabilityService.instance;
+  final _embedder = E5EmbeddingService.instance;
+  final _semantic = SemanticKnowledgeService.instance;
 
   // Live state tracking for models
   bool _qwenDownloading = false;
@@ -36,6 +41,8 @@ class _AiModelSettingsPageState extends State<AiModelSettingsPage>
   bool _qwenInstalled = false;
   String? _qwenWarning;
   String? _whisperWarning;
+  bool _embeddingInstalled = false;
+  String? _embeddingWarning;
 
   @override
   void initState() {
@@ -46,11 +53,15 @@ class _AiModelSettingsPageState extends State<AiModelSettingsPage>
     );
     _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut);
     _fadeCtrl.forward();
+    _embedder.addListener(_onEmbeddingProgress);
+    _semantic.addListener(_onEmbeddingProgress);
     _syncModelStatus();
   }
 
   @override
   void dispose() {
+    _embedder.removeListener(_onEmbeddingProgress);
+    _semantic.removeListener(_onEmbeddingProgress);
     _fadeCtrl.dispose();
     super.dispose();
   }
@@ -137,6 +148,29 @@ class _AiModelSettingsPageState extends State<AiModelSettingsPage>
               onDelete: _whisperInstalled ? _disableWhisper : null,
             ),
             const SizedBox(height: 20),
+            const _SectionHeader('Semantic Topics & Related Notes'),
+            const SizedBox(height: 8),
+            _ModelCard(
+              name: 'Multilingual E5 Small (8-bit)',
+              description:
+                  'Creates private meaning fingerprints so related notes can be linked and grouped into suggested topics, even across different wording.',
+              size: '123 MB download',
+              languages: ['94 languages', 'English', 'Telugu', 'Hindi'],
+              isInstalled: _embeddingInstalled,
+              isDownloading: _embedder.isDownloading,
+              downloadProgress: _embedder.downloadProgress,
+              statusText: _embedder.isDownloading
+                  ? 'Downloading and verifying semantic model…'
+                  : SemanticKnowledgeService.instance.isIndexing
+                  ? 'Organizing notes ${(SemanticKnowledgeService.instance.progress * 100).round()}%'
+                  : '',
+              warningText: _embeddingWarning,
+              onDownload: _embedder.isDownloading
+                  ? null
+                  : _startEmbeddingDownload,
+              onDelete: _embeddingInstalled ? _deleteEmbedding : null,
+            ),
+            const SizedBox(height: 20),
             const _SectionHeader('On-Device LLM (Summaries & Chat)'),
             const SizedBox(height: 8),
             _ModelCard(
@@ -176,13 +210,57 @@ class _AiModelSettingsPageState extends State<AiModelSettingsPage>
     setState(() {
       _qwenInstalled = _models.qwen.isReady;
       _whisperInstalled = _models.whisper.isReady;
+      _embeddingInstalled = _models.embedding.isReady;
       _qwenWarning = _models.qwen.health == ModelHealth.needsRepair
           ? _models.qwen.reason
           : null;
       _whisperWarning = _models.whisper.health == ModelHealth.needsRepair
           ? _models.whisper.reason
           : null;
+      _embeddingWarning = _models.embedding.health == ModelHealth.needsRepair
+          ? _models.embedding.reason
+          : null;
     });
+  }
+
+  void _onEmbeddingProgress() {
+    if (mounted) setState(() {});
+  }
+
+  void _startEmbeddingDownload() {
+    _showDownloadSheet(
+      modelName: 'Multilingual E5 Small (8-bit)',
+      modelSize: '123 MB',
+      details:
+          'Downloads an MIT-licensed multilingual embedding model. It runs fully on-device to find related notes and suggest topic sections. Notes are never uploaded.',
+      onConfirm: () async {
+        try {
+          await _embedder.download();
+          await _syncModelStatus();
+          await SemanticKnowledgeService.instance.indexAll(
+            NoteService().allNotes,
+          );
+          if (mounted) {
+            _showToast('Semantic Topics and Related Notes are ready.');
+          }
+        } catch (error) {
+          if (mounted) _showToast('Semantic model download failed: $error');
+        }
+      },
+    );
+  }
+
+  Future<void> _deleteEmbedding() async {
+    final confirmed = await _showDeleteDialog(
+      'Multilingual E5 Small',
+      'This removes the semantic model. Your notes remain safe; topic suggestions pause until it is downloaded again.',
+    );
+    if (confirmed == true) {
+      await _models.removeEmbedding();
+      if (!mounted) return;
+      await _syncModelStatus();
+      _showToast('Semantic model files were removed.');
+    }
   }
 
   void _startWhisperDownload() {
@@ -377,7 +455,7 @@ class _AiModelSettingsPageState extends State<AiModelSettingsPage>
                   decoration: BoxDecoration(
                     color: Theme.of(
                       context,
-                    ).colorScheme.primary.withOpacity(0.15),
+                    ).colorScheme.primary.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
@@ -548,7 +626,10 @@ class _DeviceTierCard extends StatelessWidget {
               color: _tierColor,
               shape: BoxShape.circle,
               boxShadow: [
-                BoxShadow(color: _tierColor.withOpacity(0.5), blurRadius: 8),
+                BoxShadow(
+                  color: _tierColor.withValues(alpha: 0.5),
+                  blurRadius: 8,
+                ),
               ],
             ),
           ),
@@ -623,7 +704,7 @@ class _ModelCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: isInstalled
-              ? const Color(0xFF4ADE80).withOpacity(0.4)
+              ? const Color(0xFF4ADE80).withValues(alpha: 0.4)
               : Colors.white10,
         ),
       ),
@@ -662,7 +743,7 @@ class _ModelCard extends StatelessWidget {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF4ADE80).withOpacity(0.15),
+                    color: const Color(0xFF4ADE80).withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Row(
@@ -708,7 +789,7 @@ class _ModelCard extends StatelessWidget {
                       vertical: 3,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.06),
+                      color: Colors.white.withValues(alpha: 0.06),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(

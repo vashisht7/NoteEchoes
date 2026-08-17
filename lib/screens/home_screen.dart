@@ -11,6 +11,7 @@ import '../services/action_button_note_ingestion_service.dart';
 import '../services/note_service.dart';
 import '../services/note_storage_service.dart';
 import '../ai/infrastructure/model_availability_service.dart';
+import '../ai/infrastructure/semantic_knowledge_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/apple_music_media_card.dart';
 import '../widgets/auth_sign_in_sheet.dart';
@@ -22,6 +23,8 @@ import '../widgets/siri_action_overlay.dart';
 import 'note_detail_sheet.dart';
 import 'settings_screen.dart';
 import 'voice_assistant_screen.dart';
+import 'topics_screen.dart';
+import '../ai/presentation/ai_model_settings_page.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -49,7 +52,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     // live after the first frame, so this is the earliest safe moment.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ActionButtonNoteIngestionService.instance.initialize();
-      ModelAvailabilityService.instance.refresh();
+      ModelAvailabilityService.instance.refresh().then((_) {
+        if (ModelAvailabilityService.instance.embedding.isReady) {
+          SemanticKnowledgeService.instance.indexAll(_noteService.allNotes);
+        }
+      });
       _recoverySyncTimer = Timer(const Duration(seconds: 1), () async {
         final recovered = await NoteStorageService().syncRecoveryBackup();
         if (recovered) await _noteService.reloadRecoveredNotes();
@@ -61,7 +68,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       _fetchPendingVoiceNotes();
-      ModelAvailabilityService.instance.refresh();
+      ModelAvailabilityService.instance.refresh().then((_) {
+        if (ModelAvailabilityService.instance.embedding.isReady) {
+          SemanticKnowledgeService.instance.indexAll(_noteService.allNotes);
+        }
+      });
     }
   }
 
@@ -198,6 +209,41 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     Navigator.of(
       context,
     ).push(CupertinoPageRoute(builder: (context) => const SettingsScreen()));
+  }
+
+  void _openTopics() {
+    if (!ModelAvailabilityService.instance.embedding.isReady) {
+      showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Download Semantic Topics'),
+          content: const Text(
+            'Download the 123 MB multilingual semantic model to discover related notes and suggested topic sections privately on this iPhone.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Not now'),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(context);
+                Navigator.of(this.context).push(
+                  CupertinoPageRoute(
+                    builder: (_) => const AiModelSettingsPage(),
+                  ),
+                );
+              },
+              child: const Text('View model'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+    Navigator.of(
+      context,
+    ).push(CupertinoPageRoute(builder: (_) => const TopicsScreen()));
   }
 
   void _openSignInSheet() {
@@ -500,7 +546,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 _buildHeader(),
 
                 // Tag Filter Chips (horizontal scroll)
-                if (tags.length > 1) _buildTagFilters(tags),
+                _buildTagFilters(tags),
 
                 // Main Hybrid Grid Layout or Empty State (Dims down to 20% opacity when searching)
                 Expanded(
@@ -633,9 +679,60 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: tags.length,
+        itemCount: tags.length + 1,
         itemBuilder: (context, index) {
-          final tag = tags[index];
+          if (index == 0) {
+            final ready = ModelAvailabilityService.instance.embedding.isReady;
+            return Semantics(
+              button: true,
+              label: ready
+                  ? 'View semantic topics and related notes'
+                  : 'Semantic Topics model download required',
+              child: GestureDetector(
+                onTap: _openTopics,
+                child: Container(
+                  margin: const EdgeInsets.only(right: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 13,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.elevation1,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: ready
+                          ? Theme.of(
+                              context,
+                            ).colorScheme.primary.withValues(alpha: 0.45)
+                          : AppColors.glassBorder,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.hub_rounded,
+                        size: 14,
+                        color: ready
+                            ? Theme.of(context).colorScheme.primary
+                            : AppColors.secondaryText,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Topics',
+                        style: GoogleFonts.inter(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                          color: ready ? Colors.white : AppColors.secondaryText,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }
+          final tag = tags[index - 1];
           final isSelected = _noteService.selectedTag == tag;
 
           return GestureDetector(

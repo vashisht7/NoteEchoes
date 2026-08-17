@@ -5319,6 +5319,1613 @@ class ModelInstallationsTableCompanion
   }
 }
 
+class $NoteEmbeddingsTableTable extends NoteEmbeddingsTable
+    with TableInfo<$NoteEmbeddingsTableTable, NoteEmbeddingsTableData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $NoteEmbeddingsTableTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _noteIdMeta = const VerificationMeta('noteId');
+  @override
+  late final GeneratedColumn<String> noteId = GeneratedColumn<String>(
+    'note_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _modelVersionMeta = const VerificationMeta(
+    'modelVersion',
+  );
+  @override
+  late final GeneratedColumn<String> modelVersion = GeneratedColumn<String>(
+    'model_version',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sourceHashMeta = const VerificationMeta(
+    'sourceHash',
+  );
+  @override
+  late final GeneratedColumn<String> sourceHash = GeneratedColumn<String>(
+    'source_hash',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _vectorMeta = const VerificationMeta('vector');
+  @override
+  late final GeneratedColumn<Uint8List> vector = GeneratedColumn<Uint8List>(
+    'vector',
+    aliasedName,
+    false,
+    type: DriftSqlType.blob,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _dimensionsMeta = const VerificationMeta(
+    'dimensions',
+  );
+  @override
+  late final GeneratedColumn<int> dimensions = GeneratedColumn<int>(
+    'dimensions',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<int> updatedAt = GeneratedColumn<int>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    noteId,
+    modelVersion,
+    sourceHash,
+    vector,
+    dimensions,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'note_embeddings';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<NoteEmbeddingsTableData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('note_id')) {
+      context.handle(
+        _noteIdMeta,
+        noteId.isAcceptableOrUnknown(data['note_id']!, _noteIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_noteIdMeta);
+    }
+    if (data.containsKey('model_version')) {
+      context.handle(
+        _modelVersionMeta,
+        modelVersion.isAcceptableOrUnknown(
+          data['model_version']!,
+          _modelVersionMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_modelVersionMeta);
+    }
+    if (data.containsKey('source_hash')) {
+      context.handle(
+        _sourceHashMeta,
+        sourceHash.isAcceptableOrUnknown(data['source_hash']!, _sourceHashMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sourceHashMeta);
+    }
+    if (data.containsKey('vector')) {
+      context.handle(
+        _vectorMeta,
+        vector.isAcceptableOrUnknown(data['vector']!, _vectorMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_vectorMeta);
+    }
+    if (data.containsKey('dimensions')) {
+      context.handle(
+        _dimensionsMeta,
+        dimensions.isAcceptableOrUnknown(data['dimensions']!, _dimensionsMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_dimensionsMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {noteId};
+  @override
+  NoteEmbeddingsTableData map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return NoteEmbeddingsTableData(
+      noteId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}note_id'],
+      )!,
+      modelVersion: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}model_version'],
+      )!,
+      sourceHash: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source_hash'],
+      )!,
+      vector: attachedDatabase.typeMapping.read(
+        DriftSqlType.blob,
+        data['${effectivePrefix}vector'],
+      )!,
+      dimensions: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}dimensions'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $NoteEmbeddingsTableTable createAlias(String alias) {
+    return $NoteEmbeddingsTableTable(attachedDatabase, alias);
+  }
+}
+
+class NoteEmbeddingsTableData extends DataClass
+    implements Insertable<NoteEmbeddingsTableData> {
+  final String noteId;
+  final String modelVersion;
+  final String sourceHash;
+  final Uint8List vector;
+  final int dimensions;
+  final int updatedAt;
+  const NoteEmbeddingsTableData({
+    required this.noteId,
+    required this.modelVersion,
+    required this.sourceHash,
+    required this.vector,
+    required this.dimensions,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['note_id'] = Variable<String>(noteId);
+    map['model_version'] = Variable<String>(modelVersion);
+    map['source_hash'] = Variable<String>(sourceHash);
+    map['vector'] = Variable<Uint8List>(vector);
+    map['dimensions'] = Variable<int>(dimensions);
+    map['updated_at'] = Variable<int>(updatedAt);
+    return map;
+  }
+
+  NoteEmbeddingsTableCompanion toCompanion(bool nullToAbsent) {
+    return NoteEmbeddingsTableCompanion(
+      noteId: Value(noteId),
+      modelVersion: Value(modelVersion),
+      sourceHash: Value(sourceHash),
+      vector: Value(vector),
+      dimensions: Value(dimensions),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory NoteEmbeddingsTableData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return NoteEmbeddingsTableData(
+      noteId: serializer.fromJson<String>(json['noteId']),
+      modelVersion: serializer.fromJson<String>(json['modelVersion']),
+      sourceHash: serializer.fromJson<String>(json['sourceHash']),
+      vector: serializer.fromJson<Uint8List>(json['vector']),
+      dimensions: serializer.fromJson<int>(json['dimensions']),
+      updatedAt: serializer.fromJson<int>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'noteId': serializer.toJson<String>(noteId),
+      'modelVersion': serializer.toJson<String>(modelVersion),
+      'sourceHash': serializer.toJson<String>(sourceHash),
+      'vector': serializer.toJson<Uint8List>(vector),
+      'dimensions': serializer.toJson<int>(dimensions),
+      'updatedAt': serializer.toJson<int>(updatedAt),
+    };
+  }
+
+  NoteEmbeddingsTableData copyWith({
+    String? noteId,
+    String? modelVersion,
+    String? sourceHash,
+    Uint8List? vector,
+    int? dimensions,
+    int? updatedAt,
+  }) => NoteEmbeddingsTableData(
+    noteId: noteId ?? this.noteId,
+    modelVersion: modelVersion ?? this.modelVersion,
+    sourceHash: sourceHash ?? this.sourceHash,
+    vector: vector ?? this.vector,
+    dimensions: dimensions ?? this.dimensions,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  NoteEmbeddingsTableData copyWithCompanion(NoteEmbeddingsTableCompanion data) {
+    return NoteEmbeddingsTableData(
+      noteId: data.noteId.present ? data.noteId.value : this.noteId,
+      modelVersion: data.modelVersion.present
+          ? data.modelVersion.value
+          : this.modelVersion,
+      sourceHash: data.sourceHash.present
+          ? data.sourceHash.value
+          : this.sourceHash,
+      vector: data.vector.present ? data.vector.value : this.vector,
+      dimensions: data.dimensions.present
+          ? data.dimensions.value
+          : this.dimensions,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('NoteEmbeddingsTableData(')
+          ..write('noteId: $noteId, ')
+          ..write('modelVersion: $modelVersion, ')
+          ..write('sourceHash: $sourceHash, ')
+          ..write('vector: $vector, ')
+          ..write('dimensions: $dimensions, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    noteId,
+    modelVersion,
+    sourceHash,
+    $driftBlobEquality.hash(vector),
+    dimensions,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is NoteEmbeddingsTableData &&
+          other.noteId == this.noteId &&
+          other.modelVersion == this.modelVersion &&
+          other.sourceHash == this.sourceHash &&
+          $driftBlobEquality.equals(other.vector, this.vector) &&
+          other.dimensions == this.dimensions &&
+          other.updatedAt == this.updatedAt);
+}
+
+class NoteEmbeddingsTableCompanion
+    extends UpdateCompanion<NoteEmbeddingsTableData> {
+  final Value<String> noteId;
+  final Value<String> modelVersion;
+  final Value<String> sourceHash;
+  final Value<Uint8List> vector;
+  final Value<int> dimensions;
+  final Value<int> updatedAt;
+  final Value<int> rowid;
+  const NoteEmbeddingsTableCompanion({
+    this.noteId = const Value.absent(),
+    this.modelVersion = const Value.absent(),
+    this.sourceHash = const Value.absent(),
+    this.vector = const Value.absent(),
+    this.dimensions = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  NoteEmbeddingsTableCompanion.insert({
+    required String noteId,
+    required String modelVersion,
+    required String sourceHash,
+    required Uint8List vector,
+    required int dimensions,
+    required int updatedAt,
+    this.rowid = const Value.absent(),
+  }) : noteId = Value(noteId),
+       modelVersion = Value(modelVersion),
+       sourceHash = Value(sourceHash),
+       vector = Value(vector),
+       dimensions = Value(dimensions),
+       updatedAt = Value(updatedAt);
+  static Insertable<NoteEmbeddingsTableData> custom({
+    Expression<String>? noteId,
+    Expression<String>? modelVersion,
+    Expression<String>? sourceHash,
+    Expression<Uint8List>? vector,
+    Expression<int>? dimensions,
+    Expression<int>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (noteId != null) 'note_id': noteId,
+      if (modelVersion != null) 'model_version': modelVersion,
+      if (sourceHash != null) 'source_hash': sourceHash,
+      if (vector != null) 'vector': vector,
+      if (dimensions != null) 'dimensions': dimensions,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  NoteEmbeddingsTableCompanion copyWith({
+    Value<String>? noteId,
+    Value<String>? modelVersion,
+    Value<String>? sourceHash,
+    Value<Uint8List>? vector,
+    Value<int>? dimensions,
+    Value<int>? updatedAt,
+    Value<int>? rowid,
+  }) {
+    return NoteEmbeddingsTableCompanion(
+      noteId: noteId ?? this.noteId,
+      modelVersion: modelVersion ?? this.modelVersion,
+      sourceHash: sourceHash ?? this.sourceHash,
+      vector: vector ?? this.vector,
+      dimensions: dimensions ?? this.dimensions,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (noteId.present) {
+      map['note_id'] = Variable<String>(noteId.value);
+    }
+    if (modelVersion.present) {
+      map['model_version'] = Variable<String>(modelVersion.value);
+    }
+    if (sourceHash.present) {
+      map['source_hash'] = Variable<String>(sourceHash.value);
+    }
+    if (vector.present) {
+      map['vector'] = Variable<Uint8List>(vector.value);
+    }
+    if (dimensions.present) {
+      map['dimensions'] = Variable<int>(dimensions.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<int>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('NoteEmbeddingsTableCompanion(')
+          ..write('noteId: $noteId, ')
+          ..write('modelVersion: $modelVersion, ')
+          ..write('sourceHash: $sourceHash, ')
+          ..write('vector: $vector, ')
+          ..write('dimensions: $dimensions, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $NoteRelationshipsTableTable extends NoteRelationshipsTable
+    with TableInfo<$NoteRelationshipsTableTable, NoteRelationshipsTableData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $NoteRelationshipsTableTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _sourceNoteIdMeta = const VerificationMeta(
+    'sourceNoteId',
+  );
+  @override
+  late final GeneratedColumn<String> sourceNoteId = GeneratedColumn<String>(
+    'source_note_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _targetNoteIdMeta = const VerificationMeta(
+    'targetNoteId',
+  );
+  @override
+  late final GeneratedColumn<String> targetNoteId = GeneratedColumn<String>(
+    'target_note_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _similarityMeta = const VerificationMeta(
+    'similarity',
+  );
+  @override
+  late final GeneratedColumn<double> similarity = GeneratedColumn<double>(
+    'similarity',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('suggested'),
+  );
+  static const VerificationMeta _explanationMeta = const VerificationMeta(
+    'explanation',
+  );
+  @override
+  late final GeneratedColumn<String> explanation = GeneratedColumn<String>(
+    'explanation',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<int> updatedAt = GeneratedColumn<int>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    sourceNoteId,
+    targetNoteId,
+    similarity,
+    status,
+    explanation,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'note_relationships';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<NoteRelationshipsTableData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('source_note_id')) {
+      context.handle(
+        _sourceNoteIdMeta,
+        sourceNoteId.isAcceptableOrUnknown(
+          data['source_note_id']!,
+          _sourceNoteIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_sourceNoteIdMeta);
+    }
+    if (data.containsKey('target_note_id')) {
+      context.handle(
+        _targetNoteIdMeta,
+        targetNoteId.isAcceptableOrUnknown(
+          data['target_note_id']!,
+          _targetNoteIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_targetNoteIdMeta);
+    }
+    if (data.containsKey('similarity')) {
+      context.handle(
+        _similarityMeta,
+        similarity.isAcceptableOrUnknown(data['similarity']!, _similarityMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_similarityMeta);
+    }
+    if (data.containsKey('status')) {
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    }
+    if (data.containsKey('explanation')) {
+      context.handle(
+        _explanationMeta,
+        explanation.isAcceptableOrUnknown(
+          data['explanation']!,
+          _explanationMeta,
+        ),
+      );
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {sourceNoteId, targetNoteId};
+  @override
+  NoteRelationshipsTableData map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return NoteRelationshipsTableData(
+      sourceNoteId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source_note_id'],
+      )!,
+      targetNoteId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}target_note_id'],
+      )!,
+      similarity: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}similarity'],
+      )!,
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}status'],
+      )!,
+      explanation: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}explanation'],
+      ),
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $NoteRelationshipsTableTable createAlias(String alias) {
+    return $NoteRelationshipsTableTable(attachedDatabase, alias);
+  }
+}
+
+class NoteRelationshipsTableData extends DataClass
+    implements Insertable<NoteRelationshipsTableData> {
+  final String sourceNoteId;
+  final String targetNoteId;
+  final double similarity;
+  final String status;
+  final String? explanation;
+  final int updatedAt;
+  const NoteRelationshipsTableData({
+    required this.sourceNoteId,
+    required this.targetNoteId,
+    required this.similarity,
+    required this.status,
+    this.explanation,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['source_note_id'] = Variable<String>(sourceNoteId);
+    map['target_note_id'] = Variable<String>(targetNoteId);
+    map['similarity'] = Variable<double>(similarity);
+    map['status'] = Variable<String>(status);
+    if (!nullToAbsent || explanation != null) {
+      map['explanation'] = Variable<String>(explanation);
+    }
+    map['updated_at'] = Variable<int>(updatedAt);
+    return map;
+  }
+
+  NoteRelationshipsTableCompanion toCompanion(bool nullToAbsent) {
+    return NoteRelationshipsTableCompanion(
+      sourceNoteId: Value(sourceNoteId),
+      targetNoteId: Value(targetNoteId),
+      similarity: Value(similarity),
+      status: Value(status),
+      explanation: explanation == null && nullToAbsent
+          ? const Value.absent()
+          : Value(explanation),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory NoteRelationshipsTableData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return NoteRelationshipsTableData(
+      sourceNoteId: serializer.fromJson<String>(json['sourceNoteId']),
+      targetNoteId: serializer.fromJson<String>(json['targetNoteId']),
+      similarity: serializer.fromJson<double>(json['similarity']),
+      status: serializer.fromJson<String>(json['status']),
+      explanation: serializer.fromJson<String?>(json['explanation']),
+      updatedAt: serializer.fromJson<int>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'sourceNoteId': serializer.toJson<String>(sourceNoteId),
+      'targetNoteId': serializer.toJson<String>(targetNoteId),
+      'similarity': serializer.toJson<double>(similarity),
+      'status': serializer.toJson<String>(status),
+      'explanation': serializer.toJson<String?>(explanation),
+      'updatedAt': serializer.toJson<int>(updatedAt),
+    };
+  }
+
+  NoteRelationshipsTableData copyWith({
+    String? sourceNoteId,
+    String? targetNoteId,
+    double? similarity,
+    String? status,
+    Value<String?> explanation = const Value.absent(),
+    int? updatedAt,
+  }) => NoteRelationshipsTableData(
+    sourceNoteId: sourceNoteId ?? this.sourceNoteId,
+    targetNoteId: targetNoteId ?? this.targetNoteId,
+    similarity: similarity ?? this.similarity,
+    status: status ?? this.status,
+    explanation: explanation.present ? explanation.value : this.explanation,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  NoteRelationshipsTableData copyWithCompanion(
+    NoteRelationshipsTableCompanion data,
+  ) {
+    return NoteRelationshipsTableData(
+      sourceNoteId: data.sourceNoteId.present
+          ? data.sourceNoteId.value
+          : this.sourceNoteId,
+      targetNoteId: data.targetNoteId.present
+          ? data.targetNoteId.value
+          : this.targetNoteId,
+      similarity: data.similarity.present
+          ? data.similarity.value
+          : this.similarity,
+      status: data.status.present ? data.status.value : this.status,
+      explanation: data.explanation.present
+          ? data.explanation.value
+          : this.explanation,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('NoteRelationshipsTableData(')
+          ..write('sourceNoteId: $sourceNoteId, ')
+          ..write('targetNoteId: $targetNoteId, ')
+          ..write('similarity: $similarity, ')
+          ..write('status: $status, ')
+          ..write('explanation: $explanation, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    sourceNoteId,
+    targetNoteId,
+    similarity,
+    status,
+    explanation,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is NoteRelationshipsTableData &&
+          other.sourceNoteId == this.sourceNoteId &&
+          other.targetNoteId == this.targetNoteId &&
+          other.similarity == this.similarity &&
+          other.status == this.status &&
+          other.explanation == this.explanation &&
+          other.updatedAt == this.updatedAt);
+}
+
+class NoteRelationshipsTableCompanion
+    extends UpdateCompanion<NoteRelationshipsTableData> {
+  final Value<String> sourceNoteId;
+  final Value<String> targetNoteId;
+  final Value<double> similarity;
+  final Value<String> status;
+  final Value<String?> explanation;
+  final Value<int> updatedAt;
+  final Value<int> rowid;
+  const NoteRelationshipsTableCompanion({
+    this.sourceNoteId = const Value.absent(),
+    this.targetNoteId = const Value.absent(),
+    this.similarity = const Value.absent(),
+    this.status = const Value.absent(),
+    this.explanation = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  NoteRelationshipsTableCompanion.insert({
+    required String sourceNoteId,
+    required String targetNoteId,
+    required double similarity,
+    this.status = const Value.absent(),
+    this.explanation = const Value.absent(),
+    required int updatedAt,
+    this.rowid = const Value.absent(),
+  }) : sourceNoteId = Value(sourceNoteId),
+       targetNoteId = Value(targetNoteId),
+       similarity = Value(similarity),
+       updatedAt = Value(updatedAt);
+  static Insertable<NoteRelationshipsTableData> custom({
+    Expression<String>? sourceNoteId,
+    Expression<String>? targetNoteId,
+    Expression<double>? similarity,
+    Expression<String>? status,
+    Expression<String>? explanation,
+    Expression<int>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (sourceNoteId != null) 'source_note_id': sourceNoteId,
+      if (targetNoteId != null) 'target_note_id': targetNoteId,
+      if (similarity != null) 'similarity': similarity,
+      if (status != null) 'status': status,
+      if (explanation != null) 'explanation': explanation,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  NoteRelationshipsTableCompanion copyWith({
+    Value<String>? sourceNoteId,
+    Value<String>? targetNoteId,
+    Value<double>? similarity,
+    Value<String>? status,
+    Value<String?>? explanation,
+    Value<int>? updatedAt,
+    Value<int>? rowid,
+  }) {
+    return NoteRelationshipsTableCompanion(
+      sourceNoteId: sourceNoteId ?? this.sourceNoteId,
+      targetNoteId: targetNoteId ?? this.targetNoteId,
+      similarity: similarity ?? this.similarity,
+      status: status ?? this.status,
+      explanation: explanation ?? this.explanation,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (sourceNoteId.present) {
+      map['source_note_id'] = Variable<String>(sourceNoteId.value);
+    }
+    if (targetNoteId.present) {
+      map['target_note_id'] = Variable<String>(targetNoteId.value);
+    }
+    if (similarity.present) {
+      map['similarity'] = Variable<double>(similarity.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (explanation.present) {
+      map['explanation'] = Variable<String>(explanation.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<int>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('NoteRelationshipsTableCompanion(')
+          ..write('sourceNoteId: $sourceNoteId, ')
+          ..write('targetNoteId: $targetNoteId, ')
+          ..write('similarity: $similarity, ')
+          ..write('status: $status, ')
+          ..write('explanation: $explanation, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $TopicClustersTableTable extends TopicClustersTable
+    with TableInfo<$TopicClustersTableTable, TopicClustersTableData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $TopicClustersTableTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _labelMeta = const VerificationMeta('label');
+  @override
+  late final GeneratedColumn<String> label = GeneratedColumn<String>(
+    'label',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _summaryMeta = const VerificationMeta(
+    'summary',
+  );
+  @override
+  late final GeneratedColumn<String> summary = GeneratedColumn<String>(
+    'summary',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('suggested'),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<int> updatedAt = GeneratedColumn<int>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    label,
+    summary,
+    status,
+    createdAt,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'topic_clusters';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<TopicClustersTableData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('label')) {
+      context.handle(
+        _labelMeta,
+        label.isAcceptableOrUnknown(data['label']!, _labelMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_labelMeta);
+    }
+    if (data.containsKey('summary')) {
+      context.handle(
+        _summaryMeta,
+        summary.isAcceptableOrUnknown(data['summary']!, _summaryMeta),
+      );
+    }
+    if (data.containsKey('status')) {
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  TopicClustersTableData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return TopicClustersTableData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      label: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}label'],
+      )!,
+      summary: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}summary'],
+      ),
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}status'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $TopicClustersTableTable createAlias(String alias) {
+    return $TopicClustersTableTable(attachedDatabase, alias);
+  }
+}
+
+class TopicClustersTableData extends DataClass
+    implements Insertable<TopicClustersTableData> {
+  final String id;
+  final String label;
+  final String? summary;
+  final String status;
+  final int createdAt;
+  final int updatedAt;
+  const TopicClustersTableData({
+    required this.id,
+    required this.label,
+    this.summary,
+    required this.status,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['label'] = Variable<String>(label);
+    if (!nullToAbsent || summary != null) {
+      map['summary'] = Variable<String>(summary);
+    }
+    map['status'] = Variable<String>(status);
+    map['created_at'] = Variable<int>(createdAt);
+    map['updated_at'] = Variable<int>(updatedAt);
+    return map;
+  }
+
+  TopicClustersTableCompanion toCompanion(bool nullToAbsent) {
+    return TopicClustersTableCompanion(
+      id: Value(id),
+      label: Value(label),
+      summary: summary == null && nullToAbsent
+          ? const Value.absent()
+          : Value(summary),
+      status: Value(status),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory TopicClustersTableData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return TopicClustersTableData(
+      id: serializer.fromJson<String>(json['id']),
+      label: serializer.fromJson<String>(json['label']),
+      summary: serializer.fromJson<String?>(json['summary']),
+      status: serializer.fromJson<String>(json['status']),
+      createdAt: serializer.fromJson<int>(json['createdAt']),
+      updatedAt: serializer.fromJson<int>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'label': serializer.toJson<String>(label),
+      'summary': serializer.toJson<String?>(summary),
+      'status': serializer.toJson<String>(status),
+      'createdAt': serializer.toJson<int>(createdAt),
+      'updatedAt': serializer.toJson<int>(updatedAt),
+    };
+  }
+
+  TopicClustersTableData copyWith({
+    String? id,
+    String? label,
+    Value<String?> summary = const Value.absent(),
+    String? status,
+    int? createdAt,
+    int? updatedAt,
+  }) => TopicClustersTableData(
+    id: id ?? this.id,
+    label: label ?? this.label,
+    summary: summary.present ? summary.value : this.summary,
+    status: status ?? this.status,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  TopicClustersTableData copyWithCompanion(TopicClustersTableCompanion data) {
+    return TopicClustersTableData(
+      id: data.id.present ? data.id.value : this.id,
+      label: data.label.present ? data.label.value : this.label,
+      summary: data.summary.present ? data.summary.value : this.summary,
+      status: data.status.present ? data.status.value : this.status,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TopicClustersTableData(')
+          ..write('id: $id, ')
+          ..write('label: $label, ')
+          ..write('summary: $summary, ')
+          ..write('status: $status, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, label, summary, status, createdAt, updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is TopicClustersTableData &&
+          other.id == this.id &&
+          other.label == this.label &&
+          other.summary == this.summary &&
+          other.status == this.status &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class TopicClustersTableCompanion
+    extends UpdateCompanion<TopicClustersTableData> {
+  final Value<String> id;
+  final Value<String> label;
+  final Value<String?> summary;
+  final Value<String> status;
+  final Value<int> createdAt;
+  final Value<int> updatedAt;
+  final Value<int> rowid;
+  const TopicClustersTableCompanion({
+    this.id = const Value.absent(),
+    this.label = const Value.absent(),
+    this.summary = const Value.absent(),
+    this.status = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  TopicClustersTableCompanion.insert({
+    required String id,
+    required String label,
+    this.summary = const Value.absent(),
+    this.status = const Value.absent(),
+    required int createdAt,
+    required int updatedAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       label = Value(label),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<TopicClustersTableData> custom({
+    Expression<String>? id,
+    Expression<String>? label,
+    Expression<String>? summary,
+    Expression<String>? status,
+    Expression<int>? createdAt,
+    Expression<int>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (label != null) 'label': label,
+      if (summary != null) 'summary': summary,
+      if (status != null) 'status': status,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  TopicClustersTableCompanion copyWith({
+    Value<String>? id,
+    Value<String>? label,
+    Value<String?>? summary,
+    Value<String>? status,
+    Value<int>? createdAt,
+    Value<int>? updatedAt,
+    Value<int>? rowid,
+  }) {
+    return TopicClustersTableCompanion(
+      id: id ?? this.id,
+      label: label ?? this.label,
+      summary: summary ?? this.summary,
+      status: status ?? this.status,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (label.present) {
+      map['label'] = Variable<String>(label.value);
+    }
+    if (summary.present) {
+      map['summary'] = Variable<String>(summary.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<int>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<int>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TopicClustersTableCompanion(')
+          ..write('id: $id, ')
+          ..write('label: $label, ')
+          ..write('summary: $summary, ')
+          ..write('status: $status, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $TopicMembershipsTableTable extends TopicMembershipsTable
+    with TableInfo<$TopicMembershipsTableTable, TopicMembershipsTableData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $TopicMembershipsTableTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _clusterIdMeta = const VerificationMeta(
+    'clusterId',
+  );
+  @override
+  late final GeneratedColumn<String> clusterId = GeneratedColumn<String>(
+    'cluster_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _noteIdMeta = const VerificationMeta('noteId');
+  @override
+  late final GeneratedColumn<String> noteId = GeneratedColumn<String>(
+    'note_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _confidenceMeta = const VerificationMeta(
+    'confidence',
+  );
+  @override
+  late final GeneratedColumn<double> confidence = GeneratedColumn<double>(
+    'confidence',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<int> updatedAt = GeneratedColumn<int>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    clusterId,
+    noteId,
+    confidence,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'topic_memberships';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<TopicMembershipsTableData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('cluster_id')) {
+      context.handle(
+        _clusterIdMeta,
+        clusterId.isAcceptableOrUnknown(data['cluster_id']!, _clusterIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_clusterIdMeta);
+    }
+    if (data.containsKey('note_id')) {
+      context.handle(
+        _noteIdMeta,
+        noteId.isAcceptableOrUnknown(data['note_id']!, _noteIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_noteIdMeta);
+    }
+    if (data.containsKey('confidence')) {
+      context.handle(
+        _confidenceMeta,
+        confidence.isAcceptableOrUnknown(data['confidence']!, _confidenceMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_confidenceMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {clusterId, noteId};
+  @override
+  TopicMembershipsTableData map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return TopicMembershipsTableData(
+      clusterId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cluster_id'],
+      )!,
+      noteId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}note_id'],
+      )!,
+      confidence: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}confidence'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $TopicMembershipsTableTable createAlias(String alias) {
+    return $TopicMembershipsTableTable(attachedDatabase, alias);
+  }
+}
+
+class TopicMembershipsTableData extends DataClass
+    implements Insertable<TopicMembershipsTableData> {
+  final String clusterId;
+  final String noteId;
+  final double confidence;
+  final int updatedAt;
+  const TopicMembershipsTableData({
+    required this.clusterId,
+    required this.noteId,
+    required this.confidence,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['cluster_id'] = Variable<String>(clusterId);
+    map['note_id'] = Variable<String>(noteId);
+    map['confidence'] = Variable<double>(confidence);
+    map['updated_at'] = Variable<int>(updatedAt);
+    return map;
+  }
+
+  TopicMembershipsTableCompanion toCompanion(bool nullToAbsent) {
+    return TopicMembershipsTableCompanion(
+      clusterId: Value(clusterId),
+      noteId: Value(noteId),
+      confidence: Value(confidence),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory TopicMembershipsTableData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return TopicMembershipsTableData(
+      clusterId: serializer.fromJson<String>(json['clusterId']),
+      noteId: serializer.fromJson<String>(json['noteId']),
+      confidence: serializer.fromJson<double>(json['confidence']),
+      updatedAt: serializer.fromJson<int>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'clusterId': serializer.toJson<String>(clusterId),
+      'noteId': serializer.toJson<String>(noteId),
+      'confidence': serializer.toJson<double>(confidence),
+      'updatedAt': serializer.toJson<int>(updatedAt),
+    };
+  }
+
+  TopicMembershipsTableData copyWith({
+    String? clusterId,
+    String? noteId,
+    double? confidence,
+    int? updatedAt,
+  }) => TopicMembershipsTableData(
+    clusterId: clusterId ?? this.clusterId,
+    noteId: noteId ?? this.noteId,
+    confidence: confidence ?? this.confidence,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  TopicMembershipsTableData copyWithCompanion(
+    TopicMembershipsTableCompanion data,
+  ) {
+    return TopicMembershipsTableData(
+      clusterId: data.clusterId.present ? data.clusterId.value : this.clusterId,
+      noteId: data.noteId.present ? data.noteId.value : this.noteId,
+      confidence: data.confidence.present
+          ? data.confidence.value
+          : this.confidence,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TopicMembershipsTableData(')
+          ..write('clusterId: $clusterId, ')
+          ..write('noteId: $noteId, ')
+          ..write('confidence: $confidence, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(clusterId, noteId, confidence, updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is TopicMembershipsTableData &&
+          other.clusterId == this.clusterId &&
+          other.noteId == this.noteId &&
+          other.confidence == this.confidence &&
+          other.updatedAt == this.updatedAt);
+}
+
+class TopicMembershipsTableCompanion
+    extends UpdateCompanion<TopicMembershipsTableData> {
+  final Value<String> clusterId;
+  final Value<String> noteId;
+  final Value<double> confidence;
+  final Value<int> updatedAt;
+  final Value<int> rowid;
+  const TopicMembershipsTableCompanion({
+    this.clusterId = const Value.absent(),
+    this.noteId = const Value.absent(),
+    this.confidence = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  TopicMembershipsTableCompanion.insert({
+    required String clusterId,
+    required String noteId,
+    required double confidence,
+    required int updatedAt,
+    this.rowid = const Value.absent(),
+  }) : clusterId = Value(clusterId),
+       noteId = Value(noteId),
+       confidence = Value(confidence),
+       updatedAt = Value(updatedAt);
+  static Insertable<TopicMembershipsTableData> custom({
+    Expression<String>? clusterId,
+    Expression<String>? noteId,
+    Expression<double>? confidence,
+    Expression<int>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (clusterId != null) 'cluster_id': clusterId,
+      if (noteId != null) 'note_id': noteId,
+      if (confidence != null) 'confidence': confidence,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  TopicMembershipsTableCompanion copyWith({
+    Value<String>? clusterId,
+    Value<String>? noteId,
+    Value<double>? confidence,
+    Value<int>? updatedAt,
+    Value<int>? rowid,
+  }) {
+    return TopicMembershipsTableCompanion(
+      clusterId: clusterId ?? this.clusterId,
+      noteId: noteId ?? this.noteId,
+      confidence: confidence ?? this.confidence,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (clusterId.present) {
+      map['cluster_id'] = Variable<String>(clusterId.value);
+    }
+    if (noteId.present) {
+      map['note_id'] = Variable<String>(noteId.value);
+    }
+    if (confidence.present) {
+      map['confidence'] = Variable<double>(confidence.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<int>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TopicMembershipsTableCompanion(')
+          ..write('clusterId: $clusterId, ')
+          ..write('noteId: $noteId, ')
+          ..write('confidence: $confidence, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AiDatabase extends GeneratedDatabase {
   _$AiDatabase(QueryExecutor e) : super(e);
   $AiDatabaseManager get managers => $AiDatabaseManager(this);
@@ -5336,6 +6943,14 @@ abstract class _$AiDatabase extends GeneratedDatabase {
   late final $AiJobsTableTable aiJobsTable = $AiJobsTableTable(this);
   late final $ModelInstallationsTableTable modelInstallationsTable =
       $ModelInstallationsTableTable(this);
+  late final $NoteEmbeddingsTableTable noteEmbeddingsTable =
+      $NoteEmbeddingsTableTable(this);
+  late final $NoteRelationshipsTableTable noteRelationshipsTable =
+      $NoteRelationshipsTableTable(this);
+  late final $TopicClustersTableTable topicClustersTable =
+      $TopicClustersTableTable(this);
+  late final $TopicMembershipsTableTable topicMembershipsTable =
+      $TopicMembershipsTableTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -5349,6 +6964,10 @@ abstract class _$AiDatabase extends GeneratedDatabase {
     personalMemoriesTable,
     aiJobsTable,
     modelInstallationsTable,
+    noteEmbeddingsTable,
+    noteRelationshipsTable,
+    topicClustersTable,
+    topicMembershipsTable,
   ];
 }
 
@@ -7986,6 +9605,927 @@ typedef $$ModelInstallationsTableTableProcessedTableManager =
       ModelInstallationsTableData,
       PrefetchHooks Function()
     >;
+typedef $$NoteEmbeddingsTableTableCreateCompanionBuilder =
+    NoteEmbeddingsTableCompanion Function({
+      required String noteId,
+      required String modelVersion,
+      required String sourceHash,
+      required Uint8List vector,
+      required int dimensions,
+      required int updatedAt,
+      Value<int> rowid,
+    });
+typedef $$NoteEmbeddingsTableTableUpdateCompanionBuilder =
+    NoteEmbeddingsTableCompanion Function({
+      Value<String> noteId,
+      Value<String> modelVersion,
+      Value<String> sourceHash,
+      Value<Uint8List> vector,
+      Value<int> dimensions,
+      Value<int> updatedAt,
+      Value<int> rowid,
+    });
+
+class $$NoteEmbeddingsTableTableFilterComposer
+    extends Composer<_$AiDatabase, $NoteEmbeddingsTableTable> {
+  $$NoteEmbeddingsTableTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get noteId => $composableBuilder(
+    column: $table.noteId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get modelVersion => $composableBuilder(
+    column: $table.modelVersion,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sourceHash => $composableBuilder(
+    column: $table.sourceHash,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<Uint8List> get vector => $composableBuilder(
+    column: $table.vector,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get dimensions => $composableBuilder(
+    column: $table.dimensions,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$NoteEmbeddingsTableTableOrderingComposer
+    extends Composer<_$AiDatabase, $NoteEmbeddingsTableTable> {
+  $$NoteEmbeddingsTableTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get noteId => $composableBuilder(
+    column: $table.noteId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get modelVersion => $composableBuilder(
+    column: $table.modelVersion,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sourceHash => $composableBuilder(
+    column: $table.sourceHash,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<Uint8List> get vector => $composableBuilder(
+    column: $table.vector,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get dimensions => $composableBuilder(
+    column: $table.dimensions,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$NoteEmbeddingsTableTableAnnotationComposer
+    extends Composer<_$AiDatabase, $NoteEmbeddingsTableTable> {
+  $$NoteEmbeddingsTableTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get noteId =>
+      $composableBuilder(column: $table.noteId, builder: (column) => column);
+
+  GeneratedColumn<String> get modelVersion => $composableBuilder(
+    column: $table.modelVersion,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get sourceHash => $composableBuilder(
+    column: $table.sourceHash,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<Uint8List> get vector =>
+      $composableBuilder(column: $table.vector, builder: (column) => column);
+
+  GeneratedColumn<int> get dimensions => $composableBuilder(
+    column: $table.dimensions,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$NoteEmbeddingsTableTableTableManager
+    extends
+        RootTableManager<
+          _$AiDatabase,
+          $NoteEmbeddingsTableTable,
+          NoteEmbeddingsTableData,
+          $$NoteEmbeddingsTableTableFilterComposer,
+          $$NoteEmbeddingsTableTableOrderingComposer,
+          $$NoteEmbeddingsTableTableAnnotationComposer,
+          $$NoteEmbeddingsTableTableCreateCompanionBuilder,
+          $$NoteEmbeddingsTableTableUpdateCompanionBuilder,
+          (
+            NoteEmbeddingsTableData,
+            BaseReferences<
+              _$AiDatabase,
+              $NoteEmbeddingsTableTable,
+              NoteEmbeddingsTableData
+            >,
+          ),
+          NoteEmbeddingsTableData,
+          PrefetchHooks Function()
+        > {
+  $$NoteEmbeddingsTableTableTableManager(
+    _$AiDatabase db,
+    $NoteEmbeddingsTableTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$NoteEmbeddingsTableTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$NoteEmbeddingsTableTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$NoteEmbeddingsTableTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> noteId = const Value.absent(),
+                Value<String> modelVersion = const Value.absent(),
+                Value<String> sourceHash = const Value.absent(),
+                Value<Uint8List> vector = const Value.absent(),
+                Value<int> dimensions = const Value.absent(),
+                Value<int> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => NoteEmbeddingsTableCompanion(
+                noteId: noteId,
+                modelVersion: modelVersion,
+                sourceHash: sourceHash,
+                vector: vector,
+                dimensions: dimensions,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String noteId,
+                required String modelVersion,
+                required String sourceHash,
+                required Uint8List vector,
+                required int dimensions,
+                required int updatedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => NoteEmbeddingsTableCompanion.insert(
+                noteId: noteId,
+                modelVersion: modelVersion,
+                sourceHash: sourceHash,
+                vector: vector,
+                dimensions: dimensions,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$NoteEmbeddingsTableTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AiDatabase,
+      $NoteEmbeddingsTableTable,
+      NoteEmbeddingsTableData,
+      $$NoteEmbeddingsTableTableFilterComposer,
+      $$NoteEmbeddingsTableTableOrderingComposer,
+      $$NoteEmbeddingsTableTableAnnotationComposer,
+      $$NoteEmbeddingsTableTableCreateCompanionBuilder,
+      $$NoteEmbeddingsTableTableUpdateCompanionBuilder,
+      (
+        NoteEmbeddingsTableData,
+        BaseReferences<
+          _$AiDatabase,
+          $NoteEmbeddingsTableTable,
+          NoteEmbeddingsTableData
+        >,
+      ),
+      NoteEmbeddingsTableData,
+      PrefetchHooks Function()
+    >;
+typedef $$NoteRelationshipsTableTableCreateCompanionBuilder =
+    NoteRelationshipsTableCompanion Function({
+      required String sourceNoteId,
+      required String targetNoteId,
+      required double similarity,
+      Value<String> status,
+      Value<String?> explanation,
+      required int updatedAt,
+      Value<int> rowid,
+    });
+typedef $$NoteRelationshipsTableTableUpdateCompanionBuilder =
+    NoteRelationshipsTableCompanion Function({
+      Value<String> sourceNoteId,
+      Value<String> targetNoteId,
+      Value<double> similarity,
+      Value<String> status,
+      Value<String?> explanation,
+      Value<int> updatedAt,
+      Value<int> rowid,
+    });
+
+class $$NoteRelationshipsTableTableFilterComposer
+    extends Composer<_$AiDatabase, $NoteRelationshipsTableTable> {
+  $$NoteRelationshipsTableTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get sourceNoteId => $composableBuilder(
+    column: $table.sourceNoteId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get targetNoteId => $composableBuilder(
+    column: $table.targetNoteId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get similarity => $composableBuilder(
+    column: $table.similarity,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get explanation => $composableBuilder(
+    column: $table.explanation,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$NoteRelationshipsTableTableOrderingComposer
+    extends Composer<_$AiDatabase, $NoteRelationshipsTableTable> {
+  $$NoteRelationshipsTableTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get sourceNoteId => $composableBuilder(
+    column: $table.sourceNoteId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get targetNoteId => $composableBuilder(
+    column: $table.targetNoteId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get similarity => $composableBuilder(
+    column: $table.similarity,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get explanation => $composableBuilder(
+    column: $table.explanation,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$NoteRelationshipsTableTableAnnotationComposer
+    extends Composer<_$AiDatabase, $NoteRelationshipsTableTable> {
+  $$NoteRelationshipsTableTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get sourceNoteId => $composableBuilder(
+    column: $table.sourceNoteId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get targetNoteId => $composableBuilder(
+    column: $table.targetNoteId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get similarity => $composableBuilder(
+    column: $table.similarity,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<String> get explanation => $composableBuilder(
+    column: $table.explanation,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$NoteRelationshipsTableTableTableManager
+    extends
+        RootTableManager<
+          _$AiDatabase,
+          $NoteRelationshipsTableTable,
+          NoteRelationshipsTableData,
+          $$NoteRelationshipsTableTableFilterComposer,
+          $$NoteRelationshipsTableTableOrderingComposer,
+          $$NoteRelationshipsTableTableAnnotationComposer,
+          $$NoteRelationshipsTableTableCreateCompanionBuilder,
+          $$NoteRelationshipsTableTableUpdateCompanionBuilder,
+          (
+            NoteRelationshipsTableData,
+            BaseReferences<
+              _$AiDatabase,
+              $NoteRelationshipsTableTable,
+              NoteRelationshipsTableData
+            >,
+          ),
+          NoteRelationshipsTableData,
+          PrefetchHooks Function()
+        > {
+  $$NoteRelationshipsTableTableTableManager(
+    _$AiDatabase db,
+    $NoteRelationshipsTableTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$NoteRelationshipsTableTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$NoteRelationshipsTableTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$NoteRelationshipsTableTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> sourceNoteId = const Value.absent(),
+                Value<String> targetNoteId = const Value.absent(),
+                Value<double> similarity = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<String?> explanation = const Value.absent(),
+                Value<int> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => NoteRelationshipsTableCompanion(
+                sourceNoteId: sourceNoteId,
+                targetNoteId: targetNoteId,
+                similarity: similarity,
+                status: status,
+                explanation: explanation,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String sourceNoteId,
+                required String targetNoteId,
+                required double similarity,
+                Value<String> status = const Value.absent(),
+                Value<String?> explanation = const Value.absent(),
+                required int updatedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => NoteRelationshipsTableCompanion.insert(
+                sourceNoteId: sourceNoteId,
+                targetNoteId: targetNoteId,
+                similarity: similarity,
+                status: status,
+                explanation: explanation,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$NoteRelationshipsTableTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AiDatabase,
+      $NoteRelationshipsTableTable,
+      NoteRelationshipsTableData,
+      $$NoteRelationshipsTableTableFilterComposer,
+      $$NoteRelationshipsTableTableOrderingComposer,
+      $$NoteRelationshipsTableTableAnnotationComposer,
+      $$NoteRelationshipsTableTableCreateCompanionBuilder,
+      $$NoteRelationshipsTableTableUpdateCompanionBuilder,
+      (
+        NoteRelationshipsTableData,
+        BaseReferences<
+          _$AiDatabase,
+          $NoteRelationshipsTableTable,
+          NoteRelationshipsTableData
+        >,
+      ),
+      NoteRelationshipsTableData,
+      PrefetchHooks Function()
+    >;
+typedef $$TopicClustersTableTableCreateCompanionBuilder =
+    TopicClustersTableCompanion Function({
+      required String id,
+      required String label,
+      Value<String?> summary,
+      Value<String> status,
+      required int createdAt,
+      required int updatedAt,
+      Value<int> rowid,
+    });
+typedef $$TopicClustersTableTableUpdateCompanionBuilder =
+    TopicClustersTableCompanion Function({
+      Value<String> id,
+      Value<String> label,
+      Value<String?> summary,
+      Value<String> status,
+      Value<int> createdAt,
+      Value<int> updatedAt,
+      Value<int> rowid,
+    });
+
+class $$TopicClustersTableTableFilterComposer
+    extends Composer<_$AiDatabase, $TopicClustersTableTable> {
+  $$TopicClustersTableTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get label => $composableBuilder(
+    column: $table.label,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get summary => $composableBuilder(
+    column: $table.summary,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$TopicClustersTableTableOrderingComposer
+    extends Composer<_$AiDatabase, $TopicClustersTableTable> {
+  $$TopicClustersTableTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get label => $composableBuilder(
+    column: $table.label,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get summary => $composableBuilder(
+    column: $table.summary,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$TopicClustersTableTableAnnotationComposer
+    extends Composer<_$AiDatabase, $TopicClustersTableTable> {
+  $$TopicClustersTableTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get label =>
+      $composableBuilder(column: $table.label, builder: (column) => column);
+
+  GeneratedColumn<String> get summary =>
+      $composableBuilder(column: $table.summary, builder: (column) => column);
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<int> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$TopicClustersTableTableTableManager
+    extends
+        RootTableManager<
+          _$AiDatabase,
+          $TopicClustersTableTable,
+          TopicClustersTableData,
+          $$TopicClustersTableTableFilterComposer,
+          $$TopicClustersTableTableOrderingComposer,
+          $$TopicClustersTableTableAnnotationComposer,
+          $$TopicClustersTableTableCreateCompanionBuilder,
+          $$TopicClustersTableTableUpdateCompanionBuilder,
+          (
+            TopicClustersTableData,
+            BaseReferences<
+              _$AiDatabase,
+              $TopicClustersTableTable,
+              TopicClustersTableData
+            >,
+          ),
+          TopicClustersTableData,
+          PrefetchHooks Function()
+        > {
+  $$TopicClustersTableTableTableManager(
+    _$AiDatabase db,
+    $TopicClustersTableTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$TopicClustersTableTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$TopicClustersTableTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$TopicClustersTableTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> label = const Value.absent(),
+                Value<String?> summary = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<int> createdAt = const Value.absent(),
+                Value<int> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => TopicClustersTableCompanion(
+                id: id,
+                label: label,
+                summary: summary,
+                status: status,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String label,
+                Value<String?> summary = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                required int createdAt,
+                required int updatedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => TopicClustersTableCompanion.insert(
+                id: id,
+                label: label,
+                summary: summary,
+                status: status,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$TopicClustersTableTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AiDatabase,
+      $TopicClustersTableTable,
+      TopicClustersTableData,
+      $$TopicClustersTableTableFilterComposer,
+      $$TopicClustersTableTableOrderingComposer,
+      $$TopicClustersTableTableAnnotationComposer,
+      $$TopicClustersTableTableCreateCompanionBuilder,
+      $$TopicClustersTableTableUpdateCompanionBuilder,
+      (
+        TopicClustersTableData,
+        BaseReferences<
+          _$AiDatabase,
+          $TopicClustersTableTable,
+          TopicClustersTableData
+        >,
+      ),
+      TopicClustersTableData,
+      PrefetchHooks Function()
+    >;
+typedef $$TopicMembershipsTableTableCreateCompanionBuilder =
+    TopicMembershipsTableCompanion Function({
+      required String clusterId,
+      required String noteId,
+      required double confidence,
+      required int updatedAt,
+      Value<int> rowid,
+    });
+typedef $$TopicMembershipsTableTableUpdateCompanionBuilder =
+    TopicMembershipsTableCompanion Function({
+      Value<String> clusterId,
+      Value<String> noteId,
+      Value<double> confidence,
+      Value<int> updatedAt,
+      Value<int> rowid,
+    });
+
+class $$TopicMembershipsTableTableFilterComposer
+    extends Composer<_$AiDatabase, $TopicMembershipsTableTable> {
+  $$TopicMembershipsTableTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get clusterId => $composableBuilder(
+    column: $table.clusterId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get noteId => $composableBuilder(
+    column: $table.noteId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get confidence => $composableBuilder(
+    column: $table.confidence,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$TopicMembershipsTableTableOrderingComposer
+    extends Composer<_$AiDatabase, $TopicMembershipsTableTable> {
+  $$TopicMembershipsTableTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get clusterId => $composableBuilder(
+    column: $table.clusterId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get noteId => $composableBuilder(
+    column: $table.noteId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get confidence => $composableBuilder(
+    column: $table.confidence,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$TopicMembershipsTableTableAnnotationComposer
+    extends Composer<_$AiDatabase, $TopicMembershipsTableTable> {
+  $$TopicMembershipsTableTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get clusterId =>
+      $composableBuilder(column: $table.clusterId, builder: (column) => column);
+
+  GeneratedColumn<String> get noteId =>
+      $composableBuilder(column: $table.noteId, builder: (column) => column);
+
+  GeneratedColumn<double> get confidence => $composableBuilder(
+    column: $table.confidence,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$TopicMembershipsTableTableTableManager
+    extends
+        RootTableManager<
+          _$AiDatabase,
+          $TopicMembershipsTableTable,
+          TopicMembershipsTableData,
+          $$TopicMembershipsTableTableFilterComposer,
+          $$TopicMembershipsTableTableOrderingComposer,
+          $$TopicMembershipsTableTableAnnotationComposer,
+          $$TopicMembershipsTableTableCreateCompanionBuilder,
+          $$TopicMembershipsTableTableUpdateCompanionBuilder,
+          (
+            TopicMembershipsTableData,
+            BaseReferences<
+              _$AiDatabase,
+              $TopicMembershipsTableTable,
+              TopicMembershipsTableData
+            >,
+          ),
+          TopicMembershipsTableData,
+          PrefetchHooks Function()
+        > {
+  $$TopicMembershipsTableTableTableManager(
+    _$AiDatabase db,
+    $TopicMembershipsTableTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$TopicMembershipsTableTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$TopicMembershipsTableTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$TopicMembershipsTableTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> clusterId = const Value.absent(),
+                Value<String> noteId = const Value.absent(),
+                Value<double> confidence = const Value.absent(),
+                Value<int> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => TopicMembershipsTableCompanion(
+                clusterId: clusterId,
+                noteId: noteId,
+                confidence: confidence,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String clusterId,
+                required String noteId,
+                required double confidence,
+                required int updatedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => TopicMembershipsTableCompanion.insert(
+                clusterId: clusterId,
+                noteId: noteId,
+                confidence: confidence,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$TopicMembershipsTableTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AiDatabase,
+      $TopicMembershipsTableTable,
+      TopicMembershipsTableData,
+      $$TopicMembershipsTableTableFilterComposer,
+      $$TopicMembershipsTableTableOrderingComposer,
+      $$TopicMembershipsTableTableAnnotationComposer,
+      $$TopicMembershipsTableTableCreateCompanionBuilder,
+      $$TopicMembershipsTableTableUpdateCompanionBuilder,
+      (
+        TopicMembershipsTableData,
+        BaseReferences<
+          _$AiDatabase,
+          $TopicMembershipsTableTable,
+          TopicMembershipsTableData
+        >,
+      ),
+      TopicMembershipsTableData,
+      PrefetchHooks Function()
+    >;
 
 class $AiDatabaseManager {
   final _$AiDatabase _db;
@@ -8012,4 +10552,15 @@ class $AiDatabaseManager {
         _db,
         _db.modelInstallationsTable,
       );
+  $$NoteEmbeddingsTableTableTableManager get noteEmbeddingsTable =>
+      $$NoteEmbeddingsTableTableTableManager(_db, _db.noteEmbeddingsTable);
+  $$NoteRelationshipsTableTableTableManager get noteRelationshipsTable =>
+      $$NoteRelationshipsTableTableTableManager(
+        _db,
+        _db.noteRelationshipsTable,
+      );
+  $$TopicClustersTableTableTableManager get topicClustersTable =>
+      $$TopicClustersTableTableTableManager(_db, _db.topicClustersTable);
+  $$TopicMembershipsTableTableTableManager get topicMembershipsTable =>
+      $$TopicMembershipsTableTableTableManager(_db, _db.topicMembershipsTable);
 }
