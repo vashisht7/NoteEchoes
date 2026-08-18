@@ -30,9 +30,11 @@ Release: `v2.9.1` plus unreleased fixes on `main`
 
 ## Known installation limitation — must not be described as a permanent install
 
-The current app installed from Xcode has been reported not to keep running after the iPhone is disconnected. Treat this as an unresolved distribution/signing issue, not as confirmed daily-use installation behavior.
+The former Debug installation crashed during native startup, which looked like a cable/disconnection failure. The 2026-08-18 device crash report proved the actual fault was `GeneratedPluginRegistrant` registering `connectivity_plus` through `AppDelegate` before the UIScene Flutter engine existed (`EXC_BAD_ACCESS` in `ConnectivityPlusPlugin.register`). Plugin and PDF platform-view registration now occurs in `FlutterImplicitEngineDelegate.didInitializeImplicitFlutterEngine`, matching the current Flutter iOS template.
 
 On 2026-08-17, commit `f22f6fe` was compiled as a signed **Release** build, installed directly with Apple device services, and launched without a resident Flutter/Xcode debugger. The active development provisioning profile expires on **2026-08-21 at 05:45 UTC**. Cable disconnection should not terminate this detached Release installation, but it will need to be rebuilt/reinstalled after the temporary profile expires unless the app moves to TestFlight/App Store distribution.
+
+On 2026-08-18, the repaired app was compiled and signed in Release, installed directly on the physical iPhone, launched detached, verified alive, deliberately terminated, cold-launched again, and verified alive under a new process ID. No new Runner crash report was produced. The shared Xcode Runner scheme now uses **Release** for Run by default; keep tests in Debug and archives in Release.
 
 - An Xcode Run session is a development/debug deployment. Disconnecting can terminate the debugger-launched process; the user should then try launching NoteEchoes directly from the iPhone Home Screen.
 - Do **not** promise that a development-signed build will remain usable indefinitely. Its provisioning profile is temporary and can expire or become invalid.
@@ -105,7 +107,7 @@ Verification completed for the unreleased `399c585` PDF/save fixes:
 - Full Flutter test suite: 27 tests passed.
 - Analyzer on all modified Dart files: no issues.
 - Native iOS Release compilation with code signing disabled: passed.
-- A persistent disconnected-phone installation has **not** passed and remains required before the next release/IPA is claimed ready.
+- Detached and repeated cold launch now pass. A literal cable-unplug plus phone-restart check by the user remains the final distribution verification.
 - Signed detached Release installation on the connected iPhone: passed; development profile expiration is 2026-08-21 05:45 UTC.
 
 Verification completed for the memory-network conversation redesign:

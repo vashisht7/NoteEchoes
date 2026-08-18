@@ -4,22 +4,13 @@ import AppIntents
 import PDFKit
 
 @main
-@objc class AppDelegate: FlutterAppDelegate {
+@objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
     override func application(
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [
             UIApplication.LaunchOptionsKey: Any
         ]?
     ) -> Bool {
-        GeneratedPluginRegistrant.register(with: self)
-
-        if let pdfRegistrar = registrar(forPlugin: "NoteEchoesPDFKitView") {
-            pdfRegistrar.register(
-                NoteEchoesPDFViewFactory(),
-                withId: "noteechoes/pdf_view"
-            )
-        }
-
         if #available(iOS 16.0, *) {
             NotechoesShortcuts.updateAppShortcutParameters()
         }
@@ -28,6 +19,22 @@ import PDFKit
             application,
             didFinishLaunchingWithOptions: launchOptions
         )
+    }
+
+    func didInitializeImplicitFlutterEngine(
+        _ engineBridge: FlutterImplicitEngineBridge
+    ) {
+        let registry = engineBridge.pluginRegistry
+        GeneratedPluginRegistrant.register(with: registry)
+
+        if let pdfRegistrar = registry.registrar(
+            forPlugin: "NoteEchoesPDFKitView"
+        ) {
+            pdfRegistrar.register(
+                NoteEchoesPDFViewFactory(),
+                withId: "noteechoes/pdf_view"
+            )
+        }
     }
 }
 
