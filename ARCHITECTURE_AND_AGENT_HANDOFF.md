@@ -30,6 +30,8 @@ Release: `v2.9.1` plus unreleased fixes on `main` through commit `399c585`
 
 The current app installed from Xcode has been reported not to keep running after the iPhone is disconnected. Treat this as an unresolved distribution/signing issue, not as confirmed daily-use installation behavior.
 
+On 2026-08-17, commit `f22f6fe` was compiled as a signed **Release** build, installed directly with Apple device services, and launched without a resident Flutter/Xcode debugger. The active development provisioning profile expires on **2026-08-21 at 05:45 UTC**. Cable disconnection should not terminate this detached Release installation, but it will need to be rebuilt/reinstalled after the temporary profile expires unless the app moves to TestFlight/App Store distribution.
+
 - An Xcode Run session is a development/debug deployment. Disconnecting can terminate the debugger-launched process; the user should then try launching NoteEchoes directly from the iPhone Home Screen.
 - Do **not** promise that a development-signed build will remain usable indefinitely. Its provisioning profile is temporary and can expire or become invalid.
 - Before declaring this fixed, physically verify this exact sequence: install; stop Xcode; unplug the cable; force-close NoteEchoes; launch it from the iPhone Home Screen; create and save a note; restart the phone; launch again; confirm the note remains.
@@ -102,6 +104,7 @@ Verification completed for the unreleased `399c585` PDF/save fixes:
 - Analyzer on all modified Dart files: no issues.
 - Native iOS Release compilation with code signing disabled: passed.
 - A persistent disconnected-phone installation has **not** passed and remains required before the next release/IPA is claimed ready.
+- Signed detached Release installation on the connected iPhone: passed; development profile expiration is 2026-08-21 05:45 UTC.
 
 ## Guardrails for future changes
 
