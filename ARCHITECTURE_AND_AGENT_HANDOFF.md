@@ -1,7 +1,7 @@
 # NoteEchoes — Current Handoff Guide
 
 Last updated: 2026-08-17
-Release: `v2.9.1` plus unreleased fixes on `main` through commit `399c585`
+Release: `v2.9.1` plus unreleased fixes on `main`
 
 ## What is working now
 
@@ -21,6 +21,8 @@ Release: `v2.9.1` plus unreleased fixes on `main` through commit `399c585`
 - Core notes, keyword search, checklists, tables, and Apple speech remain available without optional model downloads. Model-dependent features explain the required download before opening.
 - The note editor supports swipe-back, inline cursor-positioned checklists, Return-to-add table rows, and an explicit add-column control.
 - Conversation mode uses installed Apple Premium/Enhanced voices when available, synchronizes highlighted sentences from native speech callbacks, and stops speech on every route exit.
+- Conversation thinking/results now stay on a single matte-black memory-network surface: relevant note cards connect to a restrained crimson source point, then the generated answer appears as an Integrated Insight card with a **View Detailed Report** action. Generation and native speech behavior are unchanged; speech starts automatically when the answer is ready.
+- The detailed voice report is a separate selectable-text page driven by the existing native sentence callbacks, so it follows and highlights the sentence currently being spoken. Its only bottom action is **Copy report**. Save, replay, pause/continue, audio troubleshooting, copy, and new-question actions remain available from the response-page menu.
 - Reduce Motion, Dynamic Type, VoiceOver labels/actions, and compact-iPhone layouts are supported.
 - PDF attachments on iPhone now use Apple's native PDFKit reader rather than the third-party Flutter renderer. They open in a dedicated matte-black reader with pinch zoom, selectable clean text, per-page Markdown copying, accessible loading/error states, and a separate optional document-chat action. Back returns to the note; the note remains one step above the home page.
 - Attachment references are stored relative to Documents and legacy absolute iOS-container paths are repaired automatically. PDF notes show a rendered first-page cover on the home card and inside the editor. The reader can switch to a clean selectable Markdown view, copy all extracted text, and use on-device Vision OCR for scanned pages.
@@ -105,6 +107,13 @@ Verification completed for the unreleased `399c585` PDF/save fixes:
 - Native iOS Release compilation with code signing disabled: passed.
 - A persistent disconnected-phone installation has **not** passed and remains required before the next release/IPA is claimed ready.
 - Signed detached Release installation on the connected iPhone: passed; development profile expiration is 2026-08-21 05:45 UTC.
+
+Verification completed for the memory-network conversation redesign:
+
+- Modified-file analyzer: no issues.
+- Full Flutter test suite: 27 tests passed.
+- Compact 320×640 iPhone test at 140% Dynamic Type: network result card, detailed-report navigation, and bottom copy action passed without overflow.
+- `VoiceAssistantService` generation, speech, highlighting callbacks, and stop-on-conversation-exit logic were not changed.
 
 ## Guardrails for future changes
 

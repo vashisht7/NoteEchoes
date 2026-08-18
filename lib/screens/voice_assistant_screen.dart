@@ -8,6 +8,7 @@ import '../services/note_service.dart';
 import '../services/voice_assistant_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/voice_visualizer_painter.dart';
+import 'voice_detailed_report_screen.dart';
 import '../ai/infrastructure/model_availability_service.dart';
 import '../ai/presentation/model_feature_gate.dart';
 
@@ -33,9 +34,6 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
 
   // Candidate NoteNodes for Thinking State
   List<NoteNode> _candidateNodes = [];
-  int _currentInsideOrbIndex = 0;
-  Timer? _orbScanTimer;
-  bool _isCopied = false;
   bool _didCheckAudio = false;
 
   // Thoughts revolving loop dynamically generated from real user notes
@@ -65,7 +63,6 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
   }
 
   late final FixedExtentScrollController _wheelScrollController;
-  final ScrollController _lyricsScrollController = ScrollController();
 
   @override
   void initState() {
@@ -85,10 +82,6 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
 
     // Immediately start active listening on open
     _voiceService.startVoiceSession(initialPrompt: widget.initialPrompt);
-
-    if (_state == VoiceState.thinking) {
-      _startInsideOrbScanning();
-    }
   }
 
   @override
@@ -127,11 +120,6 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
           _state = mappedState;
         });
 
-        if (_state == VoiceState.thinking) {
-          _startInsideOrbScanning();
-        } else {
-          _orbScanTimer?.cancel();
-        }
         if (_state == VoiceState.speaking && !_didCheckAudio) {
           _didCheckAudio = true;
           WidgetsBinding.instance.addPostFrameCallback((_) => _checkAudio());
@@ -139,45 +127,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
       } else {
         setState(() {});
       }
-      if (mappedState == VoiceState.speaking) {
-        WidgetsBinding.instance.addPostFrameCallback(
-          (_) => _scrollToActiveLyric(),
-        );
-      }
     }
-  }
-
-  void _scrollToActiveLyric() {
-    if (!_lyricsScrollController.hasClients) return;
-    final target = (_voiceService.activeLyricIndex * 86.0).clamp(
-      0.0,
-      _lyricsScrollController.position.maxScrollExtent,
-    );
-    _lyricsScrollController.animateTo(
-      target,
-      duration: MediaQuery.of(context).disableAnimations
-          ? Duration.zero
-          : const Duration(milliseconds: 320),
-      curve: Curves.easeOutCubic,
-    );
-  }
-
-  // Inside the Orb note scanner
-  void _startInsideOrbScanning() {
-    _orbScanTimer?.cancel();
-    _currentInsideOrbIndex = 0;
-    if (MediaQuery.of(context).disableAnimations) return;
-
-    _orbScanTimer = Timer.periodic(const Duration(milliseconds: 900), (timer) {
-      if (_state == VoiceState.thinking &&
-          mounted &&
-          _candidateNodes.isNotEmpty) {
-        setState(() {
-          _currentInsideOrbIndex =
-              (_currentInsideOrbIndex + 1) % _candidateNodes.length;
-        });
-      }
-    });
   }
 
   Future<void> _checkAudio({bool alwaysShow = false}) async {
@@ -223,10 +173,9 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
         : "No transcript available.";
     Clipboard.setData(ClipboardData(text: text));
     HapticFeedback.mediumImpact();
-    setState(() => _isCopied = true);
-    Future.delayed(const Duration(milliseconds: 2000), () {
-      if (mounted) setState(() => _isCopied = false);
-    });
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Response copied')));
   }
 
   Future<void> _saveAiResponseAsNote() async {
@@ -264,12 +213,10 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
 
   @override
   void dispose() {
-    _orbScanTimer?.cancel();
     _voiceService.removeListener(_onServiceUpdate);
     _voiceService.stopVoiceSession();
     _animationController.dispose();
     _wheelScrollController.dispose();
-    _lyricsScrollController.dispose();
     super.dispose();
   }
 
@@ -281,7 +228,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
         child: Stack(
           children: [
             // Layer 1: Water Droplet Ripple Effect (Listening) or Dream Bubble (Thinking)
-            if (_state == VoiceState.listening || _state == VoiceState.thinking)
+            if (_state == VoiceState.listening)
               Positioned.fill(
                 child: AnimatedBuilder(
                   animation: _animationController,
@@ -298,10 +245,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
                 ),
               ),
 
-            // Layer 2: Thinking State - Note Cards appearing INSIDE the Dream Bubble Orb one after the other
-            if (_state == VoiceState.thinking) _buildInsideOrbNoteScanner(),
-
-            // Layer 3: Main UI Views
+            // Layer 2: Main UI Views
             Column(
               children: [
                 // Top Minimal Header (Close button & subtle live badge)
@@ -414,28 +358,61 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
             ),
           ),
           if (_state == VoiceState.speaking)
-            IconButton(
-              tooltip: 'Save response as a note',
-              onPressed: _saveAiResponseAsNote,
-              icon: const Icon(
-                Icons.bookmark_add_outlined,
-                color: AppColors.accentBlue,
-                size: 21,
-              ),
-            ),
-          if (_state == VoiceState.speaking)
-            IconButton(
-              tooltip: _isCopied ? 'Copied' : 'Copy response',
-              onPressed: _copySpokenTranscript,
-              icon: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 180),
-                child: Icon(
-                  _isCopied ? Icons.check_rounded : Icons.copy_rounded,
-                  key: ValueKey(_isCopied),
-                  color: _isCopied ? AppColors.accentGreen : Colors.white,
-                  size: 20,
+            PopupMenuButton<String>(
+              tooltip: 'Response controls',
+              icon: const Icon(Icons.more_horiz_rounded, color: Colors.white),
+              onSelected: (action) {
+                switch (action) {
+                  case 'save':
+                    _saveAiResponseAsNote();
+                    break;
+                  case 'copy':
+                    _copySpokenTranscript();
+                    break;
+                  case 'replay':
+                    _voiceService.restartKaraoke();
+                    break;
+                  case 'play_pause':
+                    _voiceService.togglePlayPause();
+                    break;
+                  case 'audio':
+                    _checkAudio(alwaysShow: true);
+                    break;
+                  case 'new_question':
+                    _voiceService.transitionToListeningState();
+                    break;
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'save',
+                  child: Text('Save response as note'),
                 ),
-              ),
+                const PopupMenuItem(
+                  value: 'copy',
+                  child: Text('Copy response'),
+                ),
+                const PopupMenuItem(
+                  value: 'replay',
+                  child: Text('Replay response'),
+                ),
+                PopupMenuItem(
+                  value: 'play_pause',
+                  child: Text(
+                    _voiceService.isPlayingAudio
+                        ? 'Pause response'
+                        : 'Continue response',
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'audio',
+                  child: Text("I can't hear the voice"),
+                ),
+                const PopupMenuItem(
+                  value: 'new_question',
+                  child: Text('Ask a new question'),
+                ),
+              ],
             ),
         ],
       ),
@@ -594,296 +571,377 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
   // ==========================================================
   // STATE 2: THINKING - RICH NOTE TILES INSIDE THE DREAM BUBBLE ORB
   // ==========================================================
-  Widget _buildInsideOrbNoteScanner() {
-    final notes = NoteService().allNotes;
-    if (notes.isEmpty) return const SizedBox.shrink();
-    final activeNote = notes[_currentInsideOrbIndex % notes.length];
-    final hasPdf = activeNote.mediaAssets.any(
-      (m) => m.type == MediaAssetType.pdf,
-    );
-    final accent = Theme.of(context).colorScheme.primary;
-
-    return Align(
-      alignment: const Alignment(0, 0.02),
-      child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 420),
-        transitionBuilder: (child, animation) => FadeTransition(
-          opacity: animation,
-          child: SlideTransition(
-            position:
-                Tween<Offset>(
-                  begin: const Offset(0, -0.08),
-                  end: Offset.zero,
-                ).animate(
-                  CurvedAnimation(parent: animation, curve: Curves.easeOut),
-                ),
-            child: child,
-          ),
-        ),
-        child: Container(
-          key: ValueKey("memory_${activeNote.noteId}"),
-          width: 250,
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 15),
-          decoration: BoxDecoration(
-            color: AppColors.elevation1.withValues(alpha: 0.96),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    activeNote.contentType == NoteContentType.richMedia
-                        ? Icons.auto_awesome_mosaic_rounded
-                        : activeNote.checklist.isNotEmpty
-                        ? Icons.checklist_rounded
-                        : Icons.description_outlined,
-                    size: 15,
-                    color: accent,
-                  ),
-                  if (hasPdf) ...[
-                    const SizedBox(width: 6),
-                    const Text(
-                      'PDF',
-                      style: TextStyle(
-                        fontSize: 9,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.secondaryText,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                activeNote.title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.outfit(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 5),
-              Text(
-                activeNote.summarySnippet.isNotEmpty
-                    ? activeNote.summarySnippet
-                    : activeNote.textContent,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.inter(
-                  fontSize: 11,
-                  color: AppColors.secondaryText,
-                  height: 1.35,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildThinkingOverlay() {
-    final accent = Theme.of(context).colorScheme.primary;
-    return Column(
-      children: [
-        const Spacer(),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Text(
-            "Gathering the right memories",
-            textAlign: TextAlign.center,
-            style: GoogleFonts.outfit(
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-              color: accent,
-            ),
-          ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          'Your notes stay on this device',
-          style: GoogleFonts.inter(
-            fontSize: 11.5,
-            color: AppColors.secondaryText,
-          ),
-        ),
-        const SizedBox(height: 32),
-      ],
-    );
+    return _buildMemoryNetwork(showResult: false);
   }
 
   // ==========================================================
   // STATE 3: SPEAKING - FULL-SCREEN APPLE MUSIC / GEMINI LIVE KARAOKE HIGHLIGHT
   // ==========================================================
   Widget _buildGeminiLiveKaraokeScreen() {
-    final lyricLines = _voiceService.aiLyricLines;
+    return _buildMemoryNetwork(showResult: true);
+  }
+
+  Widget _buildMemoryNetwork({required bool showResult}) {
     final accent = Theme.of(context).colorScheme.primary;
+    final contextual = _voiceService.contextualNotes;
+    final nodes = contextual.isNotEmpty
+        ? contextual.take(6).map((note) {
+            return NoteNode(
+              id: note.noteId,
+              title: note.title,
+              snippet: note.summarySnippet.isNotEmpty
+                  ? note.summarySnippet
+                  : note.textContent,
+            );
+          }).toList()
+        : _candidateNodes.take(6).toList();
 
-    return Stack(
-      children: [
-        // Pure Matte Black Background with Glowing Apple Music Lyrics
-        ShaderMask(
-          shaderCallback: (rect) {
-            return const LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Colors.transparent,
-                Colors.black,
-                Colors.black,
-                Colors.transparent,
-              ],
-              stops: [0.0, 0.08, 0.90, 1.0],
-            ).createShader(rect);
-          },
-          blendMode: BlendMode.dstIn,
-          child: ListView.builder(
-            controller: _lyricsScrollController,
-            padding: const EdgeInsets.only(
-              left: 24,
-              right: 24,
-              top: 20,
-              bottom: 90,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final cardWidth = (constraints.maxWidth * 0.285).clamp(84.0, 116.0);
+        final resultSpace = showResult ? 200.0 : 70.0;
+        final hubY = (constraints.maxHeight - resultSpace).clamp(
+          220.0,
+          constraints.maxHeight * 0.76,
+        );
+        const positions = <Offset>[
+          Offset(0.18, 0.06),
+          Offset(0.50, 0.02),
+          Offset(0.82, 0.07),
+          Offset(0.25, 0.34),
+          Offset(0.74, 0.35),
+          Offset(0.50, 0.61),
+        ];
+
+        return Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned.fill(
+              child: AnimatedBuilder(
+                animation: _animationController,
+                builder: (context, child) => CustomPaint(
+                  painter: _MemoryNetworkPainter(
+                    progress: _animationController.value,
+                    accent: accent,
+                    nodePositions: positions.take(nodes.length).toList(),
+                    hubY: hubY,
+                    reduceMotion: MediaQuery.of(context).disableAnimations,
+                  ),
+                ),
+              ),
             ),
-            itemCount: lyricLines.length,
-            itemBuilder: (context, index) {
-              final line = lyricLines[index];
-              final isActive = index == _voiceService.activeLyricIndex;
-              final isPast = index < _voiceService.activeLyricIndex;
-
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 24),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 350),
-                  curve: Curves.easeOutCubic,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 9,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isActive
-                        ? accent.withValues(alpha: 0.10)
-                        : Colors.transparent,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: isActive
-                          ? accent.withValues(alpha: 0.22)
-                          : Colors.transparent,
-                    ),
-                  ),
-                  child: AnimatedDefaultTextStyle(
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeOut,
-                    style: GoogleFonts.outfit(
-                      fontSize: isActive ? 26 : 20,
-                      fontWeight: isActive ? FontWeight.w800 : FontWeight.w500,
-                      height: 1.35,
-                      letterSpacing: isActive ? -0.5 : -0.2,
-                      color: isActive
-                          ? Colors.white
-                          : isPast
-                          ? AppColors.secondaryText.withValues(alpha: 0.45)
-                          : AppColors.dimmedLyric,
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        AnimatedContainer(
-                          duration: const Duration(milliseconds: 300),
-                          width: 2,
-                          height: isActive ? 34 : 0,
-                          margin: const EdgeInsets.only(right: 10, top: 2),
-                          color: isActive ? accent : Colors.transparent,
-                        ),
-                        Expanded(child: Text(line.text)),
-                      ],
-                    ),
-                  ),
+            for (var index = 0; index < nodes.length; index++)
+              Positioned(
+                left:
+                    positions[index].dx * constraints.maxWidth - cardWidth / 2,
+                top: positions[index].dy * hubY,
+                width: cardWidth,
+                child: _MemoryNoteCard(
+                  node: nodes[index],
+                  index: index,
+                  accent: accent,
+                  active:
+                      !showResult &&
+                      index ==
+                          _voiceService.activeOrbitNoteIndex % nodes.length,
                 ),
-              );
-            },
-          ),
-        ),
-
-        // Bottom Minimal Audio Controls Pill
-        Positioned(
-          left: 24,
-          right: 24,
-          bottom: 16,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: AppColors.elevation2.withValues(alpha: 0.92),
-              borderRadius: BorderRadius.circular(28),
-              border: Border.all(color: AppColors.glassBorderBright),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.6),
-                  blurRadius: 16,
+              ),
+            Positioned(
+              left: constraints.maxWidth / 2 - 5,
+              top: hubY - 5,
+              child: Container(
+                width: 10,
+                height: 10,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: accent,
+                  boxShadow: [
+                    BoxShadow(
+                      color: accent.withValues(alpha: 0.45),
+                      blurRadius: 14,
+                      spreadRadius: 3,
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                IconButton(
-                  tooltip: 'Replay spoken response',
-                  icon: const Icon(
-                    Icons.replay_rounded,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                  onPressed: () => _voiceService.restartKaraoke(),
-                ),
-                const SizedBox(width: 14),
-                GestureDetector(
-                  onTap: () => _voiceService.togglePlayPause(),
-                  child: Semantics(
-                    button: true,
-                    label: _voiceService.isPlayingAudio
-                        ? 'Pause spoken response'
-                        : 'Play spoken response',
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: accent,
-                      ),
-                      child: Icon(
-                        _voiceService.isPlayingAudio
-                            ? Icons.pause_rounded
-                            : Icons.play_arrow_rounded,
-                        color: Colors.white,
-                        size: 22,
+            if (!showResult)
+              Positioned(
+                left: 20,
+                right: 20,
+                bottom: 22,
+                child: Column(
+                  children: [
+                    Text(
+                      'Connecting the right memories',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.outfit(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primaryText,
                       ),
                     ),
-                  ),
+                    const SizedBox(height: 5),
+                    Text(
+                      'Your notes stay on this device',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: AppColors.secondaryText,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 14),
-                IconButton(
-                  tooltip: "Can't hear the voice?",
-                  icon: const Icon(Icons.hearing_rounded, size: 19),
-                  onPressed: () => _checkAudio(alwaysShow: true),
+              ),
+            if (showResult)
+              Positioned(
+                left: 20,
+                right: 20,
+                bottom: 14,
+                child: _IntegratedInsightCard(
+                  title: _voiceService.summaryTitle,
+                  response: _voiceService.fullGeneratedResponse,
+                  onOpen: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const VoiceDetailedReportScreen(),
+                      ),
+                    );
+                  },
                 ),
-                IconButton(
-                  tooltip: 'Start a new question',
-                  icon: Icon(Icons.mic_rounded, color: accent, size: 20),
-                  onPressed: () => _voiceService.transitionToListeningState(),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
+              ),
+          ],
+        );
+      },
     );
+  }
+}
+
+class _MemoryNoteCard extends StatelessWidget {
+  const _MemoryNoteCard({
+    required this.node,
+    required this.index,
+    required this.accent,
+    required this.active,
+  });
+
+  final NoteNode node;
+  final int index;
+  final Color accent;
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    const icons = [
+      Icons.description_outlined,
+      Icons.location_on_outlined,
+      Icons.mail_outline_rounded,
+      Icons.checklist_rounded,
+      Icons.link_rounded,
+      Icons.graphic_eq_rounded,
+    ];
+    return AnimatedContainer(
+      duration: MediaQuery.of(context).disableAnimations
+          ? Duration.zero
+          : const Duration(milliseconds: 260),
+      height: 78,
+      padding: const EdgeInsets.fromLTRB(10, 9, 9, 8),
+      decoration: BoxDecoration(
+        color: active
+            ? AppColors.elevation3.withValues(alpha: 0.98)
+            : AppColors.elevation1.withValues(alpha: 0.94),
+        borderRadius: BorderRadius.circular(13),
+        border: Border.all(
+          color: active
+              ? accent.withValues(alpha: 0.45)
+              : Colors.white.withValues(alpha: 0.12),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.42),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icons[index % icons.length], size: 17, color: Colors.white70),
+          const Spacer(),
+          Text(
+            node.title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.inter(
+              fontSize: 10.5,
+              height: 1.08,
+              fontWeight: FontWeight.w600,
+              color: AppColors.primaryText,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _IntegratedInsightCard extends StatelessWidget {
+  const _IntegratedInsightCard({
+    required this.title,
+    required this.response,
+    required this.onOpen,
+  });
+
+  final String title;
+  final String response;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final summary = response.replaceAll(RegExp(r'\s+'), ' ').trim();
+    return Container(
+      key: const ValueKey('integrated_insight_card'),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 13),
+      decoration: BoxDecoration(
+        color: AppColors.elevation2.withValues(alpha: 0.96),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.13)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.5),
+            blurRadius: 18,
+            offset: const Offset(0, 9),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'Integrated Insight',
+            style: GoogleFonts.inter(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: AppColors.secondaryText,
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.outfit(
+              fontSize: 17,
+              fontWeight: FontWeight.w800,
+              color: AppColors.primaryText,
+            ),
+          ),
+          const SizedBox(height: 7),
+          Text(
+            summary,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.inter(
+              fontSize: 11.5,
+              height: 1.35,
+              color: AppColors.secondaryText,
+            ),
+          ),
+          const SizedBox(height: 11),
+          SizedBox(
+            width: double.infinity,
+            height: 42,
+            child: FilledButton(
+              key: const ValueKey('view_detailed_report_button'),
+              onPressed: onOpen,
+              style: FilledButton.styleFrom(
+                backgroundColor: Colors.white.withValues(alpha: 0.08),
+                foregroundColor: AppColors.primaryText,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'View Detailed Report',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  SizedBox(width: 8),
+                  Icon(Icons.arrow_forward_rounded, size: 18),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MemoryNetworkPainter extends CustomPainter {
+  const _MemoryNetworkPainter({
+    required this.progress,
+    required this.accent,
+    required this.nodePositions,
+    required this.hubY,
+    required this.reduceMotion,
+  });
+
+  final double progress;
+  final Color accent;
+  final List<Offset> nodePositions;
+  final double hubY;
+  final bool reduceMotion;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final hub = Offset(size.width / 2, hubY);
+    final linePaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 0.8;
+    final pulse = reduceMotion ? 0.55 : (0.36 + progress * 0.30);
+
+    for (var i = 0; i < nodePositions.length; i++) {
+      final normalized = nodePositions[i];
+      final target = Offset(
+        normalized.dx * size.width,
+        normalized.dy * hubY + 39,
+      );
+      final path = Path()
+        ..moveTo(hub.dx, hub.dy)
+        ..quadraticBezierTo(
+          hub.dx + (target.dx - hub.dx) * 0.22,
+          hub.dy - 34 - i * 2,
+          target.dx,
+          target.dy,
+        );
+      linePaint.color = accent.withValues(alpha: pulse);
+      canvas.drawPath(path, linePaint);
+    }
+
+    final glow = Paint()
+      ..shader = RadialGradient(
+        colors: [
+          accent.withValues(alpha: 0.28),
+          accent.withValues(alpha: 0.04),
+          Colors.transparent,
+        ],
+      ).createShader(Rect.fromCircle(center: hub, radius: 72));
+    canvas.drawCircle(hub, 72, glow);
+  }
+
+  @override
+  bool shouldRepaint(covariant _MemoryNetworkPainter oldDelegate) {
+    return oldDelegate.progress != progress ||
+        oldDelegate.hubY != hubY ||
+        oldDelegate.nodePositions.length != nodePositions.length ||
+        oldDelegate.accent != accent;
   }
 }

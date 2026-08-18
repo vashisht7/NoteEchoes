@@ -216,6 +216,20 @@ void main() {
     await VoiceAssistantService().transitionToSpeakingState();
     await tester.pump(const Duration(milliseconds: 500));
 
+    expect(
+      find.byKey(const ValueKey('integrated_insight_card')),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+    await tester.tap(find.byKey(const ValueKey('view_detailed_report_button')));
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.text('Detailed Report'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('copy_detailed_report_button')),
+      findsOneWidget,
+    );
     expect(tester.takeException(), isNull);
     VoiceAssistantService().stopVoiceSession();
   });
