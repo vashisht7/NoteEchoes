@@ -10,7 +10,7 @@ import WhisperKit
 final class OfflineSpeechService {
     static let shared = OfflineSpeechService()
 
-    private let whisperVariant  = "base"
+    private let whisperVariant  = "openai_whisper-base"
     private let whisperRepo     = "argmaxinc/whisperkit-coreml"
     private let modelPathKey    = "whisper_base_multilingual_model_path"
     private let installedKey    = "whisper_base_multilingual_installed"
@@ -221,7 +221,8 @@ final class OfflineSpeechService {
             }
 
             // Persist the resolved path immediately so whisperStatus() sees it.
-            UserDefaults.standard.set(folderURL.path, forKey: self.modelPathKey)
+            let directFolder = self.findDirectWhisperFolder(in: folderURL) ?? folderURL
+            UserDefaults.standard.set(directFolder.path, forKey: self.modelPathKey)
             UserDefaults.standard.set(true, forKey: self.installedKey)
 
             DispatchQueue.main.async { [weak self] in
@@ -234,7 +235,7 @@ final class OfflineSpeechService {
 
             // --- Step 2: Load ---
             let kit = try await WhisperKit(
-                modelFolder: folderURL.path,
+                modelFolder: directFolder.path,
                 computeOptions: ModelComputeOptions(
                     melCompute: .cpuAndNeuralEngine,
                     audioEncoderCompute: .cpuAndNeuralEngine,
@@ -295,27 +296,27 @@ final class OfflineSpeechService {
     }
 
     /// Scans known locations for an already-downloaded model and returns the
-    /// first directory that contains the required Core ML model files.
+    /// first directory that directly contains the required Core ML model files.
     private func resolveInstalledFolder() -> URL? {
         let manager = FileManager.default
 
-        // 1. Stored path (fastest check — set after a successful download)
+        // 1. Check stored path if it still points to a valid direct folder
         if let stored = UserDefaults.standard.string(forKey: modelPathKey) {
             let url = URL(fileURLWithPath: stored)
-            if isCompleteWhisperFolder(url) { return url }
+            if let direct = findDirectWhisperFolder(in: url) {
+                return direct
+            }
         }
 
-        // 2. Known roots to scan
+        // 2. Scan known roots dynamically (handles sandbox container UUID relocations)
         var roots: [URL] = []
 
         if let appSupport = manager.urls(
             for: .applicationSupportDirectory,
             in: .userDomainMask
         ).first {
-            // Our custom download base
             roots.append(appSupport.appendingPathComponent("WhisperKitModels"))
-            // WhisperKit default HuggingFace cache
-            roots.append(appSupport.appendingPathComponent("huggingface/models/\(whisperRepo)/openai_whisper-\(whisperVariant)"))
+            roots.append(appSupport.appendingPathComponent("huggingface/models/\(whisperRepo)/\(whisperVariant)"))
             roots.append(appSupport.appendingPathComponent("huggingface/models/\(whisperRepo)"))
             roots.append(appSupport)
         }
@@ -331,69 +332,51 @@ final class OfflineSpeechService {
         }
 
         for root in roots {
-            // Check the root itself
-            if isCompleteWhisperFolder(root) {
-                UserDefaults.standard.set(root.path, forKey: modelPathKey)
-                return root
-            }
-            // Enumerate one level of subdirectories
-            guard let enumerator = manager.enumerator(
-                at: root,
-                includingPropertiesForKeys: [.isDirectoryKey],
-                options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants]
-            ) else { continue }
-            for case let candidate as URL in enumerator {
-                if isCompleteWhisperFolder(candidate) {
-                    UserDefaults.standard.set(candidate.path, forKey: modelPathKey)
-                    return candidate
-                }
-                // Also check one level deeper (variant folder inside repo folder)
-                guard let sub = manager.enumerator(
-                    at: candidate,
-                    includingPropertiesForKeys: [.isDirectoryKey],
-                    options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants]
-                ) else { continue }
-                for case let deep as URL in sub {
-                    if isCompleteWhisperFolder(deep) {
-                        UserDefaults.standard.set(deep.path, forKey: modelPathKey)
-                        return deep
-                    }
-                }
+            if let found = findDirectWhisperFolder(in: root) {
+                UserDefaults.standard.set(found.path, forKey: modelPathKey)
+                return found
             }
         }
         return nil
     }
 
-    /// Returns true if `folder` contains the three Core ML model components
-    /// that WhisperKit requires to run transcription.
-    private func isCompleteWhisperFolder(_ folder: URL) -> Bool {
+    /// Recursively looks for a directory that directly contains the required Core ML model files.
+    private func findDirectWhisperFolder(in root: URL) -> URL? {
+        if isDirectWhisperFolder(root) { return root }
+        let manager = FileManager.default
+        var isDir: ObjCBool = false
+        guard manager.fileExists(atPath: root.path, isDirectory: &isDir), isDir.boolValue else {
+            return nil
+        }
+        guard let enumerator = manager.enumerator(
+            at: root,
+            includingPropertiesForKeys: [.isDirectoryKey],
+            options: [.skipsHiddenFiles]
+        ) else { return nil }
+
+        for case let url as URL in enumerator {
+            if isDirectWhisperFolder(url) {
+                return url
+            }
+        }
+        return nil
+    }
+
+    /// Returns true if `folder` directly contains MelSpectrogram, AudioEncoder, and TextDecoder.
+    private func isDirectWhisperFolder(_ folder: URL) -> Bool {
         let manager = FileManager.default
         var isDir: ObjCBool = false
         guard manager.fileExists(atPath: folder.path, isDirectory: &isDir), isDir.boolValue else {
             return false
         }
 
-        // Look for the required model component names (any depth within the folder)
-        let required = Set(["MelSpectrogram", "AudioEncoder", "TextDecoder"])
-        guard let enumerator = manager.enumerator(
-            at: folder,
-            includingPropertiesForKeys: [.isDirectoryKey],
-            options: [.skipsHiddenFiles]
-        ) else { return false }
+        let mel = ModelUtilities.detectModelURL(inFolder: folder, named: "MelSpectrogram")
+        let encoder = ModelUtilities.detectModelURL(inFolder: folder, named: "AudioEncoder")
+        let decoder = ModelUtilities.detectModelURL(inFolder: folder, named: "TextDecoder")
 
-        var found = Set<String>()
-        for case let url as URL in enumerator {
-            let ext = url.pathExtension.lowercased()
-            if ext == "mlmodelc" || ext == "mlpackage" || ext == "mlmodel" {
-                let name = url.deletingPathExtension().lastPathComponent
-                // Match partial names (e.g. "AudioEncoderContextAll" contains "AudioEncoder")
-                for req in required {
-                    if name.contains(req) { found.insert(req) }
-                }
-            }
-            if found == required { return true }
-        }
-        return found == required
+        return manager.fileExists(atPath: mel.path) &&
+               manager.fileExists(atPath: encoder.path) &&
+               manager.fileExists(atPath: decoder.path)
     }
 
     // MARK: – Status
