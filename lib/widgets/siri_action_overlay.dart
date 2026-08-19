@@ -107,6 +107,9 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
 
   void _startLiveDictation() {
     if (!_isSpeechAvailable || !_isRecording) return;
+    // Determine the locale to use for live dictation
+    final localeId = _appleLocaleId;
+
     try {
       _speech.listen(
         onResult: (result) {
@@ -125,11 +128,14 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
           pauseFor: const Duration(seconds: 4),
           partialResults: true,
           onDevice: false,
-          localeId: _appleLocaleId,
+          // Use null for auto detection (en-US default on iOS when no te-IN is installed).
+          // Whisper will handle the full-file Telugu/Hindi transcription offline.
+          localeId: localeId,
         ),
       );
     } catch (e) {
-      debugPrint("Error starting live dictation: $e");
+      debugPrint("Error starting live dictation ($localeId): $e");
+      // If te-IN / hi-IN dictation fails, continue — Whisper will transcribe the full audio.
     }
   }
 

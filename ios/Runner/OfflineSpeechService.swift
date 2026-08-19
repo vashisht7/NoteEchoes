@@ -36,8 +36,12 @@ final class OfflineSpeechService {
             case "downloadWhisperBase":
                 Task {
                     do {
-                        _ = try await self.loadWhisper(download: true)
+                        let kit = try await self.loadWhisper(download: true)
+                        // Eagerly persist so whisperStatus() sees installed=true immediately.
                         UserDefaults.standard.set(true, forKey: self.installedKey)
+                        if let folder = kit.modelFolder {
+                            UserDefaults.standard.set(folder.path, forKey: self.modelPathKey)
+                        }
                         await MainActor.run { result(true) }
                     } catch {
                         await MainActor.run {
@@ -100,12 +104,19 @@ final class OfflineSpeechService {
     func transcribeAudio(at url: URL, language: String) async throws -> String {
         if isWhisperInstalled {
             let pipe = try await loadWhisper(download: false)
-            let isAutomatic = language == "auto"
+            let isAutomatic = language == "auto" || language == "en"
+            // Map Flutter language code → Whisper language token
+            let whisperLang: String? = switch language {
+            case "te": "te"      // Telugu
+            case "hi": "hi"      // Hindi
+            case "en": "en"      // English
+            default: nil         // auto-detect
+            }
             let options = DecodingOptions(
                 task: .transcribe,
-                language: isAutomatic ? nil : language,
-                usePrefillPrompt: !isAutomatic,
-                detectLanguage: isAutomatic,
+                language: whisperLang,
+                usePrefillPrompt: whisperLang != nil,
+                detectLanguage: whisperLang == nil,
                 chunkingStrategy: .vad
             )
             let results = try await pipe.transcribe(
@@ -282,6 +293,7 @@ final class OfflineSpeechService {
         let localeIdentifier = switch language {
         case "te": "te-IN"
         case "hi": "hi-IN"
+        case "en": "en-US"
         case "auto": Locale.current.identifier
         default: "en-US"
         }

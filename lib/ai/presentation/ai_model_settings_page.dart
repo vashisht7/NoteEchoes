@@ -277,13 +277,28 @@ class _AiModelSettingsPageState extends State<AiModelSettingsPage>
         });
         try {
           await _speechChannel.invokeMethod<bool>('downloadWhisperBase');
-          await _syncModelStatus();
+          // WhisperKit may need a moment to persist its model folder path.
+          // Poll whisperStatus up to 6 times (≈ 3 seconds) until installed=true.
+          bool installed = false;
+          for (int attempt = 0; attempt < 6; attempt++) {
+            await Future<void>.delayed(const Duration(milliseconds: 500));
+            final status = await _speechChannel
+                .invokeMapMethod<Object?, Object?>('whisperStatus');
+            if (status != null && status['installed'] == true) {
+              installed = true;
+              break;
+            }
+          }
           if (!mounted) return;
+          await _syncModelStatus();
           setState(() {
             _whisperDownloading = false;
             _whisperStatusText = '';
+            if (installed) _whisperInstalled = true;
           });
-          _showToast('Offline multilingual speech recognition is ready.');
+          _showToast(installed
+              ? 'Offline multilingual speech recognition is ready.'
+              : 'Download completed — tap the card to verify the model.');
         } catch (error) {
           if (!mounted) return;
           setState(() {
