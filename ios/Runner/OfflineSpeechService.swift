@@ -178,7 +178,27 @@ final class OfflineSpeechService {
             roots.append(URL(fileURLWithPath: storedPath))
         }
         if let documents = manager.urls(for: .documentDirectory, in: .userDomainMask).first {
+            roots.append(documents)
             roots.append(documents.appendingPathComponent("huggingface"))
+            roots.append(documents.appendingPathComponent("models"))
+            roots.append(documents.appendingPathComponent("whisper"))
+        }
+        if let appSupport = manager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first {
+            roots.append(appSupport)
+            roots.append(appSupport.appendingPathComponent("huggingface"))
+            roots.append(appSupport.appendingPathComponent("models"))
+            roots.append(appSupport.appendingPathComponent("whisper"))
+        }
+        if let caches = manager.urls(for: .cachesDirectory, in: .userDomainMask).first {
+            roots.append(caches)
+            roots.append(caches.appendingPathComponent("huggingface"))
+            roots.append(caches.appendingPathComponent("models"))
+            roots.append(caches.appendingPathComponent("whisper"))
+        }
+        if let shared = SharedDefaults.sharedContainerURL {
+            roots.append(shared)
+            roots.append(shared.appendingPathComponent("huggingface"))
+            roots.append(shared.appendingPathComponent("models"))
         }
 
         for root in roots {

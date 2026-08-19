@@ -14,8 +14,39 @@ actor MLXTextGenerationService {
 
     nonisolated static func installationStatus() -> [String: Any] {
         let configuration = ModelConfiguration(id: modelID)
-        let directory = configuration.modelDirectory(hub: defaultHubApi)
-        return inspectCache(at: directory)
+        let defaultDir = configuration.modelDirectory(hub: defaultHubApi)
+        let defaultStatus = inspectCache(at: defaultDir)
+        if defaultStatus["verified"] as? Bool == true {
+            return defaultStatus
+        }
+
+        // Search alternate directories (Documents, Application Support, Caches)
+        let manager = FileManager.default
+        var alternateRoots: [URL] = []
+        if let docs = manager.urls(for: .documentDirectory, in: .userDomainMask).first {
+            alternateRoots.append(docs.appendingPathComponent("huggingface/models/mlx-community/Qwen3-0.6B-4bit"))
+            alternateRoots.append(docs.appendingPathComponent("models/mlx-community/Qwen3-0.6B-4bit"))
+            alternateRoots.append(docs.appendingPathComponent("Qwen3-0.6B-4bit"))
+        }
+        if let appSupport = manager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first {
+            alternateRoots.append(appSupport.appendingPathComponent("huggingface/models/mlx-community/Qwen3-0.6B-4bit"))
+            alternateRoots.append(appSupport.appendingPathComponent("models/mlx-community/Qwen3-0.6B-4bit"))
+            alternateRoots.append(appSupport.appendingPathComponent("Qwen3-0.6B-4bit"))
+        }
+        if let caches = manager.urls(for: .cachesDirectory, in: .userDomainMask).first {
+            alternateRoots.append(caches.appendingPathComponent("huggingface/models/mlx-community/Qwen3-0.6B-4bit"))
+            alternateRoots.append(caches.appendingPathComponent("models/mlx-community/Qwen3-0.6B-4bit"))
+            alternateRoots.append(caches.appendingPathComponent("Qwen3-0.6B-4bit"))
+        }
+
+        for alt in alternateRoots {
+            let status = inspectCache(at: alt)
+            if status["verified"] as? Bool == true {
+                return status
+            }
+        }
+
+        return defaultStatus
     }
 
     func load() async throws {

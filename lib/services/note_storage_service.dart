@@ -39,7 +39,9 @@ class NoteStorageService {
     if (databaseWasMissing || _noteCount(database) == 0) {
       await _recoverFromBackup(database);
     }
-    await _writeRecoveryBackup(database);
+    if (_noteCount(database) > 0) {
+      await _writeRecoveryBackup(database);
+    }
     _databaseInstance = database;
     return database;
   }
@@ -209,7 +211,9 @@ class NoteStorageService {
     final database = await _database();
     final wasEmpty = _noteCount(database) == 0;
     final recovered = wasEmpty ? await _recoverFromBackup(database) : 0;
-    await _writeRecoveryBackup(database);
+    if (_noteCount(database) > 0) {
+      await _writeRecoveryBackup(database);
+    }
     return recovered > 0;
   }
 

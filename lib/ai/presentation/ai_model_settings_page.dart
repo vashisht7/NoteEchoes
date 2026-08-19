@@ -600,45 +600,32 @@ class _DeviceTierCard extends StatelessWidget {
     }
   }
 
-  Color get _tierColor {
-    switch (tier) {
-      case DeviceTier.tierA:
-        return const Color(0xFF4ADE80);
-      case DeviceTier.tierB:
-        return const Color(0xFFFBBF24);
-      case DeviceTier.tierC:
-        return const Color(0xFFFF6B6B);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF151518),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white10),
+        color: const Color(0xFF1C1C1E),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFF2C2C2E)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            margin: const EdgeInsets.only(top: 4),
-            width: 10,
-            height: 10,
+            margin: const EdgeInsets.only(top: 2),
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: _tierColor,
+              color: Colors.white.withValues(alpha: 0.08),
               shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: _tierColor.withValues(alpha: 0.5),
-                  blurRadius: 8,
-                ),
-              ],
+            ),
+            child: const Icon(
+              Icons.memory_rounded,
+              color: Colors.white70,
+              size: 18,
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -646,7 +633,7 @@ class _DeviceTierCard extends StatelessWidget {
                 Text(
                   _tierLabel,
                   style: GoogleFonts.inter(
-                    fontSize: 14,
+                    fontSize: 15,
                     fontWeight: FontWeight.w600,
                     color: Colors.white,
                   ),
@@ -655,7 +642,7 @@ class _DeviceTierCard extends StatelessWidget {
                 Text(
                   _tierDescription,
                   style: GoogleFonts.inter(
-                    fontSize: 12,
+                    fontSize: 13,
                     color: Colors.white54,
                     height: 1.4,
                   ),
@@ -705,13 +692,9 @@ class _ModelCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF151518),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: isInstalled
-              ? const Color(0xFF4ADE80).withValues(alpha: 0.4)
-              : Colors.white10,
-        ),
+        color: const Color(0xFF1C1C1E),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFF2C2C2E)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -748,24 +731,24 @@ class _ModelCard extends StatelessWidget {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF4ADE80).withValues(alpha: 0.15),
+                    color: Colors.white.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       const Icon(
-                        Icons.check_circle_rounded,
-                        color: Color(0xFF4ADE80),
-                        size: 14,
+                        Icons.check_rounded,
+                        color: Colors.white70,
+                        size: 13,
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        'Installed & verified',
+                        'Ready',
                         style: GoogleFonts.inter(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
-                          color: const Color(0xFF4ADE80),
+                          color: Colors.white70,
                         ),
                       ),
                     ],
@@ -794,7 +777,7 @@ class _ModelCard extends StatelessWidget {
                       vertical: 3,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.06),
+                      color: Colors.white.withValues(alpha: 0.05),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
@@ -814,7 +797,7 @@ class _ModelCard extends StatelessWidget {
               '⚠ $notAvailableReason',
               style: GoogleFonts.inter(
                 fontSize: 12,
-                color: const Color(0xFFFBBF24),
+                color: const Color(0xFFFF9F0A),
               ),
             ),
           ],
@@ -824,7 +807,7 @@ class _ModelCard extends StatelessWidget {
               'Needs repair • $warningText',
               style: GoogleFonts.inter(
                 fontSize: 12,
-                color: const Color(0xFFFBBF24),
+                color: const Color(0xFFFF9F0A),
                 height: 1.4,
               ),
             ),
@@ -841,7 +824,7 @@ class _ModelCard extends StatelessWidget {
                 valueColor: AlwaysStoppedAnimation<Color>(
                   Theme.of(context).colorScheme.primary,
                 ),
-                minHeight: 6,
+                minHeight: 4,
               ),
             ),
             if (statusText.isNotEmpty) ...[
@@ -850,7 +833,7 @@ class _ModelCard extends StatelessWidget {
                 statusText,
                 style: GoogleFonts.inter(
                   fontSize: 11,
-                  color: Theme.of(context).colorScheme.primary,
+                  color: Colors.white54,
                 ),
               ),
             ],
@@ -889,13 +872,13 @@ class _ModelCard extends StatelessWidget {
                   icon: const Icon(
                     Icons.delete_outline_rounded,
                     size: 15,
-                    color: Color(0xFFFF6B6B),
+                    color: Color(0xFFFF453A),
                   ),
                   label: Text(
                     'Delete Model',
                     style: GoogleFonts.inter(
                       fontSize: 12,
-                      color: const Color(0xFFFF6B6B),
+                      color: const Color(0xFFFF453A),
                     ),
                   ),
                 ),
@@ -914,9 +897,9 @@ class _PrivacyInfoCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF151518),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white10),
+        color: const Color(0xFF1C1C1E),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFF2C2C2E)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -926,7 +909,7 @@ class _PrivacyInfoCard extends StatelessWidget {
               const Icon(
                 Icons.lock_outline_rounded,
                 size: 16,
-                color: Color(0xFF4ADE80),
+                color: Colors.white70,
               ),
               const SizedBox(width: 8),
               Text(

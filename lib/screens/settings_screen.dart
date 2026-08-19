@@ -218,9 +218,9 @@ class _SettingsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     decoration: BoxDecoration(
-      color: AppColors.elevation1,
-      borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: AppColors.glassBorder),
+      color: const Color(0xFF1C1C1E),
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: const Color(0xFF2C2C2E)),
     ),
     clipBehavior: Clip.antiAlias,
     child: child,
