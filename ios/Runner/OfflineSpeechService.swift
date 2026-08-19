@@ -17,6 +17,7 @@ final class OfflineSpeechService {
 
     private var whisperKit: WhisperKit?
     private var loadingTask: Task<WhisperKit, Error>?
+    private weak var methodChannel: FlutterMethodChannel?
 
     private init() {}
 
@@ -33,6 +34,7 @@ final class OfflineSpeechService {
             name: "noteechoes/offline_speech",
             binaryMessenger: controller.binaryMessenger
         )
+        self.methodChannel = channel
         channel.setMethodCallHandler { [weak self] call, result in
             guard let self else {
                 return result(FlutterError(code: "unavailable", message: nil, details: nil))
@@ -121,37 +123,54 @@ final class OfflineSpeechService {
 
     func transcribeAudio(at url: URL, language: String) async throws -> String {
         if isWhisperInstalled {
-            let pipe = try await getLoadedWhisperKit()
-            // Map Flutter language code → Whisper language token
-            let whisperLang: String? = switch language {
-            case "te": "te"
-            case "hi": "hi"
-            case "en": "en"
-            default: nil   // auto-detect
+            do {
+                let pipe = try await getLoadedWhisperKit()
+                // Map Flutter language code → Whisper language token
+                // "auto" or empty → nil language + detectLanguage: true for mixed Telugu-English
+                let isAuto = language == "auto" || language.isEmpty
+                let whisperLang: String? = isAuto ? nil : (switch language {
+                case "te": "te"
+                case "hi": "hi"
+                case "en": "en"
+                default: nil
+                })
+
+                let options = DecodingOptions(
+                    verbose: false,
+                    task: .transcribe,
+                    language: whisperLang,
+                    temperature: 0.0,
+                    temperatureIncrementOnFallback: 0.2,
+                    temperatureFallbackCount: 3,
+                    usePrefillPrompt: whisperLang != nil,
+                    detectLanguage: whisperLang == nil,
+                    skipSpecialTokens: true,
+                    withoutTimestamps: true,
+                    suppressBlank: true,
+                    chunkingStrategy: .vad
+                )
+                let results = try await pipe.transcribe(
+                    audioPath: url.path,
+                    decodeOptions: options
+                )
+                let text = results.map(\.text)
+                    .joined(separator: " ")
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                if !text.isEmpty {
+                    return text
+                }
+            } catch {
+                // If Whisper encountered an issue on a specific audio clip, fall back to Apple Speech
+                NSLog("[OfflineSpeechService] Whisper transcription error: \(error), falling back to Apple Speech")
             }
-            let options = DecodingOptions(
-                task: .transcribe,
-                language: whisperLang,
-                usePrefillPrompt: whisperLang != nil,
-                detectLanguage: whisperLang == nil,
-                chunkingStrategy: .vad
-            )
-            let results = try await pipe.transcribe(
-                audioPath: url.path,
-                decodeOptions: options
-            )
-            return results.map(\.text)
-                .joined(separator: " ")
-                .trimmingCharacters(in: .whitespacesAndNewlines)
         }
         return try await transcribeWithAppleSpeech(at: url, language: language)
     }
 
-    // MARK: – Download + Load (two-step, reliable)
+    // MARK: – Download + Load (two-step, reliable with live progress)
 
-    /// Step 1: Download the model files using WhisperKit's own HuggingFace downloader.
+    /// Step 1: Download the model files using WhisperKit's own HuggingFace downloader with live progress streaming.
     /// Step 2: Load WhisperKit from the downloaded folder.
-    /// This avoids the "model file not found" race condition in WhisperKitConfig.
     private func downloadAndLoad() async throws -> WhisperKit {
         // Reuse a cached instance if already downloaded + loaded
         if let whisperKit { return whisperKit }
@@ -159,7 +178,6 @@ final class OfflineSpeechService {
 
         let task = Task<WhisperKit, Error> {
             // --- Step 1: Download ---
-            // If model files already exist, use them directly and skip download.
             let folderURL: URL
             if let existing = self.resolveInstalledFolder() {
                 folderURL = existing
@@ -171,13 +189,43 @@ final class OfflineSpeechService {
                     variant: self.whisperVariant,
                     downloadBase: downloadBase,
                     useBackgroundSession: false,
-                    from: self.whisperRepo
+                    from: self.whisperRepo,
+                    progressCallback: { [weak self] progress in
+                        let fraction = progress.fractionCompleted
+                        let completedBytes = progress.completedUnitCount
+                        let totalBytes = progress.totalUnitCount
+                        let percent = Int(fraction * 100)
+                        let completedMB = Double(completedBytes) / (1024 * 1024)
+                        let totalMB = Double(totalBytes) / (1024 * 1024)
+
+                        let statusText = totalMB > 0
+                            ? String(format: "Downloading Whisper Base (%.1f / %.1f MB • %d%%)…", completedMB, totalMB, percent)
+                            : "Downloading Whisper Base (\(percent)%)…"
+
+                        DispatchQueue.main.async {
+                            self?.methodChannel?.invokeMethod("onWhisperDownloadProgress", arguments: [
+                                "progress": fraction,
+                                "percent": percent,
+                                "completedBytes": completedBytes,
+                                "totalBytes": totalBytes,
+                                "statusText": statusText
+                            ])
+                        }
+                    }
                 )
             }
 
             // Persist the resolved path immediately so whisperStatus() sees it.
             UserDefaults.standard.set(folderURL.path, forKey: self.modelPathKey)
             UserDefaults.standard.set(true, forKey: self.installedKey)
+
+            DispatchQueue.main.async { [weak self] in
+                self?.methodChannel?.invokeMethod("onWhisperDownloadProgress", arguments: [
+                    "progress": 0.95,
+                    "percent": 95,
+                    "statusText": "Preparing Core ML Neural Engine model…"
+                ])
+            }
 
             // --- Step 2: Load ---
             let kit = try await WhisperKit(
@@ -188,6 +236,15 @@ final class OfflineSpeechService {
                     textDecoderCompute: .cpuAndNeuralEngine
                 )
             )
+
+            DispatchQueue.main.async { [weak self] in
+                self?.methodChannel?.invokeMethod("onWhisperDownloadProgress", arguments: [
+                    "progress": 1.0,
+                    "percent": 100,
+                    "statusText": "Whisper Base is ready!"
+                ])
+            }
+
             return kit
         }
 

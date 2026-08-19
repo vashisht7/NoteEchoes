@@ -37,6 +37,7 @@ class _AiModelSettingsPageState extends State<AiModelSettingsPage>
   static const _speechChannel = MethodChannel('noteechoes/offline_speech');
   bool _whisperInstalled = false;
   bool _whisperDownloading = false;
+  double _whisperProgress = 0.0;
   String _whisperStatusText = '';
   bool _qwenInstalled = false;
   String? _qwenWarning;
@@ -55,7 +56,23 @@ class _AiModelSettingsPageState extends State<AiModelSettingsPage>
     _fadeCtrl.forward();
     _embedder.addListener(_onEmbeddingProgress);
     _semantic.addListener(_onEmbeddingProgress);
+    _setupSpeechChannelListener();
     _syncModelStatus();
+  }
+
+  void _setupSpeechChannelListener() {
+    _speechChannel.setMethodCallHandler((call) async {
+      if (call.method == 'onWhisperDownloadProgress') {
+        final args = call.arguments as Map<Object?, Object?>?;
+        if (args != null && mounted) {
+          setState(() {
+            _whisperDownloading = true;
+            _whisperProgress = (args['progress'] as num?)?.toDouble() ?? _whisperProgress;
+            _whisperStatusText = (args['statusText'] as String?) ?? _whisperStatusText;
+          });
+        }
+      }
+    });
   }
 
   @override
@@ -138,10 +155,10 @@ class _AiModelSettingsPageState extends State<AiModelSettingsPage>
                   'Core ML speech recognition for complete offline recordings. '
                   'Optimized for Telugu, English and Hindi voice notes.',
               size: '147 MB download',
-              languages: ['Telugu', 'English', 'Hindi', 'Multilingual'],
+              languages: ['Telugu', 'English', 'Hindi', 'Multilingual (Telugu & English Mixed)'],
               isInstalled: _whisperInstalled,
               isDownloading: _whisperDownloading,
-              downloadProgress: _whisperDownloading ? 0.35 : 0,
+              downloadProgress: _whisperDownloading ? (_whisperProgress > 0 ? _whisperProgress : 0.05) : 0,
               statusText: _whisperStatusText,
               warningText: _whisperWarning,
               onDownload: _whisperDownloading ? null : _startWhisperDownload,
@@ -273,14 +290,15 @@ class _AiModelSettingsPageState extends State<AiModelSettingsPage>
       onConfirm: () async {
         setState(() {
           _whisperDownloading = true;
-          _whisperStatusText = 'Downloading and preparing Core ML model…';
+          _whisperProgress = 0.05;
+          _whisperStatusText = 'Connecting to Hugging Face model repository…';
         });
         try {
           await _speechChannel.invokeMethod<bool>('downloadWhisperBase');
           // WhisperKit may need a moment to persist its model folder path.
-          // Poll whisperStatus up to 6 times (≈ 3 seconds) until installed=true.
+          // Poll whisperStatus up to 8 times (≈ 4 seconds) until installed=true.
           bool installed = false;
-          for (int attempt = 0; attempt < 6; attempt++) {
+          for (int attempt = 0; attempt < 8; attempt++) {
             await Future<void>.delayed(const Duration(milliseconds: 500));
             final status = await _speechChannel
                 .invokeMapMethod<Object?, Object?>('whisperStatus');
@@ -293,16 +311,18 @@ class _AiModelSettingsPageState extends State<AiModelSettingsPage>
           await _syncModelStatus();
           setState(() {
             _whisperDownloading = false;
+            _whisperProgress = 1.0;
             _whisperStatusText = '';
             if (installed) _whisperInstalled = true;
           });
           _showToast(installed
-              ? 'Offline multilingual speech recognition is ready.'
-              : 'Download completed — tap the card to verify the model.');
+              ? 'Whisper Multilingual is ready! Telugu, English & mixed speech enabled.'
+              : 'Download completed — tap to verify model.');
         } catch (error) {
           if (!mounted) return;
           setState(() {
             _whisperDownloading = false;
+            _whisperProgress = 0;
             _whisperStatusText = '';
           });
           _showToast('Speech model download failed: $error');

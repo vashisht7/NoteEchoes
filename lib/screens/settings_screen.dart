@@ -129,7 +129,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         DropdownMenuItem(value: 'hi', child: Text('Hindi')),
                         DropdownMenuItem(
                           value: 'auto',
-                          child: Text('Automatic'),
+                          child: Text('Automatic (Telugu/English Mixed)'),
                         ),
                       ],
                       onChanged: (value) {
