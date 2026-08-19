@@ -222,8 +222,6 @@ class AiCategorizationEngine {
     // Default tag if none detected
     if (categories.isEmpty) {
       categories.add("voice-memo");
-    } else {
-      categories.add("voice-memo");
     }
 
     // 10. Extract checklist items if list patterns exist
