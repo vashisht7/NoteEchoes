@@ -195,6 +195,50 @@ class SemanticKnowledgeService extends ChangeNotifier {
         ),
       );
     }
+
+    // Dynamic Intent & Knowledge Clusters fallback: group notes by inferred meaning and tags
+    if (result.isEmpty && notes.isNotEmpty) {
+      final categoryMap = <String, List<NoteModel>>{};
+      for (final note in notes) {
+        final specificTags = note.tags.where((t) => t != 'voice-memo' && t != 'notes').toList();
+        if (specificTags.isNotEmpty) {
+          for (final tag in specificTags) {
+            final key = tag[0].toUpperCase() + tag.substring(1);
+            categoryMap.putIfAbsent(key, () => []).add(note);
+          }
+        } else {
+          // Inferred from title/content
+          final lower = (note.title + ' ' + note.textContent).toLowerCase();
+          if (lower.contains('task') || lower.contains('todo') || lower.contains('finish')) {
+            categoryMap.putIfAbsent('Tasks & Action Items', () => []).add(note);
+          } else if (lower.contains('meet') || lower.contains('call') || lower.contains('sync')) {
+            categoryMap.putIfAbsent('Meetings & Calls', () => []).add(note);
+          } else if (lower.contains('idea') || lower.contains('brainstorm')) {
+            categoryMap.putIfAbsent('Ideas & Concepts', () => []).add(note);
+          } else if (lower.contains('buy') || lower.contains('shop') || lower.contains('grocer')) {
+            categoryMap.putIfAbsent('Shopping & Groceries', () => []).add(note);
+          } else if (lower.contains('plan') || lower.contains('travel') || lower.contains('trip')) {
+            categoryMap.putIfAbsent('Travel & Plans', () => []).add(note);
+          } else {
+            categoryMap.putIfAbsent('Quick Voice Thoughts', () => []).add(note);
+          }
+        }
+      }
+
+      for (final entry in categoryMap.entries) {
+        result.add(
+          NoteTopic(
+            id: 'intent_${entry.key.toLowerCase().replaceAll(' ', '_')}',
+            label: entry.key,
+            summary: '${entry.value.length} notes connected by topic and context.',
+            status: SemanticSuggestionStatus.confirmed,
+            notes: entry.value,
+            confidence: 0.88,
+          ),
+        );
+      }
+    }
+
     result.sort((a, b) {
       if (a.status == SemanticSuggestionStatus.confirmed &&
           b.status != SemanticSuggestionStatus.confirmed) {

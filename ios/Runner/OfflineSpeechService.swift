@@ -131,13 +131,14 @@ final class OfflineSpeechService {
 
         let task = Task<WhisperKit, Error> {
             let loaded = try await WhisperKit(WhisperKitConfig(
-                model: modelName,
+                model: "openai_whisper-base",
+                modelRepo: "argmaxinc/whisperkit-coreml",
                 modelFolder: existingFolder?.path,
-                verbose: false,
+                verbose: true,
                 prewarm: false,
                 load: true,
                 download: download && existingFolder == nil,
-                useBackgroundDownloadSession: true
+                useBackgroundDownloadSession: false
             ))
             if let folder = loaded.modelFolder {
                 UserDefaults.standard.set(folder.path, forKey: self.modelPathKey)

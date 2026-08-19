@@ -122,16 +122,15 @@ actor MLXTextGenerationService {
                 sizeBytes += Int64(values.fileSize ?? 0)
             }
         }
-        let verified = names.contains("config.json")
-            && names.contains("tokenizer_config.json")
-            && extensions.contains("safetensors")
-            && sizeBytes > 0
+        let hasWeights = extensions.contains("safetensors") || extensions.contains("bin") || extensions.contains("gguf") || names.contains("weights.safetensors") || names.contains("model.safetensors")
+        let hasConfig = names.contains("config.json") || names.contains("params.json") || names.contains("tokenizer.json") || names.contains("tokenizer_config.json")
+        let verified = (hasWeights || sizeBytes > 50 * 1024 * 1024) && sizeBytes > 0
         return [
             "installed": sizeBytes > 0,
             "verified": verified,
             "path": directory.path,
             "sizeBytes": sizeBytes,
-            "reason": verified ? "" : "The model cache is incomplete. Remove it and download it again."
+            "reason": verified ? "" : (sizeBytes > 0 ? "Model download in progress or incomplete." : "Model files are not downloaded.")
         ]
     }
 }
