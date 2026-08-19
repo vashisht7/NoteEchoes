@@ -20,19 +20,24 @@ Future<void> main() async {
     ),
   );
 
-  // Step 1: Initialize storage so notes are loaded from disk first
-  await NoteService().initStorage();
+  try {
+    await AppPreferences.instance.load();
+  } catch (e) {
+    debugPrint('AppPreferences load fallback: $e');
+  }
 
-  // Step 2: AI flags
-  await AiFeatureFlags.instance.load();
-  await AiRuntimeConfig.instance.detect();
-  await AppPreferences.instance.load();
+  try {
+    await AiFeatureFlags.instance.load();
+    await AiRuntimeConfig.instance.detect();
+  } catch (e) {
+    debugPrint('AI config init fallback: $e');
+  }
 
-  // NOTE: ActionButtonNoteIngestionService.initialize() is intentionally
-  // NOT called here. MethodChannels require a live FlutterViewController
-  // which is only registered AFTER runApp(). Calling it before runApp()
-  // makes every peekPendingActionButtonNote call return null silently.
-  // HomeScreen.initState() handles the first import on its first frame.
+  try {
+    await NoteService().initStorage();
+  } catch (e) {
+    debugPrint('Note storage init fallback: $e');
+  }
 
   runApp(const NoteEchoesApp());
 }
