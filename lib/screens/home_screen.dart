@@ -215,8 +215,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _openVoiceAssistant();
   }
 
-  void _openSiriActionOverlay() {
-    SiriActionOverlay.show(context);
+  void _openSiriActionOverlay() async {
+    final note = await SiriActionOverlay.show(context);
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   void _openSettings() {

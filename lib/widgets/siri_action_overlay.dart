@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:ui';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -23,29 +23,20 @@ class SiriActionOverlay extends StatefulWidget {
     this.autoStartRecording = true,
   });
 
-  /// Static helper to trigger the Siri overlay modal from anywhere
+  /// Shows the sleek, real-time bottom recording sheet inspired by Google/Apple Notes & Antigravity.
   static Future<NoteModel?> show(
     BuildContext context, {
     bool autoStart = true,
   }) {
-    return showGeneralDialog<NoteModel>(
+    return showModalBottomSheet<NoteModel>(
       context: context,
-      barrierDismissible: true,
-      barrierLabel: "SiriActionOverlay",
-      barrierColor: Colors.black.withValues(alpha: 0.78),
-      transitionDuration: MediaQuery.of(context).disableAnimations
-          ? Duration.zero
-          : const Duration(milliseconds: 250),
-      pageBuilder: (context, anim1, anim2) {
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withValues(alpha: 0.7),
+      builder: (context) {
         return SiriActionOverlay(
           autoStartRecording: autoStart,
           onDismiss: () => Navigator.of(context).pop(),
-        );
-      },
-      transitionBuilder: (context, anim1, anim2, child) {
-        return FadeTransition(
-          opacity: CurvedAnimation(parent: anim1, curve: Curves.easeOutCubic),
-          child: child,
         );
       },
     );
@@ -55,25 +46,23 @@ class SiriActionOverlay extends StatefulWidget {
   State<SiriActionOverlay> createState() => _SiriActionOverlayState();
 }
 
-class _SiriActionOverlayState extends State<SiriActionOverlay> {
+class _SiriActionOverlayState extends State<SiriActionOverlay>
+    with SingleTickerProviderStateMixin {
   final stt.SpeechToText _speech = stt.SpeechToText();
   final AudioRecorder _audioRecorder = AudioRecorder();
   static const MethodChannel _offlineSpeechChannel = MethodChannel(
     'noteechoes/offline_speech',
   );
+
   bool _isSpeechAvailable = false;
   bool _isRecording = false;
   bool _isAnalyzing = false;
-  bool _isRestartingListening = false;
 
   String _accumulatedText = "";
   String _currentSessionText = "";
-
   int _recordingSeconds = 0;
   Timer? _durationTimer;
-  Timer? _watchdogTimer;
   NoteAnalysisResult? _completedAnalysis;
-  String _statusMessage = "";
   String? _recordingPath;
 
   String get _spokenText {
@@ -84,7 +73,6 @@ class _SiriActionOverlayState extends State<SiriActionOverlay> {
   @override
   void initState() {
     super.initState();
-
     _initSpeechAndStart();
   }
 
@@ -92,53 +80,33 @@ class _SiriActionOverlayState extends State<SiriActionOverlay> {
     try {
       _isSpeechAvailable = await _speech.initialize(
         onStatus: (status) {
-          debugPrint("SpeechToText Status: $status");
-          if (_isRecording &&
-              (status == 'done' || status == 'notListening') &&
-              mounted) {
-            _handleSessionEndAndRestart();
+          debugPrint("Live Speech Status: $status");
+          if (_isRecording && (status == 'done' || status == 'notListening') && mounted) {
+            _restartLiveDictation();
           }
         },
         onError: (error) {
-          debugPrint("Speech recognition error: ${error.errorMsg}");
+          debugPrint("Live Speech Error: ${error.errorMsg}");
           if (_isRecording && mounted) {
-            _handleSessionEndAndRestart();
+            _restartLiveDictation();
           }
         },
       );
-      if (mounted) {
-        setState(() {});
-        if (widget.autoStartRecording) {
-          _startRecording();
-        }
-      }
     } catch (e) {
       debugPrint("Speech recognition init exception: $e");
       _isSpeechAvailable = false;
     }
-  }
 
-  void _handleSessionEndAndRestart() {
-    if (!_isRecording || _isRestartingListening) return;
-    _isRestartingListening = true;
-
-    // Flush current session text to master accumulator
-    if (_currentSessionText.trim().isNotEmpty) {
-      _accumulatedText = "$_accumulatedText $_currentSessionText".trim();
-      _currentSessionText = "";
-    }
-
-    // Brief delay to allow iOS SFSpeechRecognizer audio hardware to release before re-subscribing
-    Future.delayed(const Duration(milliseconds: 150), () {
-      if (mounted && _isRecording) {
-        _restartListeningSession();
+    if (mounted) {
+      setState(() {});
+      if (widget.autoStartRecording) {
+        _startRecording();
       }
-      _isRestartingListening = false;
-    });
+    }
   }
 
-  void _restartListeningSession() {
-    if (!_isRecording || !_isSpeechAvailable) return;
+  void _startLiveDictation() {
+    if (!_isSpeechAvailable || !_isRecording) return;
     try {
       _speech.listen(
         onResult: (result) {
@@ -146,8 +114,7 @@ class _SiriActionOverlayState extends State<SiriActionOverlay> {
             setState(() {
               _currentSessionText = result.recognizedWords;
               if (result.finalResult && _currentSessionText.trim().isNotEmpty) {
-                _accumulatedText = "$_accumulatedText $_currentSessionText"
-                    .trim();
+                _accumulatedText = "$_accumulatedText $_currentSessionText".trim();
                 _currentSessionText = "";
               }
             });
@@ -155,15 +122,28 @@ class _SiriActionOverlayState extends State<SiriActionOverlay> {
         },
         listenOptions: stt.SpeechListenOptions(
           listenMode: stt.ListenMode.dictation,
-          pauseFor: const Duration(hours: 2),
+          pauseFor: const Duration(seconds: 4),
           partialResults: true,
           onDevice: false,
           localeId: _appleLocaleId,
         ),
       );
     } catch (e) {
-      debugPrint("Error restarting listening session: $e");
+      debugPrint("Error starting live dictation: $e");
     }
+  }
+
+  void _restartLiveDictation() {
+    if (!_isRecording) return;
+    if (_currentSessionText.trim().isNotEmpty) {
+      _accumulatedText = "$_accumulatedText $_currentSessionText".trim();
+      _currentSessionText = "";
+    }
+    Future.delayed(const Duration(milliseconds: 150), () {
+      if (mounted && _isRecording) {
+        _startLiveDictation();
+      }
+    });
   }
 
   String? get _appleLocaleId =>
@@ -177,30 +157,29 @@ class _SiriActionOverlayState extends State<SiriActionOverlay> {
   Future<void> _startRecording() async {
     if (_isRecording) return;
     if (!await _audioRecorder.hasPermission()) {
-      if (mounted) {
-        setState(
-          () => _statusMessage =
-              'Microphone permission is required to record a note.',
-        );
-      }
       return;
     }
 
     final tempDirectory = await getTemporaryDirectory();
     _recordingPath =
         '${tempDirectory.path}/noteechoes_${DateTime.now().microsecondsSinceEpoch}.m4a';
-    await _audioRecorder.start(
-      const RecordConfig(
-        encoder: AudioEncoder.aacLc,
-        bitRate: 64000,
-        sampleRate: 16000,
-        numChannels: 1,
-        autoGain: true,
-        echoCancel: true,
-        noiseSuppress: true,
-      ),
-      path: _recordingPath!,
-    );
+
+    try {
+      await _audioRecorder.start(
+        const RecordConfig(
+          encoder: AudioEncoder.aacLc,
+          bitRate: 64000,
+          sampleRate: 16000,
+          numChannels: 1,
+          autoGain: true,
+          echoCancel: true,
+          noiseSuppress: true,
+        ),
+        path: _recordingPath!,
+      );
+    } catch (e) {
+      debugPrint("Error starting audio recorder: $e");
+    }
 
     HapticFeedback.heavyImpact();
     setState(() {
@@ -210,7 +189,6 @@ class _SiriActionOverlayState extends State<SiriActionOverlay> {
       _currentSessionText = "";
       _recordingSeconds = 0;
       _completedAnalysis = null;
-      _statusMessage = "";
     });
 
     _durationTimer?.cancel();
@@ -220,40 +198,38 @@ class _SiriActionOverlayState extends State<SiriActionOverlay> {
       }
     });
 
-    // Do not run two microphone engines at once. The previous implementation
-    // kept restarting Apple's live recognizer, which could drop words between
-    // sessions and could conflict with the durable audio recorder.
-    _watchdogTimer?.cancel();
-    setState(
-      () => _statusMessage =
-          'Recording full audio • ${AppPreferences.instance.speechLanguageLabel}',
-    );
+    // Start live speech-to-text so words appear instantly as spoken
+    _startLiveDictation();
   }
 
-  Future<void> _stopRecordingAndSave() async {
-    if (!_isRecording && !_isAnalyzing) return;
+  Future<void> _stopRecordingAndSave({bool userCancelled = false}) async {
+    if (!_isRecording && !_isAnalyzing) {
+      Navigator.of(context).pop();
+      return;
+    }
 
     HapticFeedback.mediumImpact();
     _durationTimer?.cancel();
-    _watchdogTimer?.cancel();
 
-    // Set this first so the Speech callbacks cannot restart themselves while
-    // the full audio file is being finalized.
     setState(() {
       _isRecording = false;
       _isAnalyzing = true;
-      _statusMessage = 'Finalizing the complete recording…';
     });
 
-    final recordedPath = await _audioRecorder.stop() ?? _recordingPath;
-    if (_isSpeechAvailable) {
-      await _speech.stop();
-    }
+    try {
+      if (_isSpeechAvailable) {
+        await _speech.stop();
+      }
+    } catch (_) {}
+
+    String? recordedPath;
+    try {
+      recordedPath = await _audioRecorder.stop() ?? _recordingPath;
+    } catch (_) {}
 
     var cleanText = _spokenText.trim();
 
-    // The recorded file is the source of truth. Unlike a live recognition
-    // session it is not truncated when iOS ends or restarts SFSpeechRecognizer.
+    // Verify audio transcription with offline/multilingual Whisper if available
     if (recordedPath != null && await File(recordedPath).exists()) {
       try {
         final completeTranscript = await _offlineSpeechChannel
@@ -261,14 +237,11 @@ class _SiriActionOverlayState extends State<SiriActionOverlay> {
               'path': recordedPath,
               'language': AppPreferences.instance.speechLanguageCode,
             });
-        if (completeTranscript != null &&
-            completeTranscript.trim().isNotEmpty) {
+        if (completeTranscript != null && completeTranscript.trim().isNotEmpty) {
           cleanText = completeTranscript.trim();
         }
       } catch (error) {
-        debugPrint(
-          'Full-file transcription failed; using live preview: $error',
-        );
+        debugPrint('Full-file transcription fallback to live text: $error');
       } finally {
         try {
           await File(recordedPath).delete();
@@ -277,46 +250,32 @@ class _SiriActionOverlayState extends State<SiriActionOverlay> {
     }
 
     if (cleanText.isEmpty) {
-      setState(() {
-        _isAnalyzing = false;
-        _statusMessage = "No speech detected.";
-      });
-      Future.delayed(const Duration(milliseconds: 1000), () {
-        if (mounted) Navigator.of(context).pop();
-      });
+      if (mounted) Navigator.of(context).pop();
       return;
     }
 
-    setState(() => _statusMessage = 'Saving note…');
-
-    // Deep semantic categorization on user's real spoken words
+    // Categorize and create note
     final analysis = AiCategorizationEngine().analyzeNote(cleanText);
-
-    await Future.delayed(const Duration(milliseconds: 300));
-
-    if (!mounted) return;
-
     final note = await NoteService().createFromVoiceTranscription(cleanText);
 
-    setState(() {
-      _isAnalyzing = false;
-      _completedAnalysis = analysis;
-    });
-
-    HapticFeedback.heavyImpact();
-
-    // Auto dismiss after displaying categorized tags
-    Future.delayed(const Duration(milliseconds: 1200), () {
-      if (mounted) {
-        Navigator.of(context).pop(note);
-      }
-    });
+    if (mounted) {
+      setState(() {
+        _isAnalyzing = false;
+        _completedAnalysis = analysis;
+      });
+      HapticFeedback.heavyImpact();
+      // Auto close and return created note
+      Future.delayed(const Duration(milliseconds: 600), () {
+        if (mounted) {
+          Navigator.of(context).pop(note);
+        }
+      });
+    }
   }
 
   @override
   void dispose() {
     _durationTimer?.cancel();
-    _watchdogTimer?.cancel();
     if (_isSpeechAvailable) {
       _speech.stop();
     }
@@ -324,276 +283,222 @@ class _SiriActionOverlayState extends State<SiriActionOverlay> {
     super.dispose();
   }
 
+  String _formatTime(int sec) {
+    final m = sec ~/ 60;
+    final s = sec % 60;
+    return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+  }
+
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        // Only dismiss on background tap when NOT actively recording
-        if (!_isRecording && !_isAnalyzing) {
-          Navigator.of(context).pop();
-        }
-      },
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        body: Stack(
-          children: [
-            // Calm, legible recording surface. The previous neon perimeter
-            // competed with the note content and made the app feel synthetic.
-            SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 16,
-                ),
-                child: Column(
-                  children: [
-                    // Top Status Pill
-                    _buildTopStatusPill(),
-
-                    const Spacer(),
-
-                    // Floating Glass Card for Spoken Speech & Categorization
-                    _buildFloatingTranscriptionCard(),
-
-                    const SizedBox(height: 16),
-
-                    // Bottom Action Button / Hold-to-Talk Touch Target
-                    _buildBottomActionControl(),
-                    const SizedBox(height: 12),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ==========================================================
-  // TOP STATUS BADGE (Apple Intelligence Siri Mode)
-  // ==========================================================
-  Widget _buildTopStatusPill() {
     final accent = Theme.of(context).colorScheme.primary;
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(24),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.55),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(
-              color: AppColors.glassBorderBright.withValues(alpha: 0.6),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.4),
-                blurRadius: 12,
-              ),
-            ],
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+
+    return Container(
+      margin: EdgeInsets.fromLTRB(12, 0, 12, 24 + bottomInset),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1C1C1E),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFF2C2C2E), width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.65),
+            blurRadius: 28,
+            offset: const Offset(0, 8),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: _isRecording
-                      ? accent
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Drag Handle
+          Center(
+            child: Container(
+              margin: const EdgeInsets.only(top: 10, bottom: 4),
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+
+          // Header Row: Status & Live Timer
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            child: Row(
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: _isRecording
+                        ? accent
+                        : _isAnalyzing
+                            ? const Color(0xFFFF9F0A)
+                            : AppColors.accentGreen,
+                    boxShadow: [
+                      BoxShadow(
+                        color: accent.withValues(alpha: 0.4),
+                        blurRadius: 6,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  _isRecording
+                      ? 'Dictating • ${_formatTime(_recordingSeconds)}'
                       : _isAnalyzing
-                      ? accent
-                      : AppColors.accentGreen,
-                  boxShadow: [
-                    BoxShadow(
-                      color: accent.withValues(alpha: 0.28),
-                      blurRadius: 5,
+                          ? 'Saving to Home Notes…'
+                          : 'Note Saved',
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white70,
+                  ),
+                ),
+                const Spacer(),
+                // Language badge
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    AppPreferences.instance.speechLanguageLabel,
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      color: Colors.white54,
+                      fontWeight: FontWeight.w500,
                     ),
-                  ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                _isRecording
-                    ? "Recording Voice Note (${_recordingSeconds}s)..."
-                    : _isAnalyzing
-                    ? "Transcribing complete recording…"
-                    : "Note Saved!",
-                style: GoogleFonts.inter(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ==========================================================
-  // FLOATING TRANSCRIPTION CARD (Transparent Frosted Glass)
-  // ==========================================================
-  Widget _buildFloatingTranscriptionCard() {
-    final accent = Theme.of(context).colorScheme.primary;
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(24),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.55),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(
-              color: AppColors.glassBorderBright.withValues(alpha: 0.5),
+              ],
             ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.4),
-                blurRadius: 16,
-              ),
-            ],
           ),
-          child: _completedAnalysis != null
-              ? Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Saved Note Title
-                    Text(
-                      _completedAnalysis!.title,
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.outfit(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
 
-                    // Snippet
-                    Text(
-                      _completedAnalysis!.summarySnippet,
-                      textAlign: TextAlign.center,
-                      maxLines: 2,
-                      style: GoogleFonts.inter(
-                        fontSize: 12.5,
-                        color: AppColors.secondaryText,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
+          const Divider(color: Color(0xFF2C2C2E), height: 1),
 
-                    // Categorized Tag Badges
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      alignment: WrapAlignment.center,
-                      children: _completedAnalysis!.categories.map((tag) {
-                        return Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 5,
+          // Real-time spoken transcript display
+          Container(
+            constraints: const BoxConstraints(minHeight: 110, maxHeight: 220),
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+            child: SingleChildScrollView(
+              reverse: true,
+              child: _completedAnalysis != null
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _completedAnalysis!.title,
+                          style: GoogleFonts.outfit(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
                           ),
-                          decoration: BoxDecoration(
-                            color: accent.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(
-                              color: accent.withValues(alpha: 0.28),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.tag_rounded, size: 11, color: accent),
-                              const SizedBox(width: 4),
-                              Text(
-                                "#$tag",
+                        ),
+                        const SizedBox(height: 6),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: _completedAnalysis!.categories.map((t) {
+                            return Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: accent.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: accent.withValues(alpha: 0.3)),
+                              ),
+                              child: Text(
+                                '#$t',
                                 style: GoogleFonts.inter(
                                   fontSize: 11.5,
-                                  fontWeight: FontWeight.bold,
+                                  fontWeight: FontWeight.w600,
                                   color: Colors.white,
                                 ),
                               ),
-                            ],
-                          ),
-                        );
-                      }).toList(),
+                            );
+                          }).toList(),
+                        ),
+                      ],
+                    )
+                  : Text(
+                      _spokenText.isNotEmpty
+                          ? _spokenText
+                          : 'Speak now — your words will appear here in real time…',
+                      style: GoogleFonts.inter(
+                        fontSize: 16,
+                        height: 1.45,
+                        color: _spokenText.isNotEmpty ? Colors.white : Colors.white38,
+                        fontWeight: _spokenText.isNotEmpty ? FontWeight.w500 : FontWeight.w400,
+                      ),
                     ),
-                  ],
-                )
-              : Text(
-                  _statusMessage.isNotEmpty
-                      ? _statusMessage
-                      : _spokenText.isNotEmpty
-                      ? _spokenText
-                      : "Listening to your voice...\nSpeak your note now.",
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.outfit(
-                    fontSize: _spokenText.isNotEmpty ? 20 : 15,
-                    fontWeight: FontWeight.w600,
-                    color: _spokenText.isNotEmpty
-                        ? Colors.white
-                        : AppColors.secondaryText,
+            ),
+          ),
+
+          const Divider(color: Color(0xFF2C2C2E), height: 1),
+
+          // Action Buttons: Cancel & Done (Save)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+            child: Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () {
+                      _stopRecordingAndSave(userCancelled: true);
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white70,
+                      side: const BorderSide(color: Color(0xFF3A3A3C)),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      'Done',
+                      style: GoogleFonts.inter(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
                   ),
                 ),
-        ),
-      ),
-    );
-  }
-
-  // ==========================================================
-  // BOTTOM ACTION BUTTON — TOGGLE: TAP TO START / TAP TO STOP
-  // ==========================================================
-  Widget _buildBottomActionControl() {
-    final accent = Theme.of(context).colorScheme.primary;
-    return GestureDetector(
-      onTap: () {
-        if (_isRecording) {
-          _stopRecordingAndSave();
-        } else if (!_isAnalyzing) {
-          _startRecording();
-        }
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-        decoration: BoxDecoration(
-          color: _isRecording ? accent : AppColors.elevation2,
-          borderRadius: BorderRadius.circular(32),
-          border: Border.all(
-            color: _isRecording ? Colors.white : AppColors.glassBorderBright,
-            width: 1.5,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: () {
+                      _stopRecordingAndSave();
+                    },
+                    style: FilledButton.styleFrom(
+                      backgroundColor: accent,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    icon: const Icon(Icons.check_rounded, size: 18),
+                    label: Text(
+                      'Save Note',
+                      style: GoogleFonts.inter(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.35),
-              blurRadius: 10,
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              _isRecording ? Icons.stop_rounded : Icons.mic_rounded,
-              color: Colors.white,
-              size: 22,
-            ),
-            const SizedBox(width: 10),
-            Text(
-              _isRecording ? "Listening..." : "Tap to Record",
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
-              ),
-            ),
-          ],
-        ),
+        ],
       ),
     );
   }
