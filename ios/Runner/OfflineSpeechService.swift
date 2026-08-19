@@ -128,12 +128,17 @@ final class OfflineSpeechService {
                 // Map Flutter language code → Whisper language token
                 // "auto" or empty → nil language + detectLanguage: true for mixed Telugu-English
                 let isAuto = language == "auto" || language.isEmpty
-                let whisperLang: String? = isAuto ? nil : (switch language {
-                case "te": "te"
-                case "hi": "hi"
-                case "en": "en"
-                default: nil
-                })
+                let whisperLang: String?
+                if isAuto {
+                    whisperLang = nil
+                } else {
+                    switch language {
+                    case "te": whisperLang = "te"
+                    case "hi": whisperLang = "hi"
+                    case "en": whisperLang = "en"
+                    default:   whisperLang = nil
+                    }
+                }
 
                 let options = DecodingOptions(
                     verbose: false,
