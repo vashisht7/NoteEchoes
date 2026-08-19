@@ -172,7 +172,7 @@ class NoteService extends ChangeNotifier {
   /// using the on-device AI categorization engine.
   Future<NoteModel> createFromVoiceTranscription(String spokenText) async {
     final analysis = AiCategorizationEngine().analyzeNote(spokenText);
-    final tagsSet = <String>{'voice-memos', 'voice-memo'};
+    final tagsSet = <String>{'voice-memo'};
     tagsSet.addAll(analysis.categories);
 
     var title = analysis.title;

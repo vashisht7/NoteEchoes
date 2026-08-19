@@ -22,7 +22,6 @@ class KeepTextNoteCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final accent = Theme.of(context).colorScheme.primary;
     final isVoiceMemo =
-        note.tags.contains('voice-memos') ||
         note.tags.contains('voice-memo') ||
         note.tags.contains('voice');
 

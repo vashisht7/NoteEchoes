@@ -166,6 +166,59 @@ class AiCategorizationEngine {
       categories.add("pdf-doc");
     }
 
+    // 10. Reminders & Alerts
+    final hasReminder = lower.contains("remind") ||
+        lower.contains("reminder") ||
+        lower.contains("alert") ||
+        lower.contains("don't forget") ||
+        lower.contains("notify me") ||
+        lower.contains("alarm");
+    if (hasReminder) {
+      categories.add("reminders");
+    }
+
+    // 11. Calendar Events & Schedules
+    final hasEvent = lower.contains("calendar") ||
+        lower.contains("schedule") ||
+        lower.contains("appointment") ||
+        lower.contains("tomorrow at") ||
+        lower.contains("o'clock") ||
+        lower.contains("am ") ||
+        lower.contains("pm ") ||
+        lower.contains("birthday") ||
+        lower.contains("anniversary") ||
+        lower.contains("event");
+    if (hasEvent) {
+      categories.add("events");
+    }
+
+    // 12. Travel & Trips
+    final hasTravel = lower.contains("flight") ||
+        lower.contains("hotel") ||
+        lower.contains("airport") ||
+        lower.contains("trip") ||
+        lower.contains("travel") ||
+        lower.contains("vacation") ||
+        lower.contains("passport") ||
+        lower.contains("booking") ||
+        lower.contains("itinerary");
+    if (hasTravel) {
+      categories.add("travel");
+    }
+
+    // 13. Health & Fitness
+    final hasHealth = lower.contains("workout") ||
+        lower.contains("gym") ||
+        lower.contains("doctor") ||
+        lower.contains("medicine") ||
+        lower.contains("prescription") ||
+        lower.contains("diet") ||
+        lower.contains("health") ||
+        lower.contains("exercise");
+    if (hasHealth) {
+      categories.add("health");
+    }
+
     // Default tag if none detected
     if (categories.isEmpty) {
       categories.add("voice-memo");

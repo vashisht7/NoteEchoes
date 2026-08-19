@@ -326,7 +326,6 @@ class SemanticKnowledgeService extends ChangeNotifier {
     if (notes.isEmpty) return 'Related Notes';
     const ignored = {
       'voice-memo',
-      'voice-memos',
       'notes',
       'note',
       'ideas',

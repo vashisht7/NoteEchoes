@@ -1,6 +1,7 @@
 import Flutter
 import UIKit
 import AVFoundation
+import EventKit
 
 class SceneDelegate: FlutterSceneDelegate, AVSpeechSynthesizerDelegate {
     private let actionChannelName =
@@ -160,6 +161,14 @@ class SceneDelegate: FlutterSceneDelegate, AVSpeechSynthesizerDelegate {
             Self.handleNoteBackup(call, result: result)
         }
 
+        let calendarChannel = FlutterMethodChannel(
+            name: "notechoes/calendar",
+            binaryMessenger: flutterViewController.binaryMessenger
+        )
+        calendarChannel.setMethodCallHandler { call, result in
+            Self.handleCalendar(call, result: result)
+        }
+
         channel.setMethodCallHandler { [weak self] call, result in
             guard let self else {
                 result(FlutterMethodNotImplemented)
@@ -244,6 +253,127 @@ class SceneDelegate: FlutterSceneDelegate, AVSpeechSynthesizerDelegate {
                     message: error.localizedDescription,
                     details: nil
                 ))
+            }
+
+        default:
+            result(FlutterMethodNotImplemented)
+        }
+    }
+
+    private static let eventStore = EKEventStore()
+
+    private static func handleCalendar(
+        _ call: FlutterMethodCall,
+        result: @escaping FlutterResult
+    ) {
+        switch call.method {
+        case "requestPermissions":
+            if #available(iOS 17.0, *) {
+                eventStore.requestFullAccessToEvents { grantedEvents, _ in
+                    eventStore.requestFullAccessToReminders { grantedReminders, _ in
+                        DispatchQueue.main.async {
+                            result(grantedEvents && grantedReminders)
+                        }
+                    }
+                }
+            } else {
+                eventStore.requestAccess(to: .event) { grantedEvents, _ in
+                    eventStore.requestAccess(to: .reminder) { grantedReminders, _ in
+                        DispatchQueue.main.async {
+                            result(grantedEvents && grantedReminders)
+                        }
+                    }
+                }
+            }
+
+        case "createEvent":
+            guard let args = call.arguments as? [String: Any],
+                  let title = args["title"] as? String else {
+                result(FlutterError(code: "INVALID_ARGS", message: "Title required", details: nil))
+                return
+            }
+            let event = EKEvent(eventStore: eventStore)
+            event.title = title
+            if let startMs = args["startDateMs"] as? Double {
+                event.startDate = Date(timeIntervalSince1970: startMs / 1000.0)
+            } else {
+                event.startDate = Date()
+            }
+            if let endMs = args["endDateMs"] as? Double {
+                event.endDate = Date(timeIntervalSince1970: endMs / 1000.0)
+            } else {
+                event.endDate = event.startDate.addingTimeInterval(3600)
+            }
+            if let location = args["location"] as? String {
+                event.location = location
+            }
+            if let notes = args["notes"] as? String {
+                event.notes = notes
+            }
+            event.calendar = eventStore.defaultCalendarForNewEvents
+            do {
+                try eventStore.save(event, span: .thisEvent)
+                result(event.eventIdentifier)
+            } catch {
+                result(FlutterError(code: "EVENT_SAVE_FAILED", message: error.localizedDescription, details: nil))
+            }
+
+        case "createReminder":
+            guard let args = call.arguments as? [String: Any],
+                  let title = args["title"] as? String else {
+                result(FlutterError(code: "INVALID_ARGS", message: "Title required", details: nil))
+                return
+            }
+            let reminder = EKReminder(eventStore: eventStore)
+            reminder.title = title
+            if let notes = args["notes"] as? String {
+                reminder.notes = notes
+            }
+            if let dueMs = args["dueDateMs"] as? Double {
+                let dueDate = Date(timeIntervalSince1970: dueMs / 1000.0)
+                reminder.dueDateComponents = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: dueDate)
+                reminder.addAlarm(EKAlarm(absoluteDate: dueDate))
+            }
+            reminder.calendar = eventStore.defaultCalendarForNewReminders()
+            do {
+                try eventStore.save(reminder, commit: true)
+                result(reminder.calendarItemIdentifier)
+            } catch {
+                result(FlutterError(code: "REMINDER_SAVE_FAILED", message: error.localizedDescription, details: nil))
+            }
+
+        case "deleteEvent":
+            guard let args = call.arguments as? [String: Any],
+                  let id = args["id"] as? String else {
+                result(FlutterError(code: "INVALID_ARGS", message: "Event ID required", details: nil))
+                return
+            }
+            if let event = eventStore.event(withIdentifier: id) {
+                do {
+                    try eventStore.remove(event, span: .thisEvent)
+                    result(true)
+                } catch {
+                    result(FlutterError(code: "DELETE_FAILED", message: error.localizedDescription, details: nil))
+                }
+            } else {
+                result(true)
+            }
+
+        case "deleteReminder":
+            guard let args = call.arguments as? [String: Any],
+                  let id = args["id"] as? String else {
+                result(FlutterError(code: "INVALID_ARGS", message: "Reminder ID required", details: nil))
+                return
+            }
+            if let item = eventStore.calendarItem(withIdentifier: id) as? EKReminder {
+                do {
+                    try eventStore.remove(reminder: item, commit: true)
+                    result(true)
+                } catch {
+                    result(FlutterError(code: "DELETE_FAILED", message: error.localizedDescription, details: nil))
+                }
+            } else {
+                result(true)
             }
 
         default:

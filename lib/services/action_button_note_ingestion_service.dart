@@ -79,7 +79,7 @@ final class ActionButtonNoteIngestionService with WidgetsBindingObserver {
 
         final analysis = _categorizationEngine.analyzeNote(text);
 
-        final tagsSet = <String>{'voice-memos', 'voice-memo'};
+        final tagsSet = <String>{'voice-memo'};
         tagsSet.addAll(analysis.categories);
 
         final note = NoteModel(

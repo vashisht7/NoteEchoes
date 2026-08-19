@@ -326,6 +326,11 @@ class _AiModelSettingsPageState extends State<AiModelSettingsPage>
         try {
           await QwenLlamaProvider.instance.load();
           await _syncModelStatus();
+          // Re-organize, analyze and index all existing notes with the newly installed brain
+          final allNotes = NoteService().allNotes;
+          if (allNotes.isNotEmpty) {
+            await SemanticKnowledgeService.instance.indexAll(allNotes);
+          }
           if (!mounted) return;
           setState(() {
             _qwenDownloading = false;
@@ -333,7 +338,7 @@ class _AiModelSettingsPageState extends State<AiModelSettingsPage>
             _qwenStatusText = '';
           });
           _showToast(
-            'Qwen3 MLX is ready for multilingual notes and document chat.',
+            'Qwen3 is ready! Reorganized and indexed ${allNotes.length} notes.',
           );
         } catch (error) {
           if (!mounted) return;

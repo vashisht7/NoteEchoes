@@ -30,6 +30,14 @@
 	<string>NoteEchoes uses your microphone to capture real-time voice notes and transcribe your thoughts.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>NoteEchoes uses speech recognition to convert your voice into structured notes and smart categories.</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>NoteEchoes creates calendar events from your notes when you confirm them.</string>
+	<key>NSCalendarsWriteOnlyAccessUsageDescription</key>
+	<string>NoteEchoes adds scheduled events extracted from your notes to your calendar.</string>
+	<key>NSRemindersUsageDescription</key>
+	<string>NoteEchoes creates reminders from your action items and todo notes.</string>
+	<key>NSRemindersFullAccessUsageDescription</key>
+	<string>NoteEchoes organizes reminders and action tasks extracted from your notes.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

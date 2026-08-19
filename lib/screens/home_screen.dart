@@ -37,6 +37,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final NoteService _noteService = NoteService();
   bool _isSearchExpanded = false;
   Timer? _recoverySyncTimer;
+  Timer? _actionButtonPollTimer;
 
   static const MethodChannel _actionChannel = MethodChannel(
     'com.vashisht.notechoes/action_button',
@@ -48,21 +49,37 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     _noteService.addListener(_onServiceChange);
     _setupActionChannel();
-    // Import pending notes on the first frame — MethodChannels are only
-    // live after the first frame, so this is the earliest safe moment.
+    // Import pending notes immediately and on the first frame
+    ActionButtonNoteIngestionService.instance.initialize();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ActionButtonNoteIngestionService.instance.initialize();
+      ActionButtonNoteIngestionService.instance.importPendingNotes();
       unawaited(_refreshModelsAndIndex());
       _recoverySyncTimer = Timer(const Duration(seconds: 1), () async {
         final recovered = await NoteStorageService().syncRecoveryBackup();
         if (recovered) await _noteService.reloadRecoveredNotes();
       });
     });
+
+    // Start a lightweight periodic poll so headless Action Button notes
+    // created while the app is backgrounded/open appear immediately
+    _actionButtonPollTimer = Timer.periodic(
+      const Duration(seconds: 2),
+      (_) => _fetchPendingVoiceNotes(),
+    );
+  }
+
+  @override
+  void dispose() {
+    _actionButtonPollTimer?.cancel();
+    _recoverySyncTimer?.cancel();
+    _noteService.removeListener(_onServiceChange);
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
+    if (state == AppLifecycleState.resumed || state == AppLifecycleState.inactive) {
       _fetchPendingVoiceNotes();
       unawaited(_refreshModelsAndIndex());
     }
@@ -175,13 +192,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _noteService.setSearchQuery('');
   }
 
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    _recoverySyncTimer?.cancel();
-    _noteService.removeListener(_onServiceChange);
-    super.dispose();
-  }
+
 
   void _openNoteEditor([NoteModel? note]) {
     Navigator.of(context).push(
