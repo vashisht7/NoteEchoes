@@ -367,7 +367,7 @@ class SceneDelegate: FlutterSceneDelegate, AVSpeechSynthesizerDelegate {
             }
             if let item = eventStore.calendarItem(withIdentifier: id) as? EKReminder {
                 do {
-                    try eventStore.remove(reminder: item, commit: true)
+                    try eventStore.remove(item, commit: true)
                     result(true)
                 } catch {
                     result(FlutterError(code: "DELETE_FAILED", message: error.localizedDescription, details: nil))
