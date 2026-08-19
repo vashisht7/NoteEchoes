@@ -32,6 +32,8 @@
 	<string>NoteEchoes uses speech recognition to convert your voice into structured notes and smart categories.</string>
 	<key>NSCalendarsUsageDescription</key>
 	<string>NoteEchoes creates calendar events from your notes when you confirm them.</string>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>NoteEchoes adds scheduled events extracted from your notes to your calendar.</string>
 	<key>NSCalendarsWriteOnlyAccessUsageDescription</key>
 	<string>NoteEchoes adds scheduled events extracted from your notes to your calendar.</string>
 	<key>NSRemindersUsageDescription</key>

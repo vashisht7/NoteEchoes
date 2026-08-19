@@ -49,10 +49,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     _noteService.addListener(_onServiceChange);
     _setupActionChannel();
-    // Import pending notes immediately and on the first frame
-    ActionButtonNoteIngestionService.instance.initialize();
+    // Import pending notes on the first frame — MethodChannels are only
+    // live after the first frame, so this is the earliest safe moment.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ActionButtonNoteIngestionService.instance.importPendingNotes();
+      ActionButtonNoteIngestionService.instance.initialize();
       unawaited(_refreshModelsAndIndex());
       _recoverySyncTimer = Timer(const Duration(seconds: 1), () async {
         final recovered = await NoteStorageService().syncRecoveryBackup();

@@ -260,7 +260,13 @@ class SceneDelegate: FlutterSceneDelegate, AVSpeechSynthesizerDelegate {
         }
     }
 
-    private static let eventStore = EKEventStore()
+    private static var _eventStore: EKEventStore?
+    private static var eventStore: EKEventStore {
+        if let store = _eventStore { return store }
+        let store = EKEventStore()
+        _eventStore = store
+        return store
+    }
 
     private static func handleCalendar(
         _ call: FlutterMethodCall,
