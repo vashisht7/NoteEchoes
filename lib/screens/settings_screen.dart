@@ -1,9 +1,23 @@
+// settings_screen.dart
+// NoteEchoes macOS Settings — styled to match System Settings on macOS:
+// Dark matte palette, grouped rows, neutral icons, no colorful accent circles.
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../ai/presentation/ai_model_settings_page.dart';
-import '../theme/app_colors.dart';
 import '../theme/app_preferences.dart';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Colour constants local to settings — no AppColors accent bleed
+// ─────────────────────────────────────────────────────────────────────────────
+const _kBg = Color(0xFF111113);
+const _kGroupBg = Color(0xFF1C1C1E);
+const _kDivider = Color(0xFF2C2C2E);
+const _kIconBg = Color(0xFF3A3A3C);
+const _kLabelColor = Color(0xFFF5F5F7);
+const _kSecondary = Color(0xFF8E8E93);
+const _kIconColor = Color(0xFFAEAEB2);
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -33,157 +47,375 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final accent = Theme.of(context).colorScheme.primary;
     return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
-        title: Text(
-          'Settings',
-          style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w600),
-        ),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
-        children: [
-          _SectionLabel('Appearance'),
-          _SettingsCard(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Accent color',
-                    style: GoogleFonts.inter(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                    ),
+      backgroundColor: _kBg,
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 48),
+          children: [
+            // ── Top Navigation Row ───────────────────────────────────────────
+            Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
+                  color: _kSecondary,
+                  onPressed: () => Navigator.pop(context),
+                  tooltip: 'Back',
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  'Settings',
+                  style: GoogleFonts.inter(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                    color: _kLabelColor,
+                    letterSpacing: -0.4,
                   ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Applied to controls, selections and voice indicators.',
-                    style: TextStyle(
-                      color: AppColors.secondaryText,
-                      fontSize: 12.5,
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
-                    children: AppPreferences.accents.map((option) {
-                      final selected = option.id == _preferences.accentId;
-                      return Semantics(
-                        label: '${option.label} accent',
-                        selected: selected,
-                        button: true,
-                        child: InkWell(
-                          onTap: () => _preferences.setAccent(option.id),
-                          borderRadius: BorderRadius.circular(22),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 160),
-                            width: 38,
-                            height: 38,
-                            decoration: BoxDecoration(
-                              color: option.color,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: selected ? Colors.white : Colors.white24,
-                                width: selected ? 2.5 : 1,
-                              ),
-                            ),
-                            child: selected
-                                ? const Icon(
-                                    Icons.check_rounded,
-                                    size: 20,
-                                    color: Colors.white,
-                                  )
-                                : null,
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+          // ── SECTION: General ─────────────────────────────────────────
+          _SectionHeader('General'),
+          _SettingsGroup(children: [
+            _AccentColorRow(
+              preferences: _preferences,
+              onChanged: () => setState(() {}),
+            ),
+          ]),
+
+          const SizedBox(height: 24),
+
+          // ── SECTION: Voice & Dictation ────────────────────────────────
+          _SectionHeader('Voice & Dictation'),
+          _SettingsGroup(children: [
+            _LanguageRow(
+              preferences: _preferences,
+              onChanged: () => setState(() {}),
+            ),
+          ]),
+
+          const SizedBox(height: 24),
+
+          // ── SECTION: AI & Intelligence ────────────────────────────────
+          _SectionHeader('AI & Intelligence'),
+          _SettingsGroup(children: [
+            _NavigationRow(
+              icon: Icons.memory_rounded,
+              label: 'AI Engine & Pluggable Brain',
+              subtitle: 'Local models, Ollama, LM Studio, MLX',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const AiModelSettingsPage()),
+              ),
+            ),
+          ]),
+
+          const SizedBox(height: 24),
+
+          // ── SECTION: Privacy ──────────────────────────────────────────
+          _SectionHeader('Privacy'),
+          _SettingsGroup(children: [
+            const _InfoRow(
+              icon: Icons.lock_outline_rounded,
+              label: 'Local-first storage',
+              subtitle: 'Notes stay on this device. Models run fully offline.',
+            ),
+          ]),
+
+          const SizedBox(height: 24),
+
+          // ── SECTION: Accessibility ────────────────────────────────────
+          _SectionHeader('Accessibility'),
+          _SettingsGroup(children: [
+            const _InfoRow(
+              icon: Icons.accessibility_new_rounded,
+              label: 'System accessibility',
+              subtitle:
+                  'Follows macOS Dynamic Type, VoiceOver, and Reduce Motion.',
+            ),
+          ]),
+
+          const SizedBox(height: 32),
+
+          // ── Version Footer ────────────────────────────────────────────
+          Center(
+            child: Text(
+              'NoteEchoes  3.0.0',
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: const Color(0xFF48484A),
+                letterSpacing: 0.2,
               ),
             ),
           ),
-          const SizedBox(height: 24),
-          _SectionLabel('Voice notes'),
-          _SettingsCard(
+        ],
+      ),
+    ),
+  );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Section header — uppercase, neutral, no accent
+// ─────────────────────────────────────────────────────────────────────────────
+class _SectionHeader extends StatelessWidget {
+  final String text;
+  const _SectionHeader(this.text);
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(left: 4, bottom: 6),
+        child: Text(
+          text.toUpperCase(),
+          style: GoogleFonts.inter(
+            color: _kSecondary,
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.6,
+          ),
+        ),
+      );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Group container — macOS-style rounded card, no glass border
+// ─────────────────────────────────────────────────────────────────────────────
+class _SettingsGroup extends StatelessWidget {
+  final List<Widget> children;
+  const _SettingsGroup({required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = <Widget>[];
+    for (var i = 0; i < children.length; i++) {
+      rows.add(children[i]);
+      if (i < children.length - 1) {
+        rows.add(const Padding(
+          padding: EdgeInsets.only(left: 52),
+          child: Divider(height: 1, thickness: 1, color: _kDivider),
+        ));
+      }
+    }
+    return Container(
+      decoration: BoxDecoration(
+        color: _kGroupBg,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(mainAxisSize: MainAxisSize.min, children: rows),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Row shell — shared layout for all setting rows
+// ─────────────────────────────────────────────────────────────────────────────
+class _RowShell extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String subtitle;
+  final Widget? trailing;
+
+  const _RowShell({
+    required this.icon,
+    required this.label,
+    required this.subtitle,
+    this.trailing,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      child: Row(
+        children: [
+          Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              color: _kIconBg,
+              borderRadius: BorderRadius.circular(7),
+            ),
+            child: Icon(icon, size: 16, color: _kIconColor),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ListTile(
-                  leading: Icon(Icons.language_rounded, color: accent),
-                  title: const Text('Recognition language'),
-                  subtitle: const Text(
-                    'Used by in-app recording and the Action Button shortcut.',
-                  ),
-                  trailing: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: _preferences.speechLanguageCode,
-                      dropdownColor: AppColors.elevation2,
-                      items: const [
-                        DropdownMenuItem(value: 'en', child: Text('English')),
-                        DropdownMenuItem(value: 'te', child: Text('Telugu')),
-                        DropdownMenuItem(value: 'hi', child: Text('Hindi')),
-                        DropdownMenuItem(
-                          value: 'auto',
-                          child: Text('Automatic'),
-                        ),
-                      ],
-                      onChanged: (value) {
-                        if (value != null) {
-                          _preferences.setSpeechLanguage(value);
-                        }
-                      },
-                    ),
+                Text(
+                  label,
+                  style: GoogleFonts.inter(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w500,
+                    color: _kLabelColor,
                   ),
                 ),
-                const Divider(),
-                ListTile(
-                  leading: Icon(Icons.memory_rounded, color: accent),
-                  title: const Text('Offline models'),
-                  subtitle: const Text(
-                    'Download multilingual speech recognition and local note intelligence.',
-                  ),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const AiModelSettingsPage(),
-                    ),
+                const SizedBox(height: 1),
+                Text(
+                  subtitle,
+                  style: GoogleFonts.inter(
+                    fontSize: 11.5,
+                    color: _kSecondary,
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 24),
-          _SectionLabel('Accessibility'),
-          const _SettingsCard(
-            child: ListTile(
-              leading: Icon(Icons.accessibility_new_rounded),
-              title: Text('Follows iPhone accessibility settings'),
-              subtitle: Text(
-                'Supports Dynamic Type, VoiceOver labels, and Reduce Motion automatically.',
-              ),
-            ),
+          if (trailing != null) ...[
+            const SizedBox(width: 8),
+            trailing!,
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Navigation row (tap to navigate)
+// ─────────────────────────────────────────────────────────────────────────────
+class _NavigationRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  const _NavigationRow({
+    required this.icon,
+    required this.label,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+        onTap: onTap,
+        child: _RowShell(
+          icon: icon,
+          label: label,
+          subtitle: subtitle,
+          trailing: const Icon(
+            Icons.chevron_right_rounded,
+            size: 18,
+            color: _kSecondary,
           ),
-          const SizedBox(height: 24),
-          _SectionLabel('Privacy'),
-          const _SettingsCard(
-            child: ListTile(
-              leading: Icon(Icons.lock_outline_rounded),
-              title: Text('Local-first storage'),
-              subtitle: Text(
-                'Notes remain on this device. Installed models run without uploading your recordings.',
-              ),
+        ),
+      );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Info row (read-only)
+// ─────────────────────────────────────────────────────────────────────────────
+class _InfoRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String subtitle;
+
+  const _InfoRow({
+    required this.icon,
+    required this.label,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) =>
+      _RowShell(icon: icon, label: label, subtitle: subtitle);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Accent colour row — flat rectangular pill swatches, no glowing circles
+// ─────────────────────────────────────────────────────────────────────────────
+class _AccentColorRow extends StatelessWidget {
+  final AppPreferences preferences;
+  final VoidCallback onChanged;
+
+  const _AccentColorRow({
+    required this.preferences,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              color: _kIconBg,
+              borderRadius: BorderRadius.circular(7),
             ),
+            child: const Icon(Icons.palette_outlined, size: 16, color: _kIconColor),
           ),
-          const SizedBox(height: 28),
-          const Center(
-            child: Text(
-              'NoteEchoes 2.7.0',
-              style: TextStyle(color: AppColors.tertiaryText, fontSize: 12),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Accent Color',
+                  style: GoogleFonts.inter(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w500,
+                    color: _kLabelColor,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Applied to controls, selections and indicators.',
+                  style: GoogleFonts.inter(fontSize: 11.5, color: _kSecondary),
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: AppPreferences.accents.map((option) {
+                    final selected = option.id == preferences.accentId;
+                    return Semantics(
+                      label: '${option.label} accent',
+                      selected: selected,
+                      button: true,
+                      child: GestureDetector(
+                        onTap: () {
+                          preferences.setAccent(option.id);
+                          onChanged();
+                        },
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 150),
+                          width: selected ? 54 : 46,
+                          height: 26,
+                          decoration: BoxDecoration(
+                            color: selected
+                                ? option.color
+                                : option.color.withValues(alpha: 0.55),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: selected
+                                  ? Colors.white.withValues(alpha: 0.6)
+                                  : Colors.white.withValues(alpha: 0.12),
+                              width: selected ? 1.5 : 1.0,
+                            ),
+                          ),
+                          child: selected
+                              ? const Center(
+                                  child: Icon(
+                                    Icons.check_rounded,
+                                    size: 13,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : null,
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ],
             ),
           ),
         ],
@@ -192,37 +424,86 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 }
 
-class _SectionLabel extends StatelessWidget {
-  final String text;
-  const _SectionLabel(this.text);
+// ─────────────────────────────────────────────────────────────────────────────
+// Language dropdown row
+// ─────────────────────────────────────────────────────────────────────────────
+class _LanguageRow extends StatelessWidget {
+  final AppPreferences preferences;
+  final VoidCallback onChanged;
+
+  const _LanguageRow({
+    required this.preferences,
+    required this.onChanged,
+  });
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
-    child: Text(
-      text.toUpperCase(),
-      style: GoogleFonts.inter(
-        color: AppColors.secondaryText,
-        fontSize: 11,
-        fontWeight: FontWeight.w600,
-        letterSpacing: 0.7,
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      child: Row(
+        children: [
+          Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              color: _kIconBg,
+              borderRadius: BorderRadius.circular(7),
+            ),
+            child: const Icon(Icons.language_rounded, size: 16, color: _kIconColor),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Recognition language',
+                  style: GoogleFonts.inter(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w500,
+                    color: _kLabelColor,
+                  ),
+                ),
+                const SizedBox(height: 1),
+                Text(
+                  'Used by in-app dictation and Quick Capture (⌘⇧N).',
+                  style: GoogleFonts.inter(fontSize: 11.5, color: _kSecondary),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Theme(
+            data: Theme.of(context).copyWith(
+              canvasColor: const Color(0xFF2C2C2E),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: preferences.speechLanguageCode,
+                dropdownColor: const Color(0xFF2C2C2E),
+                style: GoogleFonts.inter(fontSize: 13, color: _kLabelColor),
+                icon: const Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  size: 16,
+                  color: _kSecondary,
+                ),
+                items: const [
+                  DropdownMenuItem(value: 'en', child: Text('English')),
+                  DropdownMenuItem(value: 'te', child: Text('Telugu')),
+                  DropdownMenuItem(value: 'hi', child: Text('Hindi')),
+                  DropdownMenuItem(value: 'auto', child: Text('Automatic')),
+                ],
+                onChanged: (value) {
+                  if (value != null) {
+                    preferences.setSpeechLanguage(value);
+                    onChanged();
+                  }
+                },
+              ),
+            ),
+          ),
+        ],
       ),
-    ),
-  );
-}
-
-class _SettingsCard extends StatelessWidget {
-  final Widget child;
-  const _SettingsCard({required this.child});
-
-  @override
-  Widget build(BuildContext context) => Container(
-    decoration: BoxDecoration(
-      color: const Color(0xFF1C1C1E),
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: const Color(0xFF2C2C2E)),
-    ),
-    clipBehavior: Clip.antiAlias,
-    child: child,
-  );
+    );
+  }
 }
