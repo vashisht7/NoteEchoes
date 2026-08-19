@@ -4,22 +4,29 @@ import Speech
 import WhisperKit
 
 /// One durable transcription path for in-app recordings and App Shortcuts.
-/// Whisper Base is downloaded on demand; Apple Speech remains the zero-download
-/// fallback for English and for users who have not installed the offline pack.
+/// Whisper Base is downloaded on demand using the official WhisperKit.download() API;
+/// Apple Speech remains the zero-download fallback for English and for users who
+/// have not installed the offline pack.
 final class OfflineSpeechService {
     static let shared = OfflineSpeechService()
 
-    private let modelName = "base"
-    private let installedKey = "whisper_base_multilingual_installed"
-    private let modelPathKey = "whisper_base_multilingual_model_path"
+    private let whisperVariant  = "base"
+    private let whisperRepo     = "argmaxinc/whisperkit-coreml"
+    private let modelPathKey    = "whisper_base_multilingual_model_path"
+    private let installedKey    = "whisper_base_multilingual_installed"
+
     private var whisperKit: WhisperKit?
     private var loadingTask: Task<WhisperKit, Error>?
 
     private init() {}
 
+    // MARK: – Public status
+
     var isWhisperInstalled: Bool {
-        installedModelFolder() != nil
+        resolveInstalledFolder() != nil
     }
+
+    // MARK: – Flutter channel
 
     func register(with controller: FlutterViewController) {
         let channel = FlutterMethodChannel(
@@ -27,21 +34,21 @@ final class OfflineSpeechService {
             binaryMessenger: controller.binaryMessenger
         )
         channel.setMethodCallHandler { [weak self] call, result in
-            guard let self else { return result(FlutterError(code: "unavailable", message: nil, details: nil)) }
+            guard let self else {
+                return result(FlutterError(code: "unavailable", message: nil, details: nil))
+            }
             switch call.method {
+
             case "whisperStatus":
                 result(self.whisperStatus())
+
             case "isWhisperInstalled":
                 result(self.isWhisperInstalled)
+
             case "downloadWhisperBase":
                 Task {
                     do {
-                        let kit = try await self.loadWhisper(download: true)
-                        // Eagerly persist so whisperStatus() sees installed=true immediately.
-                        UserDefaults.standard.set(true, forKey: self.installedKey)
-                        if let folder = kit.modelFolder {
-                            UserDefaults.standard.set(folder.path, forKey: self.modelPathKey)
-                        }
+                        _ = try await self.downloadAndLoad()
                         await MainActor.run { result(true) }
                     } catch {
                         await MainActor.run {
@@ -53,10 +60,12 @@ final class OfflineSpeechService {
                         }
                     }
                 }
+
             case "disableWhisper":
                 self.whisperKit = nil
                 UserDefaults.standard.set(false, forKey: self.installedKey)
                 result(true)
+
             case "deleteWhisperBase":
                 do {
                     try self.deleteWhisperModel()
@@ -68,14 +77,20 @@ final class OfflineSpeechService {
                         details: nil
                     ))
                 }
+
             case "recordingPermissionStatus":
                 result(self.recordingPermissionStatus())
+
             case "transcribeAudioFile":
                 guard
                     let arguments = call.arguments as? [String: Any],
                     let path = arguments["path"] as? String
                 else {
-                    return result(FlutterError(code: "bad_arguments", message: "Audio path is required.", details: nil))
+                    return result(FlutterError(
+                        code: "bad_arguments",
+                        message: "Audio path is required.",
+                        details: nil
+                    ))
                 }
                 let language = arguments["language"] as? String ?? "en"
                 Task {
@@ -95,22 +110,24 @@ final class OfflineSpeechService {
                         }
                     }
                 }
+
             default:
                 result(FlutterMethodNotImplemented)
             }
         }
     }
 
+    // MARK: – Transcription
+
     func transcribeAudio(at url: URL, language: String) async throws -> String {
         if isWhisperInstalled {
-            let pipe = try await loadWhisper(download: false)
-            let isAutomatic = language == "auto" || language == "en"
+            let pipe = try await getLoadedWhisperKit()
             // Map Flutter language code → Whisper language token
             let whisperLang: String? = switch language {
-            case "te": "te"      // Telugu
-            case "hi": "hi"      // Hindi
-            case "en": "en"      // English
-            default: nil         // auto-detect
+            case "te": "te"
+            case "hi": "hi"
+            case "en": "en"
+            default: nil   // auto-detect
             }
             let options = DecodingOptions(
                 task: .transcribe,
@@ -127,52 +144,203 @@ final class OfflineSpeechService {
                 .joined(separator: " ")
                 .trimmingCharacters(in: .whitespacesAndNewlines)
         }
-
         return try await transcribeWithAppleSpeech(at: url, language: language)
     }
 
-    private func loadWhisper(download: Bool) async throws -> WhisperKit {
+    // MARK: – Download + Load (two-step, reliable)
+
+    /// Step 1: Download the model files using WhisperKit's own HuggingFace downloader.
+    /// Step 2: Load WhisperKit from the downloaded folder.
+    /// This avoids the "model file not found" race condition in WhisperKitConfig.
+    private func downloadAndLoad() async throws -> WhisperKit {
+        // Reuse a cached instance if already downloaded + loaded
         if let whisperKit { return whisperKit }
         if let loadingTask { return try await loadingTask.value }
 
-        let existingFolder = installedModelFolder()
-        if !download && existingFolder == nil {
-            throw SpeechError.modelUnavailable
+        let task = Task<WhisperKit, Error> {
+            // --- Step 1: Download ---
+            // If model files already exist, use them directly and skip download.
+            let folderURL: URL
+            if let existing = self.resolveInstalledFolder() {
+                folderURL = existing
+            } else {
+                // Download to the app's Application Support directory so it
+                // persists across reboots and isn't cleaned by iOS cache eviction.
+                let downloadBase = try Self.whisperDownloadBase()
+                folderURL = try await WhisperKit.download(
+                    variant: self.whisperVariant,
+                    downloadBase: downloadBase,
+                    useBackgroundSession: false,
+                    from: self.whisperRepo
+                )
+            }
+
+            // Persist the resolved path immediately so whisperStatus() sees it.
+            UserDefaults.standard.set(folderURL.path, forKey: self.modelPathKey)
+            UserDefaults.standard.set(true, forKey: self.installedKey)
+
+            // --- Step 2: Load ---
+            let kit = try await WhisperKit(
+                modelFolder: folderURL.path,
+                computeOptions: ModelComputeOptions(
+                    melCompute: .cpuAndNeuralEngine,
+                    audioEncoderCompute: .cpuAndNeuralEngine,
+                    textDecoderCompute: .cpuAndNeuralEngine
+                )
+            )
+            return kit
         }
 
-        let task = Task<WhisperKit, Error> {
-            let loaded = try await WhisperKit(WhisperKitConfig(
-                model: "openai_whisper-base",
-                modelRepo: "argmaxinc/whisperkit-coreml",
-                modelFolder: existingFolder?.path,
-                verbose: true,
-                prewarm: false,
-                load: true,
-                download: download && existingFolder == nil,
-                useBackgroundDownloadSession: false
-            ))
-            if let folder = loaded.modelFolder {
-                UserDefaults.standard.set(folder.path, forKey: self.modelPathKey)
-            }
-            return loaded
-        }
         loadingTask = task
         do {
-            let loaded = try await task.value
-            whisperKit = loaded
-            loadingTask = nil
-            return loaded
+            let kit = try await task.value
+            whisperKit   = kit
+            loadingTask  = nil
+            return kit
         } catch {
             loadingTask = nil
             throw error
         }
     }
 
+    /// Returns the already-loaded WhisperKit instance for transcription,
+    /// loading it from the persisted folder path without re-downloading.
+    private func getLoadedWhisperKit() async throws -> WhisperKit {
+        if let whisperKit { return whisperKit }
+
+        guard let folder = resolveInstalledFolder() else {
+            throw SpeechError.modelUnavailable
+        }
+
+        let kit = try await WhisperKit(modelFolder: folder.path)
+        whisperKit = kit
+        return kit
+    }
+
+    // MARK: – Folder resolution
+
+    /// Returns the Application Support sub-directory where models are downloaded.
+    private static func whisperDownloadBase() throws -> URL {
+        guard let appSupport = FileManager.default.urls(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask
+        ).first else {
+            throw SpeechError.modelUnavailable
+        }
+        let base = appSupport.appendingPathComponent("WhisperKitModels", isDirectory: true)
+        try FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
+        return base
+    }
+
+    /// Scans known locations for an already-downloaded model and returns the
+    /// first directory that contains the required Core ML model files.
+    private func resolveInstalledFolder() -> URL? {
+        let manager = FileManager.default
+
+        // 1. Stored path (fastest check — set after a successful download)
+        if let stored = UserDefaults.standard.string(forKey: modelPathKey) {
+            let url = URL(fileURLWithPath: stored)
+            if isCompleteWhisperFolder(url) { return url }
+        }
+
+        // 2. Known roots to scan
+        var roots: [URL] = []
+
+        if let appSupport = manager.urls(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask
+        ).first {
+            // Our custom download base
+            roots.append(appSupport.appendingPathComponent("WhisperKitModels"))
+            // WhisperKit default HuggingFace cache
+            roots.append(appSupport.appendingPathComponent("huggingface/models/\(whisperRepo)/openai_whisper-\(whisperVariant)"))
+            roots.append(appSupport.appendingPathComponent("huggingface/models/\(whisperRepo)"))
+            roots.append(appSupport)
+        }
+
+        if let caches = manager.urls(for: .cachesDirectory, in: .userDomainMask).first {
+            roots.append(caches.appendingPathComponent("WhisperKitModels"))
+            roots.append(caches.appendingPathComponent("huggingface/models/\(whisperRepo)"))
+            roots.append(caches)
+        }
+
+        if let documents = manager.urls(for: .documentDirectory, in: .userDomainMask).first {
+            roots.append(documents)
+        }
+
+        for root in roots {
+            // Check the root itself
+            if isCompleteWhisperFolder(root) {
+                UserDefaults.standard.set(root.path, forKey: modelPathKey)
+                return root
+            }
+            // Enumerate one level of subdirectories
+            guard let enumerator = manager.enumerator(
+                at: root,
+                includingPropertiesForKeys: [.isDirectoryKey],
+                options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants]
+            ) else { continue }
+            for case let candidate as URL in enumerator {
+                if isCompleteWhisperFolder(candidate) {
+                    UserDefaults.standard.set(candidate.path, forKey: modelPathKey)
+                    return candidate
+                }
+                // Also check one level deeper (variant folder inside repo folder)
+                guard let sub = manager.enumerator(
+                    at: candidate,
+                    includingPropertiesForKeys: [.isDirectoryKey],
+                    options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants]
+                ) else { continue }
+                for case let deep as URL in sub {
+                    if isCompleteWhisperFolder(deep) {
+                        UserDefaults.standard.set(deep.path, forKey: modelPathKey)
+                        return deep
+                    }
+                }
+            }
+        }
+        return nil
+    }
+
+    /// Returns true if `folder` contains the three Core ML model components
+    /// that WhisperKit requires to run transcription.
+    private func isCompleteWhisperFolder(_ folder: URL) -> Bool {
+        let manager = FileManager.default
+        var isDir: ObjCBool = false
+        guard manager.fileExists(atPath: folder.path, isDirectory: &isDir), isDir.boolValue else {
+            return false
+        }
+
+        // Look for the required model component names (any depth within the folder)
+        let required = Set(["MelSpectrogram", "AudioEncoder", "TextDecoder"])
+        guard let enumerator = manager.enumerator(
+            at: folder,
+            includingPropertiesForKeys: [.isDirectoryKey],
+            options: [.skipsHiddenFiles]
+        ) else { return false }
+
+        var found = Set<String>()
+        for case let url as URL in enumerator {
+            let ext = url.pathExtension.lowercased()
+            if ext == "mlmodelc" || ext == "mlpackage" || ext == "mlmodel" {
+                let name = url.deletingPathExtension().lastPathComponent
+                // Match partial names (e.g. "AudioEncoderContextAll" contains "AudioEncoder")
+                for req in required {
+                    if name.contains(req) { found.insert(req) }
+                }
+            }
+            if found == required { return true }
+        }
+        return found == required
+    }
+
+    // MARK: – Status
+
     private func whisperStatus() -> [String: Any] {
-        let folder = installedModelFolder()
-        let bytes = folder.map(directorySize) ?? 0
+        let folder = resolveInstalledFolder()
         let installed = folder != nil
         UserDefaults.standard.set(installed, forKey: installedKey)
+        let bytes = folder.map(directorySize) ?? 0
         return [
             "installed": installed,
             "verified": installed,
@@ -181,72 +349,6 @@ final class OfflineSpeechService {
             "sizeBytes": bytes,
             "reason": installed ? "" : "Model files are not downloaded."
         ]
-    }
-
-    private func installedModelFolder() -> URL? {
-        let manager = FileManager.default
-        var roots: [URL] = []
-        if let storedPath = UserDefaults.standard.string(forKey: modelPathKey) {
-            roots.append(URL(fileURLWithPath: storedPath))
-        }
-        if let documents = manager.urls(for: .documentDirectory, in: .userDomainMask).first {
-            roots.append(documents)
-            roots.append(documents.appendingPathComponent("huggingface"))
-            roots.append(documents.appendingPathComponent("models"))
-            roots.append(documents.appendingPathComponent("whisper"))
-        }
-        if let appSupport = manager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first {
-            roots.append(appSupport)
-            roots.append(appSupport.appendingPathComponent("huggingface"))
-            roots.append(appSupport.appendingPathComponent("models"))
-            roots.append(appSupport.appendingPathComponent("whisper"))
-        }
-        if let caches = manager.urls(for: .cachesDirectory, in: .userDomainMask).first {
-            roots.append(caches)
-            roots.append(caches.appendingPathComponent("huggingface"))
-            roots.append(caches.appendingPathComponent("models"))
-            roots.append(caches.appendingPathComponent("whisper"))
-        }
-        if let shared = SharedDefaults.sharedContainerURL {
-            roots.append(shared)
-            roots.append(shared.appendingPathComponent("huggingface"))
-            roots.append(shared.appendingPathComponent("models"))
-        }
-
-        for root in roots {
-            if isCompleteWhisperFolder(root) { return root }
-            guard let enumerator = manager.enumerator(
-                at: root,
-                includingPropertiesForKeys: [.isDirectoryKey],
-                options: [.skipsHiddenFiles]
-            ) else { continue }
-            for case let candidate as URL in enumerator {
-                if isCompleteWhisperFolder(candidate) {
-                    UserDefaults.standard.set(candidate.path, forKey: modelPathKey)
-                    return candidate
-                }
-            }
-        }
-        return nil
-    }
-
-    private func isCompleteWhisperFolder(_ folder: URL) -> Bool {
-        let manager = FileManager.default
-        guard manager.fileExists(atPath: folder.path) else { return false }
-        let required = ["MelSpectrogram", "AudioEncoder", "TextDecoder"]
-        guard let enumerator = manager.enumerator(
-            at: folder,
-            includingPropertiesForKeys: [.isDirectoryKey],
-            options: [.skipsHiddenFiles]
-        ) else { return false }
-        var found = Set<String>()
-        for case let url as URL in enumerator {
-            let ext = url.pathExtension.lowercased()
-            if ext == "mlmodelc" || ext == "mlpackage" {
-                found.insert(url.deletingPathExtension().lastPathComponent)
-            }
-        }
-        return required.allSatisfy(found.contains)
     }
 
     private func directorySize(_ directory: URL) -> Int64 {
@@ -265,24 +367,41 @@ final class OfflineSpeechService {
         return total
     }
 
+    // MARK: – Delete
+
     private func deleteWhisperModel() throws {
         whisperKit = nil
-        if let folder = installedModelFolder(),
-           FileManager.default.fileExists(atPath: folder.path) {
-            try FileManager.default.removeItem(at: folder)
+        loadingTask?.cancel()
+        loadingTask = nil
+
+        // Remove both the custom download base and any found folder
+        if let folder = resolveInstalledFolder() {
+            try? FileManager.default.removeItem(at: folder)
         }
+        if let appSupport = FileManager.default.urls(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask
+        ).first {
+            let customBase = appSupport.appendingPathComponent("WhisperKitModels")
+            try? FileManager.default.removeItem(at: customBase)
+        }
+
         UserDefaults.standard.removeObject(forKey: modelPathKey)
         UserDefaults.standard.set(false, forKey: installedKey)
     }
 
+    // MARK: – Recording permission
+
     private func recordingPermissionStatus() -> String {
         switch AVAudioApplication.shared.recordPermission {
-        case .granted: "granted"
-        case .denied: "denied"
+        case .granted:      "granted"
+        case .denied:       "denied"
         case .undetermined: "undetermined"
-        @unknown default: "unknown"
+        @unknown default:   "unknown"
         }
     }
+
+    // MARK: – Apple Speech fallback
 
     private func transcribeWithAppleSpeech(at url: URL, language: String) async throws -> String {
         let authorization = await requestSpeechAuthorization()
@@ -291,16 +410,25 @@ final class OfflineSpeechService {
         }
 
         let localeIdentifier = switch language {
-        case "te": "te-IN"
-        case "hi": "hi-IN"
-        case "en": "en-US"
+        case "te":   "te-IN"
+        case "hi":   "hi-IN"
+        case "en":   "en-US"
         case "auto": Locale.current.identifier
-        default: "en-US"
-        }
-        guard let recognizer = SFSpeechRecognizer(locale: Locale(identifier: localeIdentifier)) else {
-            throw SpeechError.recognizerUnavailable
+        default:     "en-US"
         }
 
+        guard let recognizer = SFSpeechRecognizer(locale: Locale(identifier: localeIdentifier)),
+              recognizer.isAvailable else {
+            // Fall back to English if te-IN / hi-IN recognizer unavailable
+            guard let fallback = SFSpeechRecognizer(locale: Locale(identifier: "en-US")) else {
+                throw SpeechError.recognizerUnavailable
+            }
+            return try await recognizeFile(at: url, recognizer: fallback)
+        }
+        return try await recognizeFile(at: url, recognizer: recognizer)
+    }
+
+    private func recognizeFile(at url: URL, recognizer: SFSpeechRecognizer) async throws -> String {
         let asset = AVURLAsset(url: url)
         let duration = (try? await asset.load(.duration).seconds) ?? 0
         if duration <= 52 {
@@ -343,7 +471,7 @@ final class OfflineSpeechService {
         guard let exporter = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetAppleM4A) else {
             return false
         }
-        exporter.outputURL = outputURL
+        exporter.outputURL  = outputURL
         exporter.outputFileType = .m4a
         exporter.timeRange = CMTimeRange(
             start: CMTime(seconds: start, preferredTimescale: 600),
@@ -384,6 +512,8 @@ final class OfflineSpeechService {
     }
 }
 
+// MARK: – Helpers
+
 private final class RecognitionState: @unchecked Sendable {
     private let lock = NSLock()
     private var finished = false
@@ -415,10 +545,10 @@ private enum SpeechError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .modelUnavailable: "The offline speech model is not installed."
-        case .permissionDenied: "Speech recognition permission was denied."
+        case .modelUnavailable:    "The offline speech model is not installed."
+        case .permissionDenied:    "Speech recognition permission was denied."
         case .recognizerUnavailable: "Speech recognition is unavailable for the selected language."
-        case .emptyResult: "No speech was recognized in the recording."
+        case .emptyResult:         "No speech was recognized in the recording."
         }
     }
 }
