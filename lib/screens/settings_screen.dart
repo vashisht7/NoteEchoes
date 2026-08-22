@@ -33,8 +33,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   String _languageDisplayTitle(String code) => switch (code) {
     'te' => 'Telugu (తెలుగు)',
+    'te-en-mixed' => 'Telugu & English Mixed',
     'hi' => 'Hindi (हिन्दी)',
-    'auto' => 'Automatic (Telugu & English Mixed)',
+    'auto' => 'Auto-detect Language',
     _ => 'English',
   };
 
@@ -48,78 +49,89 @@ class _SettingsScreenState extends State<SettingsScreen> {
       builder: (ctx) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.white24,
-                    borderRadius: BorderRadius.circular(2),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.white24,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: Text(
-                  'Speech Recognition Language',
-                  style: GoogleFonts.inter(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
+                const SizedBox(height: 16),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Text(
+                    'Speech Recognition Language',
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 6),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: Text(
-                  'Select how voice dictation and Whisper should transcribe your speech.',
-                  style: GoogleFonts.inter(fontSize: 12.5, color: Colors.white54),
+                const SizedBox(height: 6),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Text(
+                    'Select how voice dictation and Whisper should transcribe your speech.',
+                    style: GoogleFonts.inter(fontSize: 12.5, color: Colors.white54),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              _LanguageOptionTile(
-                title: 'English',
-                subtitle: 'Standard English dictation & Whisper',
-                selected: _preferences.speechLanguageCode == 'en',
-                onTap: () {
-                  _preferences.setSpeechLanguage('en');
-                  Navigator.pop(ctx);
-                },
-              ),
-              _LanguageOptionTile(
-                title: 'Telugu (తెలుగు)',
-                subtitle: 'Telugu speech recognition in Telugu script',
-                selected: _preferences.speechLanguageCode == 'te',
-                onTap: () {
-                  _preferences.setSpeechLanguage('te');
-                  Navigator.pop(ctx);
-                },
-              ),
-              _LanguageOptionTile(
-                title: 'Hindi (हिन्दी)',
-                subtitle: 'Hindi speech recognition in Devanagari script',
-                selected: _preferences.speechLanguageCode == 'hi',
-                onTap: () {
-                  _preferences.setSpeechLanguage('hi');
-                  Navigator.pop(ctx);
-                },
-              ),
-              _LanguageOptionTile(
-                title: 'Automatic (Telugu & English Mixed)',
-                subtitle: 'Seamlessly recognizes Telugu, English, and code-mixed speech',
-                selected: _preferences.speechLanguageCode == 'auto',
-                onTap: () {
-                  _preferences.setSpeechLanguage('auto');
-                  Navigator.pop(ctx);
-                },
-              ),
-            ],
+                const SizedBox(height: 16),
+                _LanguageOptionTile(
+                  title: 'English',
+                  subtitle: 'Standard English dictation & Whisper (en)',
+                  selected: _preferences.speechLanguageCode == 'en',
+                  onTap: () {
+                    _preferences.setSpeechLanguage('en');
+                    Navigator.pop(ctx);
+                  },
+                ),
+                _LanguageOptionTile(
+                  title: 'Telugu (తెలుగు)',
+                  subtitle: 'Pure Telugu speech recognition (te)',
+                  selected: _preferences.speechLanguageCode == 'te',
+                  onTap: () {
+                    _preferences.setSpeechLanguage('te');
+                    Navigator.pop(ctx);
+                  },
+                ),
+                _LanguageOptionTile(
+                  title: 'Telugu & English Mixed',
+                  subtitle: 'Telugu-English conversational speech with technical terms',
+                  selected: _preferences.speechLanguageCode == 'te-en-mixed',
+                  onTap: () {
+                    _preferences.setSpeechLanguage('te-en-mixed');
+                    Navigator.pop(ctx);
+                  },
+                ),
+                _LanguageOptionTile(
+                  title: 'Hindi (हिन्दी)',
+                  subtitle: 'Hindi speech recognition in Devanagari script (hi)',
+                  selected: _preferences.speechLanguageCode == 'hi',
+                  onTap: () {
+                    _preferences.setSpeechLanguage('hi');
+                    Navigator.pop(ctx);
+                  },
+                ),
+                _LanguageOptionTile(
+                  title: 'Auto-detect Language',
+                  subtitle: 'Automatically identifies spoken language per recording',
+                  selected: _preferences.speechLanguageCode == 'auto',
+                  onTap: () {
+                    _preferences.setSpeechLanguage('auto');
+                    Navigator.pop(ctx);
+                  },
+                ),
+              ],
+            ),
           ),
         ),
       ),

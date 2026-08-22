@@ -12,11 +12,24 @@ import '../../services/ai_categorization_engine.dart' as legacy;
 
 /// Native MLX-backed multilingual text generation provider for iOS.
 class QwenLlamaProvider implements TextGenerationProvider {
-  QwenLlamaProvider._();
+  QwenLlamaProvider._() {
+    _channel.setMethodCallHandler(_handleNativeCall);
+  }
   static final QwenLlamaProvider instance = QwenLlamaProvider._();
 
   bool _isLoaded = false;
-  static const _channel = MethodChannel('notechoes/mlx_text_generation');
+  static const _channel = MethodChannel('noteechoes/mlx_text_generation');
+  final _progressController = StreamController<Map<String, dynamic>>.broadcast();
+
+  Stream<Map<String, dynamic>> get progressStream => _progressController.stream;
+
+  Future<void> _handleNativeCall(MethodCall call) async {
+    if (call.method == 'onMLXDownloadProgress') {
+      if (call.arguments is Map) {
+        _progressController.add(Map<String, dynamic>.from(call.arguments as Map));
+      }
+    }
+  }
 
   @override
   String get displayName => 'Qwen3-0.6B MLX 4-bit';

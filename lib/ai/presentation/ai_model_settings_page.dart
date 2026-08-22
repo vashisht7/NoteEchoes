@@ -4,13 +4,13 @@
 
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../config/ai_runtime_config.dart';
 import '../infrastructure/qwen_llama_provider.dart';
 import '../infrastructure/model_availability_service.dart';
 import '../infrastructure/e5_embedding_service.dart';
 import '../infrastructure/semantic_knowledge_service.dart';
+import '../infrastructure/offline_speech_bridge.dart';
 import '../../services/note_service.dart';
 
 class AiModelSettingsPage extends StatefulWidget {
@@ -29,12 +29,14 @@ class _AiModelSettingsPageState extends State<AiModelSettingsPage>
   final _models = ModelAvailabilityService.instance;
   final _embedder = E5EmbeddingService.instance;
   final _semantic = SemanticKnowledgeService.instance;
+  final _speechBridge = OfflineSpeechBridge.instance;
 
   // Live state tracking for models
   bool _qwenDownloading = false;
   double _qwenProgress = 0.0;
   String _qwenStatusText = '';
-  static const _speechChannel = MethodChannel('noteechoes/offline_speech');
+  StreamSubscription<WhisperDownloadProgress>? _whisperProgressSub;
+  StreamSubscription<Map<String, dynamic>>? _qwenProgressSub;
   bool _whisperInstalled = false;
   bool _whisperDownloading = false;
   double _whisperProgress = 0.0;
@@ -61,22 +63,33 @@ class _AiModelSettingsPageState extends State<AiModelSettingsPage>
   }
 
   void _setupSpeechChannelListener() {
-    _speechChannel.setMethodCallHandler((call) async {
-      if (call.method == 'onWhisperDownloadProgress') {
-        final args = call.arguments as Map<Object?, Object?>?;
-        if (args != null && mounted) {
-          setState(() {
-            _whisperDownloading = true;
-            _whisperProgress = (args['progress'] as num?)?.toDouble() ?? _whisperProgress;
-            _whisperStatusText = (args['statusText'] as String?) ?? _whisperStatusText;
-          });
-        }
+    _whisperProgressSub?.cancel();
+    _whisperProgressSub = _speechBridge.progressStream.listen((event) {
+      if (mounted) {
+        setState(() {
+          _whisperDownloading = true;
+          _whisperProgress = event.progress;
+          _whisperStatusText = event.statusText;
+        });
+      }
+    });
+
+    _qwenProgressSub?.cancel();
+    _qwenProgressSub = QwenLlamaProvider.instance.progressStream.listen((event) {
+      if (mounted) {
+        setState(() {
+          _qwenDownloading = true;
+          _qwenProgress = (event['progress'] as num?)?.toDouble() ?? _qwenProgress;
+          _qwenStatusText = (event['statusText'] as String?) ?? _qwenStatusText;
+        });
       }
     });
   }
 
   @override
   void dispose() {
+    _whisperProgressSub?.cancel();
+    _qwenProgressSub?.cancel();
     _embedder.removeListener(_onEmbeddingProgress);
     _semantic.removeListener(_onEmbeddingProgress);
     _fadeCtrl.dispose();
@@ -152,8 +165,8 @@ class _AiModelSettingsPageState extends State<AiModelSettingsPage>
             _ModelCard(
               name: 'Whisper Base Multilingual',
               description:
-                  'Core ML speech recognition for complete offline recordings. '
-                  'Optimized for Telugu, English and Hindi voice notes.',
+                  'Multilingual Whisper Base; accuracy varies by language and audio quality. '
+                  'Recognizes Telugu, English, Hindi and code-mixed speech fully on-device.',
               size: '147 MB download',
               languages: ['Telugu', 'English', 'Hindi', 'Multilingual (Telugu & English Mixed)'],
               isInstalled: _whisperInstalled,
@@ -294,32 +307,22 @@ class _AiModelSettingsPageState extends State<AiModelSettingsPage>
           _whisperStatusText = 'Connecting to Hugging Face model repository…';
         });
         try {
-          await _speechChannel.invokeMethod<bool>('downloadWhisperBase');
-          // WhisperKit may need a moment to persist its model folder path.
-          // Poll whisperStatus up to 8 times (≈ 4 seconds) until installed=true.
-          bool installed = false;
-          for (int attempt = 0; attempt < 8; attempt++) {
-            await Future<void>.delayed(const Duration(milliseconds: 500));
-            final status = await _speechChannel
-                .invokeMapMethod<Object?, Object?>('whisperStatus');
-            if (status != null && status['installed'] == true) {
-              installed = true;
-              break;
-            }
-          }
+          await _speechBridge.downloadWhisperBase();
           if (!mounted) return;
           await _syncModelStatus();
+          final isReady = _models.whisper.isReady;
           setState(() {
             _whisperDownloading = false;
-            _whisperProgress = 1.0;
+            _whisperProgress = isReady ? 1.0 : 0.0;
             _whisperStatusText = '';
-            if (installed) _whisperInstalled = true;
+            _whisperInstalled = isReady;
           });
-          _showToast(installed
+          _showToast(isReady
               ? 'Whisper Multilingual is ready! Telugu, English & mixed speech enabled.'
-              : 'Download completed — tap to verify model.');
+              : 'Download completed — verified status: ${_models.whisper.reason.isNotEmpty ? _models.whisper.reason : "Ready"}');
         } catch (error) {
           if (!mounted) return;
+          await _syncModelStatus();
           setState(() {
             _whisperDownloading = false;
             _whisperProgress = 0;
@@ -329,6 +332,36 @@ class _AiModelSettingsPageState extends State<AiModelSettingsPage>
         }
       },
     );
+  }
+
+  void _repairWhisper() async {
+    setState(() {
+      _whisperDownloading = true;
+      _whisperProgress = 0.05;
+      _whisperStatusText = 'Repairing Whisper installation…';
+    });
+    try {
+      await _speechBridge.repairWhisperBase();
+      if (!mounted) return;
+      await _syncModelStatus();
+      final isReady = _models.whisper.isReady;
+      setState(() {
+        _whisperDownloading = false;
+        _whisperProgress = isReady ? 1.0 : 0.0;
+        _whisperStatusText = '';
+        _whisperInstalled = isReady;
+      });
+      _showToast(isReady ? 'Whisper repaired and ready!' : 'Repair finished.');
+    } catch (e) {
+      if (!mounted) return;
+      await _syncModelStatus();
+      setState(() {
+        _whisperDownloading = false;
+        _whisperProgress = 0;
+        _whisperStatusText = '';
+      });
+      _showToast('Whisper repair failed: $e');
+    }
   }
 
   Future<void> _disableWhisper() async {

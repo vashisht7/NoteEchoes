@@ -35,6 +35,11 @@ import PDFKit
                 withId: "noteechoes/pdf_view"
             )
         }
+
+        if let mlxRegistrar = registry.registrar(forPlugin: "NoteEchoesMLX") {
+            MLXTextGenerationChannelService.shared.register(with: mlxRegistrar.messenger())
+            OfflineSpeechService.shared.register(with: mlxRegistrar.messenger())
+        }
     }
 }
 

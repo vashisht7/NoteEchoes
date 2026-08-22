@@ -229,6 +229,113 @@ class TopicMembershipsTable extends Table {
   Set<Column> get primaryKey => {clusterId, noteId};
 }
 
+class NoteInterpretationsTable extends Table {
+  @override
+  String get tableName => 'note_interpretations';
+
+  TextColumn get noteId => text()();
+  IntColumn get schemaVersion => integer().withDefault(const Constant(1))();
+  TextColumn get rawTranscript => text()();
+  TextColumn get normalizedText => text()();
+  TextColumn get primaryLanguage => text()();
+  TextColumn get mixedLanguagesJson => text().withDefault(const Constant('[]'))();
+  TextColumn get intentsJson => text().withDefault(const Constant('[]'))();
+  TextColumn get entitiesJson => text().withDefault(const Constant('[]'))();
+  TextColumn get projectCandidatesJson => text().withDefault(const Constant('[]'))();
+  TextColumn get agentPromptJson => text().nullable()();
+  TextColumn get provenanceJson => text()();
+  IntColumn get createdAt => integer()();
+  IntColumn get updatedAt => integer()();
+
+  @override
+  Set<Column> get primaryKey => {noteId};
+}
+
+class KnownProjectsTable extends Table {
+  @override
+  String get tableName => 'known_projects';
+
+  TextColumn get id => text()();
+  TextColumn get name => text()();
+  TextColumn get normalizedName => text()();
+  TextColumn get aliasesJson => text().withDefault(const Constant('[]'))();
+  TextColumn get description => text().nullable()();
+  IntColumn get lastReferencedAt => integer()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+class KnownApplicationsTable extends Table {
+  @override
+  String get tableName => 'known_applications';
+
+  TextColumn get id => text()();
+  TextColumn get name => text()();
+  TextColumn get bundleId => text().nullable()();
+  TextColumn get aliasesJson => text().withDefault(const Constant('[]'))();
+  TextColumn get description => text().nullable()();
+  IntColumn get lastReferencedAt => integer()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+class DraftCommunicationsTable extends Table {
+  @override
+  String get tableName => 'draft_communications';
+
+  TextColumn get id => text()();
+  TextColumn get noteId => text()();
+  TextColumn get type => text()(); // 'email' or 'message'
+  TextColumn get recipient => text().nullable()();
+  TextColumn get subject => text().nullable()();
+  TextColumn get body => text()();
+  TextColumn get resolvedChannel => text().nullable()();
+  TextColumn get status => text().withDefault(const Constant('draft'))(); // 'draft', 'confirmed', 'sent', 'dismissed'
+  IntColumn get createdAt => integer()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+class AgentPromptDraftsTable extends Table {
+  @override
+  String get tableName => 'agent_prompt_drafts';
+
+  TextColumn get id => text()();
+  TextColumn get noteId => text()();
+  TextColumn get goal => text()();
+  TextColumn get context => text()();
+  TextColumn get requirementsJson => text().withDefault(const Constant('[]'))();
+  TextColumn get constraintsJson => text().withDefault(const Constant('[]'))();
+  TextColumn get acceptanceCriteriaJson => text().withDefault(const Constant('[]'))();
+  TextColumn get relevantFilesJson => text().withDefault(const Constant('[]'))();
+  TextColumn get nonGoalsJson => text().withDefault(const Constant('[]'))();
+  TextColumn get openQuestionsJson => text().withDefault(const Constant('[]'))();
+  RealColumn get confidence => real()();
+  TextColumn get status => text().withDefault(const Constant('draft'))(); // 'draft', 'copied', 'dismissed'
+  IntColumn get createdAt => integer()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+class InterpretationFeedbackTable extends Table {
+  @override
+  String get tableName => 'interpretation_feedback';
+
+  TextColumn get id => text()();
+  TextColumn get noteId => text()();
+  TextColumn get correctedField => text()();
+  TextColumn get originalValue => text().nullable()();
+  TextColumn get correctedValue => text()();
+  IntColumn get createdAt => integer()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 // ── Database class ────────────────────────────────────────────────────────────
 
 @DriftDatabase(
@@ -245,6 +352,12 @@ class TopicMembershipsTable extends Table {
     NoteRelationshipsTable,
     TopicClustersTable,
     TopicMembershipsTable,
+    NoteInterpretationsTable,
+    KnownProjectsTable,
+    KnownApplicationsTable,
+    DraftCommunicationsTable,
+    AgentPromptDraftsTable,
+    InterpretationFeedbackTable,
   ],
 )
 class AiDatabase extends _$AiDatabase {
@@ -252,7 +365,7 @@ class AiDatabase extends _$AiDatabase {
   AiDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -266,6 +379,14 @@ class AiDatabase extends _$AiDatabase {
         await m.createTable(noteRelationshipsTable);
         await m.createTable(topicClustersTable);
         await m.createTable(topicMembershipsTable);
+      }
+      if (from < 3) {
+        await m.createTable(noteInterpretationsTable);
+        await m.createTable(knownProjectsTable);
+        await m.createTable(knownApplicationsTable);
+        await m.createTable(draftCommunicationsTable);
+        await m.createTable(agentPromptDraftsTable);
+        await m.createTable(interpretationFeedbackTable);
       }
     },
   );
@@ -615,6 +736,52 @@ class AiDatabase extends _$AiDatabase {
     final row = await getModelInstallation(modelId);
     return row?.expectedSha256;
   }
+
+  // ── Note interpretations ──────────────────────────────────────
+
+  Future<NoteInterpretationsTableData?> getInterpretationForNote(String noteId) =>
+      (select(noteInterpretationsTable)..where((t) => t.noteId.equals(noteId)))
+          .getSingleOrNull();
+
+  Future<void> upsertInterpretation(NoteInterpretationsTableCompanion data) =>
+      into(noteInterpretationsTable).insertOnConflictUpdate(data);
+
+  // ── Known projects & applications ─────────────────────────────
+
+  Future<List<KnownProjectsTableData>> getAllKnownProjects() =>
+      select(knownProjectsTable).get();
+
+  Future<void> upsertKnownProject(KnownProjectsTableCompanion project) =>
+      into(knownProjectsTable).insertOnConflictUpdate(project);
+
+  Future<List<KnownApplicationsTableData>> getAllKnownApplications() =>
+      select(knownApplicationsTable).get();
+
+  Future<void> upsertKnownApplication(KnownApplicationsTableCompanion app) =>
+      into(knownApplicationsTable).insertOnConflictUpdate(app);
+
+  // ── Draft communications & agent prompts ──────────────────────
+
+  Future<List<DraftCommunicationsTableData>> getDraftCommunicationsForNote(
+    String noteId,
+  ) =>
+      (select(draftCommunicationsTable)..where((t) => t.noteId.equals(noteId)))
+          .get();
+
+  Future<void> upsertDraftCommunication(DraftCommunicationsTableCompanion draft) =>
+      into(draftCommunicationsTable).insertOnConflictUpdate(draft);
+
+  Future<AgentPromptDraftsTableData?> getAgentPromptDraftForNote(String noteId) =>
+      (select(agentPromptDraftsTable)..where((t) => t.noteId.equals(noteId)))
+          .getSingleOrNull();
+
+  Future<void> upsertAgentPromptDraft(AgentPromptDraftsTableCompanion prompt) =>
+      into(agentPromptDraftsTable).insertOnConflictUpdate(prompt);
+
+  Future<void> insertInterpretationFeedback(
+    InterpretationFeedbackTableCompanion feedback,
+  ) =>
+      into(interpretationFeedbackTable).insert(feedback);
 }
 
 // ── Connection factory ────────────────────────────────────────────────────────

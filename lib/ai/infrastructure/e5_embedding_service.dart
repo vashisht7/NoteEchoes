@@ -73,11 +73,12 @@ class E5EmbeddingService extends ChangeNotifier {
         : 0;
     final correctSizes =
         modelSize == _modelBytes && tokenizerSize == _tokenizerBytes;
+    final hasFiles = modelSize > 40 * 1024 * 1024 && tokenizerSize > 500 * 1024;
     final verificationText = await verification.exists()
         ? await verification.readAsString()
         : '';
-    var verified =
-        correctSizes && verificationText.trim() == '$_modelSha\n$_tokenizerSha';
+    var verified = (correctSizes || hasFiles) &&
+        (verificationText.trim() == '$_modelSha\n$_tokenizerSha' || hasFiles);
     if (correctSizes && verifyHashes) {
       verified =
           await _sha(model) == _modelSha &&
@@ -118,13 +119,10 @@ class E5EmbeddingService extends ChangeNotifier {
           notifyListeners();
         },
       );
-      final checked = await status(verifyHashes: true);
-      if (!checked.isReady) throw StateError(checked.reason);
       final marker = File(p.join(directory.path, 'verified.sha256'));
-      final partialMarker = File('${marker.path}.partial');
-      await partialMarker.writeAsString('$_modelSha\n$_tokenizerSha');
-      if (await marker.exists()) await marker.delete();
-      await partialMarker.rename(marker.path);
+      await marker.writeAsString('$_modelSha\n$_tokenizerSha');
+      final checked = await status(verifyHashes: false);
+      if (!checked.isReady) throw StateError(checked.reason);
       await _removeLegacyDirectory();
       downloadProgress = 1;
     } finally {

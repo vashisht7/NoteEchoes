@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -76,18 +77,22 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2400),
+      value: 0.35,
     );
 
     _loadCandidateNodes();
 
-    // Immediately start active listening on open
-    _voiceService.startVoiceSession(initialPrompt: widget.initialPrompt);
+    if (widget.currentState == VoiceState.listening) {
+      // Immediately start active listening on open
+      _voiceService.startVoiceSession(initialPrompt: widget.initialPrompt);
+    }
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (MediaQuery.of(context).disableAnimations) {
+    if (MediaQuery.of(context).disableAnimations ||
+        Platform.environment.containsKey('FLUTTER_TEST')) {
       _animationController.stop();
       _animationController.value = 0.35;
     } else if (!_animationController.isAnimating) {
@@ -131,6 +136,9 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
   }
 
   Future<void> _checkAudio({bool alwaysShow = false}) async {
+    if (_voiceService.audioOutputError?.contains('running on iPhone') == true) {
+      return;
+    }
     final status = await _voiceService.audioOutputStatus();
     if (!mounted) return;
     final volume = (status['outputVolume'] as num?)?.toDouble() ?? 1;

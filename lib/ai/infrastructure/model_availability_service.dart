@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../config/ai_feature_flags.dart';
 import 'e5_embedding_service.dart';
+import 'offline_speech_bridge.dart';
 
 enum ModelHealth { checking, missing, ready, needsRepair, unavailable }
 
@@ -13,6 +14,9 @@ class LocalModelStatus {
   final int sizeBytes;
   final String localPath;
   final String reason;
+  final String? reasonCode;
+  final String? sdkVersion;
+  final List<String> missingComponents;
 
   const LocalModelStatus({
     required this.id,
@@ -20,13 +24,19 @@ class LocalModelStatus {
     this.sizeBytes = 0,
     this.localPath = '',
     this.reason = '',
+    this.reasonCode,
+    this.sdkVersion,
+    this.missingComponents = const [],
   });
 
   const LocalModelStatus.checking(this.id)
     : health = ModelHealth.checking,
       sizeBytes = 0,
       localPath = '',
-      reason = '';
+      reason = '',
+      reasonCode = null,
+      sdkVersion = null,
+      missingComponents = const [];
 
   bool get isReady => health == ModelHealth.ready;
   bool get hasFiles => sizeBytes > 0;
@@ -34,16 +44,38 @@ class LocalModelStatus {
   factory LocalModelStatus.fromNative(String id, Map<Object?, Object?> value) {
     final installed = value['installed'] == true;
     final verified = value['verified'] == true;
+    final state = value['state'] as String? ?? '';
+    final isReady = verified || state == 'ready' || state == 'downloaded';
     return LocalModelStatus(
       id: id,
-      health: verified
+      health: isReady
           ? ModelHealth.ready
-          : installed
+          : (installed || state == 'needsRepair' || state == 'partial')
           ? ModelHealth.needsRepair
-          : ModelHealth.missing,
+          : (state == 'failed' ? ModelHealth.needsRepair : ModelHealth.missing),
       sizeBytes: (value['sizeBytes'] as num?)?.toInt() ?? 0,
       localPath: value['path'] as String? ?? '',
-      reason: value['reason'] as String? ?? '',
+      reason: value['reason'] as String? ?? (value['error_message'] as String? ?? ''),
+      reasonCode: value['error_code'] as String?,
+      sdkVersion: value['sdkVersion'] as String?,
+      missingComponents: (value['missingComponents'] as List?)?.map((e) => e.toString()).toList() ?? const [],
+    );
+  }
+
+  factory LocalModelStatus.fromWhisperDetails(WhisperModelDetails details) {
+    return LocalModelStatus(
+      id: 'whisper-base',
+      health: details.isReady
+          ? ModelHealth.ready
+          : (details.needsRepair || details.state == 'failed')
+          ? ModelHealth.needsRepair
+          : ModelHealth.missing,
+      sizeBytes: details.sizeBytes,
+      localPath: details.relativePath,
+      reason: details.reason ?? '',
+      reasonCode: details.reasonCode,
+      sdkVersion: details.sdkVersion,
+      missingComponents: details.missingComponents,
     );
   }
 }
@@ -54,8 +86,7 @@ class ModelAvailabilityService extends ChangeNotifier {
   ModelAvailabilityService._();
   static final instance = ModelAvailabilityService._();
 
-  static const _mlxChannel = MethodChannel('notechoes/mlx_text_generation');
-  static const _speechChannel = MethodChannel('notechoes/offline_speech');
+  static const _mlxChannel = MethodChannel('noteechoes/mlx_text_generation');
 
   LocalModelStatus qwen = const LocalModelStatus.checking('qwen3-0.6b');
   LocalModelStatus whisper = const LocalModelStatus.checking('whisper-base');
@@ -77,7 +108,8 @@ class ModelAvailabilityService extends ChangeNotifier {
     notifyListeners();
     try {
       qwen = await _readStatus(_mlxChannel, 'status', qwen.id);
-      whisper = await _readStatus(_speechChannel, 'whisperStatus', whisper.id);
+      final whisperDetails = await OfflineSpeechBridge.instance.getWhisperStatus();
+      whisper = LocalModelStatus.fromWhisperDetails(whisperDetails);
       embedding = await E5EmbeddingService.instance.status();
       await _synchronizeFeatureFlags();
     } finally {
@@ -137,7 +169,7 @@ class ModelAvailabilityService extends ChangeNotifier {
   }
 
   Future<void> removeWhisper() async {
-    await _speechChannel.invokeMethod<Object?>('deleteWhisperBase');
+    await OfflineSpeechBridge.instance.deleteWhisperBase();
     await refresh();
   }
 

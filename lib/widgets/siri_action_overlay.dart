@@ -8,6 +8,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import '../models/note_model.dart';
+import '../ai/domain/ai_models.dart';
+import '../ai/infrastructure/offline_speech_bridge.dart';
 import '../services/ai_categorization_engine.dart';
 import '../services/note_service.dart';
 import '../theme/app_colors.dart';
@@ -238,13 +240,14 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
     // Verify audio transcription with offline/multilingual Whisper if available
     if (recordedPath != null && await File(recordedPath).exists()) {
       try {
-        final completeTranscript = await _offlineSpeechChannel
-            .invokeMethod<String>('transcribeAudioFile', {
-              'path': recordedPath,
-              'language': AppPreferences.instance.speechLanguageCode,
-            });
-        if (completeTranscript != null && completeTranscript.trim().isNotEmpty) {
-          cleanText = completeTranscript.trim();
+        final langCode = AppPreferences.instance.speechLanguageCode;
+        final audioLang = AudioLanguageExt.fromBcp47(langCode);
+        final provenance = await OfflineSpeechBridge.instance.transcribeAudioFile(
+          audioPath: recordedPath,
+          language: audioLang,
+        );
+        if (provenance.text.trim().isNotEmpty) {
+          cleanText = provenance.text.trim();
         }
       } catch (error) {
         debugPrint('Full-file transcription fallback to live text: $error');

@@ -6926,6 +6926,3491 @@ class TopicMembershipsTableCompanion
   }
 }
 
+class $NoteInterpretationsTableTable extends NoteInterpretationsTable
+    with
+        TableInfo<
+          $NoteInterpretationsTableTable,
+          NoteInterpretationsTableData
+        > {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $NoteInterpretationsTableTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _noteIdMeta = const VerificationMeta('noteId');
+  @override
+  late final GeneratedColumn<String> noteId = GeneratedColumn<String>(
+    'note_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _schemaVersionMeta = const VerificationMeta(
+    'schemaVersion',
+  );
+  @override
+  late final GeneratedColumn<int> schemaVersion = GeneratedColumn<int>(
+    'schema_version',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
+  static const VerificationMeta _rawTranscriptMeta = const VerificationMeta(
+    'rawTranscript',
+  );
+  @override
+  late final GeneratedColumn<String> rawTranscript = GeneratedColumn<String>(
+    'raw_transcript',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _normalizedTextMeta = const VerificationMeta(
+    'normalizedText',
+  );
+  @override
+  late final GeneratedColumn<String> normalizedText = GeneratedColumn<String>(
+    'normalized_text',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _primaryLanguageMeta = const VerificationMeta(
+    'primaryLanguage',
+  );
+  @override
+  late final GeneratedColumn<String> primaryLanguage = GeneratedColumn<String>(
+    'primary_language',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _mixedLanguagesJsonMeta =
+      const VerificationMeta('mixedLanguagesJson');
+  @override
+  late final GeneratedColumn<String> mixedLanguagesJson =
+      GeneratedColumn<String>(
+        'mixed_languages_json',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        defaultValue: const Constant('[]'),
+      );
+  static const VerificationMeta _intentsJsonMeta = const VerificationMeta(
+    'intentsJson',
+  );
+  @override
+  late final GeneratedColumn<String> intentsJson = GeneratedColumn<String>(
+    'intents_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('[]'),
+  );
+  static const VerificationMeta _entitiesJsonMeta = const VerificationMeta(
+    'entitiesJson',
+  );
+  @override
+  late final GeneratedColumn<String> entitiesJson = GeneratedColumn<String>(
+    'entities_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('[]'),
+  );
+  static const VerificationMeta _projectCandidatesJsonMeta =
+      const VerificationMeta('projectCandidatesJson');
+  @override
+  late final GeneratedColumn<String> projectCandidatesJson =
+      GeneratedColumn<String>(
+        'project_candidates_json',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        defaultValue: const Constant('[]'),
+      );
+  static const VerificationMeta _agentPromptJsonMeta = const VerificationMeta(
+    'agentPromptJson',
+  );
+  @override
+  late final GeneratedColumn<String> agentPromptJson = GeneratedColumn<String>(
+    'agent_prompt_json',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _provenanceJsonMeta = const VerificationMeta(
+    'provenanceJson',
+  );
+  @override
+  late final GeneratedColumn<String> provenanceJson = GeneratedColumn<String>(
+    'provenance_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<int> updatedAt = GeneratedColumn<int>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    noteId,
+    schemaVersion,
+    rawTranscript,
+    normalizedText,
+    primaryLanguage,
+    mixedLanguagesJson,
+    intentsJson,
+    entitiesJson,
+    projectCandidatesJson,
+    agentPromptJson,
+    provenanceJson,
+    createdAt,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'note_interpretations';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<NoteInterpretationsTableData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('note_id')) {
+      context.handle(
+        _noteIdMeta,
+        noteId.isAcceptableOrUnknown(data['note_id']!, _noteIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_noteIdMeta);
+    }
+    if (data.containsKey('schema_version')) {
+      context.handle(
+        _schemaVersionMeta,
+        schemaVersion.isAcceptableOrUnknown(
+          data['schema_version']!,
+          _schemaVersionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('raw_transcript')) {
+      context.handle(
+        _rawTranscriptMeta,
+        rawTranscript.isAcceptableOrUnknown(
+          data['raw_transcript']!,
+          _rawTranscriptMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_rawTranscriptMeta);
+    }
+    if (data.containsKey('normalized_text')) {
+      context.handle(
+        _normalizedTextMeta,
+        normalizedText.isAcceptableOrUnknown(
+          data['normalized_text']!,
+          _normalizedTextMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_normalizedTextMeta);
+    }
+    if (data.containsKey('primary_language')) {
+      context.handle(
+        _primaryLanguageMeta,
+        primaryLanguage.isAcceptableOrUnknown(
+          data['primary_language']!,
+          _primaryLanguageMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_primaryLanguageMeta);
+    }
+    if (data.containsKey('mixed_languages_json')) {
+      context.handle(
+        _mixedLanguagesJsonMeta,
+        mixedLanguagesJson.isAcceptableOrUnknown(
+          data['mixed_languages_json']!,
+          _mixedLanguagesJsonMeta,
+        ),
+      );
+    }
+    if (data.containsKey('intents_json')) {
+      context.handle(
+        _intentsJsonMeta,
+        intentsJson.isAcceptableOrUnknown(
+          data['intents_json']!,
+          _intentsJsonMeta,
+        ),
+      );
+    }
+    if (data.containsKey('entities_json')) {
+      context.handle(
+        _entitiesJsonMeta,
+        entitiesJson.isAcceptableOrUnknown(
+          data['entities_json']!,
+          _entitiesJsonMeta,
+        ),
+      );
+    }
+    if (data.containsKey('project_candidates_json')) {
+      context.handle(
+        _projectCandidatesJsonMeta,
+        projectCandidatesJson.isAcceptableOrUnknown(
+          data['project_candidates_json']!,
+          _projectCandidatesJsonMeta,
+        ),
+      );
+    }
+    if (data.containsKey('agent_prompt_json')) {
+      context.handle(
+        _agentPromptJsonMeta,
+        agentPromptJson.isAcceptableOrUnknown(
+          data['agent_prompt_json']!,
+          _agentPromptJsonMeta,
+        ),
+      );
+    }
+    if (data.containsKey('provenance_json')) {
+      context.handle(
+        _provenanceJsonMeta,
+        provenanceJson.isAcceptableOrUnknown(
+          data['provenance_json']!,
+          _provenanceJsonMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_provenanceJsonMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {noteId};
+  @override
+  NoteInterpretationsTableData map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return NoteInterpretationsTableData(
+      noteId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}note_id'],
+      )!,
+      schemaVersion: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}schema_version'],
+      )!,
+      rawTranscript: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}raw_transcript'],
+      )!,
+      normalizedText: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}normalized_text'],
+      )!,
+      primaryLanguage: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}primary_language'],
+      )!,
+      mixedLanguagesJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}mixed_languages_json'],
+      )!,
+      intentsJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}intents_json'],
+      )!,
+      entitiesJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}entities_json'],
+      )!,
+      projectCandidatesJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}project_candidates_json'],
+      )!,
+      agentPromptJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}agent_prompt_json'],
+      ),
+      provenanceJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}provenance_json'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $NoteInterpretationsTableTable createAlias(String alias) {
+    return $NoteInterpretationsTableTable(attachedDatabase, alias);
+  }
+}
+
+class NoteInterpretationsTableData extends DataClass
+    implements Insertable<NoteInterpretationsTableData> {
+  final String noteId;
+  final int schemaVersion;
+  final String rawTranscript;
+  final String normalizedText;
+  final String primaryLanguage;
+  final String mixedLanguagesJson;
+  final String intentsJson;
+  final String entitiesJson;
+  final String projectCandidatesJson;
+  final String? agentPromptJson;
+  final String provenanceJson;
+  final int createdAt;
+  final int updatedAt;
+  const NoteInterpretationsTableData({
+    required this.noteId,
+    required this.schemaVersion,
+    required this.rawTranscript,
+    required this.normalizedText,
+    required this.primaryLanguage,
+    required this.mixedLanguagesJson,
+    required this.intentsJson,
+    required this.entitiesJson,
+    required this.projectCandidatesJson,
+    this.agentPromptJson,
+    required this.provenanceJson,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['note_id'] = Variable<String>(noteId);
+    map['schema_version'] = Variable<int>(schemaVersion);
+    map['raw_transcript'] = Variable<String>(rawTranscript);
+    map['normalized_text'] = Variable<String>(normalizedText);
+    map['primary_language'] = Variable<String>(primaryLanguage);
+    map['mixed_languages_json'] = Variable<String>(mixedLanguagesJson);
+    map['intents_json'] = Variable<String>(intentsJson);
+    map['entities_json'] = Variable<String>(entitiesJson);
+    map['project_candidates_json'] = Variable<String>(projectCandidatesJson);
+    if (!nullToAbsent || agentPromptJson != null) {
+      map['agent_prompt_json'] = Variable<String>(agentPromptJson);
+    }
+    map['provenance_json'] = Variable<String>(provenanceJson);
+    map['created_at'] = Variable<int>(createdAt);
+    map['updated_at'] = Variable<int>(updatedAt);
+    return map;
+  }
+
+  NoteInterpretationsTableCompanion toCompanion(bool nullToAbsent) {
+    return NoteInterpretationsTableCompanion(
+      noteId: Value(noteId),
+      schemaVersion: Value(schemaVersion),
+      rawTranscript: Value(rawTranscript),
+      normalizedText: Value(normalizedText),
+      primaryLanguage: Value(primaryLanguage),
+      mixedLanguagesJson: Value(mixedLanguagesJson),
+      intentsJson: Value(intentsJson),
+      entitiesJson: Value(entitiesJson),
+      projectCandidatesJson: Value(projectCandidatesJson),
+      agentPromptJson: agentPromptJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(agentPromptJson),
+      provenanceJson: Value(provenanceJson),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory NoteInterpretationsTableData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return NoteInterpretationsTableData(
+      noteId: serializer.fromJson<String>(json['noteId']),
+      schemaVersion: serializer.fromJson<int>(json['schemaVersion']),
+      rawTranscript: serializer.fromJson<String>(json['rawTranscript']),
+      normalizedText: serializer.fromJson<String>(json['normalizedText']),
+      primaryLanguage: serializer.fromJson<String>(json['primaryLanguage']),
+      mixedLanguagesJson: serializer.fromJson<String>(
+        json['mixedLanguagesJson'],
+      ),
+      intentsJson: serializer.fromJson<String>(json['intentsJson']),
+      entitiesJson: serializer.fromJson<String>(json['entitiesJson']),
+      projectCandidatesJson: serializer.fromJson<String>(
+        json['projectCandidatesJson'],
+      ),
+      agentPromptJson: serializer.fromJson<String?>(json['agentPromptJson']),
+      provenanceJson: serializer.fromJson<String>(json['provenanceJson']),
+      createdAt: serializer.fromJson<int>(json['createdAt']),
+      updatedAt: serializer.fromJson<int>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'noteId': serializer.toJson<String>(noteId),
+      'schemaVersion': serializer.toJson<int>(schemaVersion),
+      'rawTranscript': serializer.toJson<String>(rawTranscript),
+      'normalizedText': serializer.toJson<String>(normalizedText),
+      'primaryLanguage': serializer.toJson<String>(primaryLanguage),
+      'mixedLanguagesJson': serializer.toJson<String>(mixedLanguagesJson),
+      'intentsJson': serializer.toJson<String>(intentsJson),
+      'entitiesJson': serializer.toJson<String>(entitiesJson),
+      'projectCandidatesJson': serializer.toJson<String>(projectCandidatesJson),
+      'agentPromptJson': serializer.toJson<String?>(agentPromptJson),
+      'provenanceJson': serializer.toJson<String>(provenanceJson),
+      'createdAt': serializer.toJson<int>(createdAt),
+      'updatedAt': serializer.toJson<int>(updatedAt),
+    };
+  }
+
+  NoteInterpretationsTableData copyWith({
+    String? noteId,
+    int? schemaVersion,
+    String? rawTranscript,
+    String? normalizedText,
+    String? primaryLanguage,
+    String? mixedLanguagesJson,
+    String? intentsJson,
+    String? entitiesJson,
+    String? projectCandidatesJson,
+    Value<String?> agentPromptJson = const Value.absent(),
+    String? provenanceJson,
+    int? createdAt,
+    int? updatedAt,
+  }) => NoteInterpretationsTableData(
+    noteId: noteId ?? this.noteId,
+    schemaVersion: schemaVersion ?? this.schemaVersion,
+    rawTranscript: rawTranscript ?? this.rawTranscript,
+    normalizedText: normalizedText ?? this.normalizedText,
+    primaryLanguage: primaryLanguage ?? this.primaryLanguage,
+    mixedLanguagesJson: mixedLanguagesJson ?? this.mixedLanguagesJson,
+    intentsJson: intentsJson ?? this.intentsJson,
+    entitiesJson: entitiesJson ?? this.entitiesJson,
+    projectCandidatesJson: projectCandidatesJson ?? this.projectCandidatesJson,
+    agentPromptJson: agentPromptJson.present
+        ? agentPromptJson.value
+        : this.agentPromptJson,
+    provenanceJson: provenanceJson ?? this.provenanceJson,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  NoteInterpretationsTableData copyWithCompanion(
+    NoteInterpretationsTableCompanion data,
+  ) {
+    return NoteInterpretationsTableData(
+      noteId: data.noteId.present ? data.noteId.value : this.noteId,
+      schemaVersion: data.schemaVersion.present
+          ? data.schemaVersion.value
+          : this.schemaVersion,
+      rawTranscript: data.rawTranscript.present
+          ? data.rawTranscript.value
+          : this.rawTranscript,
+      normalizedText: data.normalizedText.present
+          ? data.normalizedText.value
+          : this.normalizedText,
+      primaryLanguage: data.primaryLanguage.present
+          ? data.primaryLanguage.value
+          : this.primaryLanguage,
+      mixedLanguagesJson: data.mixedLanguagesJson.present
+          ? data.mixedLanguagesJson.value
+          : this.mixedLanguagesJson,
+      intentsJson: data.intentsJson.present
+          ? data.intentsJson.value
+          : this.intentsJson,
+      entitiesJson: data.entitiesJson.present
+          ? data.entitiesJson.value
+          : this.entitiesJson,
+      projectCandidatesJson: data.projectCandidatesJson.present
+          ? data.projectCandidatesJson.value
+          : this.projectCandidatesJson,
+      agentPromptJson: data.agentPromptJson.present
+          ? data.agentPromptJson.value
+          : this.agentPromptJson,
+      provenanceJson: data.provenanceJson.present
+          ? data.provenanceJson.value
+          : this.provenanceJson,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('NoteInterpretationsTableData(')
+          ..write('noteId: $noteId, ')
+          ..write('schemaVersion: $schemaVersion, ')
+          ..write('rawTranscript: $rawTranscript, ')
+          ..write('normalizedText: $normalizedText, ')
+          ..write('primaryLanguage: $primaryLanguage, ')
+          ..write('mixedLanguagesJson: $mixedLanguagesJson, ')
+          ..write('intentsJson: $intentsJson, ')
+          ..write('entitiesJson: $entitiesJson, ')
+          ..write('projectCandidatesJson: $projectCandidatesJson, ')
+          ..write('agentPromptJson: $agentPromptJson, ')
+          ..write('provenanceJson: $provenanceJson, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    noteId,
+    schemaVersion,
+    rawTranscript,
+    normalizedText,
+    primaryLanguage,
+    mixedLanguagesJson,
+    intentsJson,
+    entitiesJson,
+    projectCandidatesJson,
+    agentPromptJson,
+    provenanceJson,
+    createdAt,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is NoteInterpretationsTableData &&
+          other.noteId == this.noteId &&
+          other.schemaVersion == this.schemaVersion &&
+          other.rawTranscript == this.rawTranscript &&
+          other.normalizedText == this.normalizedText &&
+          other.primaryLanguage == this.primaryLanguage &&
+          other.mixedLanguagesJson == this.mixedLanguagesJson &&
+          other.intentsJson == this.intentsJson &&
+          other.entitiesJson == this.entitiesJson &&
+          other.projectCandidatesJson == this.projectCandidatesJson &&
+          other.agentPromptJson == this.agentPromptJson &&
+          other.provenanceJson == this.provenanceJson &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class NoteInterpretationsTableCompanion
+    extends UpdateCompanion<NoteInterpretationsTableData> {
+  final Value<String> noteId;
+  final Value<int> schemaVersion;
+  final Value<String> rawTranscript;
+  final Value<String> normalizedText;
+  final Value<String> primaryLanguage;
+  final Value<String> mixedLanguagesJson;
+  final Value<String> intentsJson;
+  final Value<String> entitiesJson;
+  final Value<String> projectCandidatesJson;
+  final Value<String?> agentPromptJson;
+  final Value<String> provenanceJson;
+  final Value<int> createdAt;
+  final Value<int> updatedAt;
+  final Value<int> rowid;
+  const NoteInterpretationsTableCompanion({
+    this.noteId = const Value.absent(),
+    this.schemaVersion = const Value.absent(),
+    this.rawTranscript = const Value.absent(),
+    this.normalizedText = const Value.absent(),
+    this.primaryLanguage = const Value.absent(),
+    this.mixedLanguagesJson = const Value.absent(),
+    this.intentsJson = const Value.absent(),
+    this.entitiesJson = const Value.absent(),
+    this.projectCandidatesJson = const Value.absent(),
+    this.agentPromptJson = const Value.absent(),
+    this.provenanceJson = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  NoteInterpretationsTableCompanion.insert({
+    required String noteId,
+    this.schemaVersion = const Value.absent(),
+    required String rawTranscript,
+    required String normalizedText,
+    required String primaryLanguage,
+    this.mixedLanguagesJson = const Value.absent(),
+    this.intentsJson = const Value.absent(),
+    this.entitiesJson = const Value.absent(),
+    this.projectCandidatesJson = const Value.absent(),
+    this.agentPromptJson = const Value.absent(),
+    required String provenanceJson,
+    required int createdAt,
+    required int updatedAt,
+    this.rowid = const Value.absent(),
+  }) : noteId = Value(noteId),
+       rawTranscript = Value(rawTranscript),
+       normalizedText = Value(normalizedText),
+       primaryLanguage = Value(primaryLanguage),
+       provenanceJson = Value(provenanceJson),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<NoteInterpretationsTableData> custom({
+    Expression<String>? noteId,
+    Expression<int>? schemaVersion,
+    Expression<String>? rawTranscript,
+    Expression<String>? normalizedText,
+    Expression<String>? primaryLanguage,
+    Expression<String>? mixedLanguagesJson,
+    Expression<String>? intentsJson,
+    Expression<String>? entitiesJson,
+    Expression<String>? projectCandidatesJson,
+    Expression<String>? agentPromptJson,
+    Expression<String>? provenanceJson,
+    Expression<int>? createdAt,
+    Expression<int>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (noteId != null) 'note_id': noteId,
+      if (schemaVersion != null) 'schema_version': schemaVersion,
+      if (rawTranscript != null) 'raw_transcript': rawTranscript,
+      if (normalizedText != null) 'normalized_text': normalizedText,
+      if (primaryLanguage != null) 'primary_language': primaryLanguage,
+      if (mixedLanguagesJson != null)
+        'mixed_languages_json': mixedLanguagesJson,
+      if (intentsJson != null) 'intents_json': intentsJson,
+      if (entitiesJson != null) 'entities_json': entitiesJson,
+      if (projectCandidatesJson != null)
+        'project_candidates_json': projectCandidatesJson,
+      if (agentPromptJson != null) 'agent_prompt_json': agentPromptJson,
+      if (provenanceJson != null) 'provenance_json': provenanceJson,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  NoteInterpretationsTableCompanion copyWith({
+    Value<String>? noteId,
+    Value<int>? schemaVersion,
+    Value<String>? rawTranscript,
+    Value<String>? normalizedText,
+    Value<String>? primaryLanguage,
+    Value<String>? mixedLanguagesJson,
+    Value<String>? intentsJson,
+    Value<String>? entitiesJson,
+    Value<String>? projectCandidatesJson,
+    Value<String?>? agentPromptJson,
+    Value<String>? provenanceJson,
+    Value<int>? createdAt,
+    Value<int>? updatedAt,
+    Value<int>? rowid,
+  }) {
+    return NoteInterpretationsTableCompanion(
+      noteId: noteId ?? this.noteId,
+      schemaVersion: schemaVersion ?? this.schemaVersion,
+      rawTranscript: rawTranscript ?? this.rawTranscript,
+      normalizedText: normalizedText ?? this.normalizedText,
+      primaryLanguage: primaryLanguage ?? this.primaryLanguage,
+      mixedLanguagesJson: mixedLanguagesJson ?? this.mixedLanguagesJson,
+      intentsJson: intentsJson ?? this.intentsJson,
+      entitiesJson: entitiesJson ?? this.entitiesJson,
+      projectCandidatesJson:
+          projectCandidatesJson ?? this.projectCandidatesJson,
+      agentPromptJson: agentPromptJson ?? this.agentPromptJson,
+      provenanceJson: provenanceJson ?? this.provenanceJson,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (noteId.present) {
+      map['note_id'] = Variable<String>(noteId.value);
+    }
+    if (schemaVersion.present) {
+      map['schema_version'] = Variable<int>(schemaVersion.value);
+    }
+    if (rawTranscript.present) {
+      map['raw_transcript'] = Variable<String>(rawTranscript.value);
+    }
+    if (normalizedText.present) {
+      map['normalized_text'] = Variable<String>(normalizedText.value);
+    }
+    if (primaryLanguage.present) {
+      map['primary_language'] = Variable<String>(primaryLanguage.value);
+    }
+    if (mixedLanguagesJson.present) {
+      map['mixed_languages_json'] = Variable<String>(mixedLanguagesJson.value);
+    }
+    if (intentsJson.present) {
+      map['intents_json'] = Variable<String>(intentsJson.value);
+    }
+    if (entitiesJson.present) {
+      map['entities_json'] = Variable<String>(entitiesJson.value);
+    }
+    if (projectCandidatesJson.present) {
+      map['project_candidates_json'] = Variable<String>(
+        projectCandidatesJson.value,
+      );
+    }
+    if (agentPromptJson.present) {
+      map['agent_prompt_json'] = Variable<String>(agentPromptJson.value);
+    }
+    if (provenanceJson.present) {
+      map['provenance_json'] = Variable<String>(provenanceJson.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<int>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<int>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('NoteInterpretationsTableCompanion(')
+          ..write('noteId: $noteId, ')
+          ..write('schemaVersion: $schemaVersion, ')
+          ..write('rawTranscript: $rawTranscript, ')
+          ..write('normalizedText: $normalizedText, ')
+          ..write('primaryLanguage: $primaryLanguage, ')
+          ..write('mixedLanguagesJson: $mixedLanguagesJson, ')
+          ..write('intentsJson: $intentsJson, ')
+          ..write('entitiesJson: $entitiesJson, ')
+          ..write('projectCandidatesJson: $projectCandidatesJson, ')
+          ..write('agentPromptJson: $agentPromptJson, ')
+          ..write('provenanceJson: $provenanceJson, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $KnownProjectsTableTable extends KnownProjectsTable
+    with TableInfo<$KnownProjectsTableTable, KnownProjectsTableData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $KnownProjectsTableTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _normalizedNameMeta = const VerificationMeta(
+    'normalizedName',
+  );
+  @override
+  late final GeneratedColumn<String> normalizedName = GeneratedColumn<String>(
+    'normalized_name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _aliasesJsonMeta = const VerificationMeta(
+    'aliasesJson',
+  );
+  @override
+  late final GeneratedColumn<String> aliasesJson = GeneratedColumn<String>(
+    'aliases_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('[]'),
+  );
+  static const VerificationMeta _descriptionMeta = const VerificationMeta(
+    'description',
+  );
+  @override
+  late final GeneratedColumn<String> description = GeneratedColumn<String>(
+    'description',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _lastReferencedAtMeta = const VerificationMeta(
+    'lastReferencedAt',
+  );
+  @override
+  late final GeneratedColumn<int> lastReferencedAt = GeneratedColumn<int>(
+    'last_referenced_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    normalizedName,
+    aliasesJson,
+    description,
+    lastReferencedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'known_projects';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<KnownProjectsTableData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('normalized_name')) {
+      context.handle(
+        _normalizedNameMeta,
+        normalizedName.isAcceptableOrUnknown(
+          data['normalized_name']!,
+          _normalizedNameMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_normalizedNameMeta);
+    }
+    if (data.containsKey('aliases_json')) {
+      context.handle(
+        _aliasesJsonMeta,
+        aliasesJson.isAcceptableOrUnknown(
+          data['aliases_json']!,
+          _aliasesJsonMeta,
+        ),
+      );
+    }
+    if (data.containsKey('description')) {
+      context.handle(
+        _descriptionMeta,
+        description.isAcceptableOrUnknown(
+          data['description']!,
+          _descriptionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('last_referenced_at')) {
+      context.handle(
+        _lastReferencedAtMeta,
+        lastReferencedAt.isAcceptableOrUnknown(
+          data['last_referenced_at']!,
+          _lastReferencedAtMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_lastReferencedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  KnownProjectsTableData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return KnownProjectsTableData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      normalizedName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}normalized_name'],
+      )!,
+      aliasesJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}aliases_json'],
+      )!,
+      description: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}description'],
+      ),
+      lastReferencedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}last_referenced_at'],
+      )!,
+    );
+  }
+
+  @override
+  $KnownProjectsTableTable createAlias(String alias) {
+    return $KnownProjectsTableTable(attachedDatabase, alias);
+  }
+}
+
+class KnownProjectsTableData extends DataClass
+    implements Insertable<KnownProjectsTableData> {
+  final String id;
+  final String name;
+  final String normalizedName;
+  final String aliasesJson;
+  final String? description;
+  final int lastReferencedAt;
+  const KnownProjectsTableData({
+    required this.id,
+    required this.name,
+    required this.normalizedName,
+    required this.aliasesJson,
+    this.description,
+    required this.lastReferencedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['name'] = Variable<String>(name);
+    map['normalized_name'] = Variable<String>(normalizedName);
+    map['aliases_json'] = Variable<String>(aliasesJson);
+    if (!nullToAbsent || description != null) {
+      map['description'] = Variable<String>(description);
+    }
+    map['last_referenced_at'] = Variable<int>(lastReferencedAt);
+    return map;
+  }
+
+  KnownProjectsTableCompanion toCompanion(bool nullToAbsent) {
+    return KnownProjectsTableCompanion(
+      id: Value(id),
+      name: Value(name),
+      normalizedName: Value(normalizedName),
+      aliasesJson: Value(aliasesJson),
+      description: description == null && nullToAbsent
+          ? const Value.absent()
+          : Value(description),
+      lastReferencedAt: Value(lastReferencedAt),
+    );
+  }
+
+  factory KnownProjectsTableData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return KnownProjectsTableData(
+      id: serializer.fromJson<String>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      normalizedName: serializer.fromJson<String>(json['normalizedName']),
+      aliasesJson: serializer.fromJson<String>(json['aliasesJson']),
+      description: serializer.fromJson<String?>(json['description']),
+      lastReferencedAt: serializer.fromJson<int>(json['lastReferencedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'name': serializer.toJson<String>(name),
+      'normalizedName': serializer.toJson<String>(normalizedName),
+      'aliasesJson': serializer.toJson<String>(aliasesJson),
+      'description': serializer.toJson<String?>(description),
+      'lastReferencedAt': serializer.toJson<int>(lastReferencedAt),
+    };
+  }
+
+  KnownProjectsTableData copyWith({
+    String? id,
+    String? name,
+    String? normalizedName,
+    String? aliasesJson,
+    Value<String?> description = const Value.absent(),
+    int? lastReferencedAt,
+  }) => KnownProjectsTableData(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    normalizedName: normalizedName ?? this.normalizedName,
+    aliasesJson: aliasesJson ?? this.aliasesJson,
+    description: description.present ? description.value : this.description,
+    lastReferencedAt: lastReferencedAt ?? this.lastReferencedAt,
+  );
+  KnownProjectsTableData copyWithCompanion(KnownProjectsTableCompanion data) {
+    return KnownProjectsTableData(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      normalizedName: data.normalizedName.present
+          ? data.normalizedName.value
+          : this.normalizedName,
+      aliasesJson: data.aliasesJson.present
+          ? data.aliasesJson.value
+          : this.aliasesJson,
+      description: data.description.present
+          ? data.description.value
+          : this.description,
+      lastReferencedAt: data.lastReferencedAt.present
+          ? data.lastReferencedAt.value
+          : this.lastReferencedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('KnownProjectsTableData(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('normalizedName: $normalizedName, ')
+          ..write('aliasesJson: $aliasesJson, ')
+          ..write('description: $description, ')
+          ..write('lastReferencedAt: $lastReferencedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    name,
+    normalizedName,
+    aliasesJson,
+    description,
+    lastReferencedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is KnownProjectsTableData &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.normalizedName == this.normalizedName &&
+          other.aliasesJson == this.aliasesJson &&
+          other.description == this.description &&
+          other.lastReferencedAt == this.lastReferencedAt);
+}
+
+class KnownProjectsTableCompanion
+    extends UpdateCompanion<KnownProjectsTableData> {
+  final Value<String> id;
+  final Value<String> name;
+  final Value<String> normalizedName;
+  final Value<String> aliasesJson;
+  final Value<String?> description;
+  final Value<int> lastReferencedAt;
+  final Value<int> rowid;
+  const KnownProjectsTableCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.normalizedName = const Value.absent(),
+    this.aliasesJson = const Value.absent(),
+    this.description = const Value.absent(),
+    this.lastReferencedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  KnownProjectsTableCompanion.insert({
+    required String id,
+    required String name,
+    required String normalizedName,
+    this.aliasesJson = const Value.absent(),
+    this.description = const Value.absent(),
+    required int lastReferencedAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       name = Value(name),
+       normalizedName = Value(normalizedName),
+       lastReferencedAt = Value(lastReferencedAt);
+  static Insertable<KnownProjectsTableData> custom({
+    Expression<String>? id,
+    Expression<String>? name,
+    Expression<String>? normalizedName,
+    Expression<String>? aliasesJson,
+    Expression<String>? description,
+    Expression<int>? lastReferencedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (normalizedName != null) 'normalized_name': normalizedName,
+      if (aliasesJson != null) 'aliases_json': aliasesJson,
+      if (description != null) 'description': description,
+      if (lastReferencedAt != null) 'last_referenced_at': lastReferencedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  KnownProjectsTableCompanion copyWith({
+    Value<String>? id,
+    Value<String>? name,
+    Value<String>? normalizedName,
+    Value<String>? aliasesJson,
+    Value<String?>? description,
+    Value<int>? lastReferencedAt,
+    Value<int>? rowid,
+  }) {
+    return KnownProjectsTableCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      normalizedName: normalizedName ?? this.normalizedName,
+      aliasesJson: aliasesJson ?? this.aliasesJson,
+      description: description ?? this.description,
+      lastReferencedAt: lastReferencedAt ?? this.lastReferencedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (normalizedName.present) {
+      map['normalized_name'] = Variable<String>(normalizedName.value);
+    }
+    if (aliasesJson.present) {
+      map['aliases_json'] = Variable<String>(aliasesJson.value);
+    }
+    if (description.present) {
+      map['description'] = Variable<String>(description.value);
+    }
+    if (lastReferencedAt.present) {
+      map['last_referenced_at'] = Variable<int>(lastReferencedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('KnownProjectsTableCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('normalizedName: $normalizedName, ')
+          ..write('aliasesJson: $aliasesJson, ')
+          ..write('description: $description, ')
+          ..write('lastReferencedAt: $lastReferencedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $KnownApplicationsTableTable extends KnownApplicationsTable
+    with TableInfo<$KnownApplicationsTableTable, KnownApplicationsTableData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $KnownApplicationsTableTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _bundleIdMeta = const VerificationMeta(
+    'bundleId',
+  );
+  @override
+  late final GeneratedColumn<String> bundleId = GeneratedColumn<String>(
+    'bundle_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _aliasesJsonMeta = const VerificationMeta(
+    'aliasesJson',
+  );
+  @override
+  late final GeneratedColumn<String> aliasesJson = GeneratedColumn<String>(
+    'aliases_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('[]'),
+  );
+  static const VerificationMeta _descriptionMeta = const VerificationMeta(
+    'description',
+  );
+  @override
+  late final GeneratedColumn<String> description = GeneratedColumn<String>(
+    'description',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _lastReferencedAtMeta = const VerificationMeta(
+    'lastReferencedAt',
+  );
+  @override
+  late final GeneratedColumn<int> lastReferencedAt = GeneratedColumn<int>(
+    'last_referenced_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    bundleId,
+    aliasesJson,
+    description,
+    lastReferencedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'known_applications';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<KnownApplicationsTableData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('bundle_id')) {
+      context.handle(
+        _bundleIdMeta,
+        bundleId.isAcceptableOrUnknown(data['bundle_id']!, _bundleIdMeta),
+      );
+    }
+    if (data.containsKey('aliases_json')) {
+      context.handle(
+        _aliasesJsonMeta,
+        aliasesJson.isAcceptableOrUnknown(
+          data['aliases_json']!,
+          _aliasesJsonMeta,
+        ),
+      );
+    }
+    if (data.containsKey('description')) {
+      context.handle(
+        _descriptionMeta,
+        description.isAcceptableOrUnknown(
+          data['description']!,
+          _descriptionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('last_referenced_at')) {
+      context.handle(
+        _lastReferencedAtMeta,
+        lastReferencedAt.isAcceptableOrUnknown(
+          data['last_referenced_at']!,
+          _lastReferencedAtMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_lastReferencedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  KnownApplicationsTableData map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return KnownApplicationsTableData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      bundleId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}bundle_id'],
+      ),
+      aliasesJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}aliases_json'],
+      )!,
+      description: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}description'],
+      ),
+      lastReferencedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}last_referenced_at'],
+      )!,
+    );
+  }
+
+  @override
+  $KnownApplicationsTableTable createAlias(String alias) {
+    return $KnownApplicationsTableTable(attachedDatabase, alias);
+  }
+}
+
+class KnownApplicationsTableData extends DataClass
+    implements Insertable<KnownApplicationsTableData> {
+  final String id;
+  final String name;
+  final String? bundleId;
+  final String aliasesJson;
+  final String? description;
+  final int lastReferencedAt;
+  const KnownApplicationsTableData({
+    required this.id,
+    required this.name,
+    this.bundleId,
+    required this.aliasesJson,
+    this.description,
+    required this.lastReferencedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['name'] = Variable<String>(name);
+    if (!nullToAbsent || bundleId != null) {
+      map['bundle_id'] = Variable<String>(bundleId);
+    }
+    map['aliases_json'] = Variable<String>(aliasesJson);
+    if (!nullToAbsent || description != null) {
+      map['description'] = Variable<String>(description);
+    }
+    map['last_referenced_at'] = Variable<int>(lastReferencedAt);
+    return map;
+  }
+
+  KnownApplicationsTableCompanion toCompanion(bool nullToAbsent) {
+    return KnownApplicationsTableCompanion(
+      id: Value(id),
+      name: Value(name),
+      bundleId: bundleId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(bundleId),
+      aliasesJson: Value(aliasesJson),
+      description: description == null && nullToAbsent
+          ? const Value.absent()
+          : Value(description),
+      lastReferencedAt: Value(lastReferencedAt),
+    );
+  }
+
+  factory KnownApplicationsTableData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return KnownApplicationsTableData(
+      id: serializer.fromJson<String>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      bundleId: serializer.fromJson<String?>(json['bundleId']),
+      aliasesJson: serializer.fromJson<String>(json['aliasesJson']),
+      description: serializer.fromJson<String?>(json['description']),
+      lastReferencedAt: serializer.fromJson<int>(json['lastReferencedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'name': serializer.toJson<String>(name),
+      'bundleId': serializer.toJson<String?>(bundleId),
+      'aliasesJson': serializer.toJson<String>(aliasesJson),
+      'description': serializer.toJson<String?>(description),
+      'lastReferencedAt': serializer.toJson<int>(lastReferencedAt),
+    };
+  }
+
+  KnownApplicationsTableData copyWith({
+    String? id,
+    String? name,
+    Value<String?> bundleId = const Value.absent(),
+    String? aliasesJson,
+    Value<String?> description = const Value.absent(),
+    int? lastReferencedAt,
+  }) => KnownApplicationsTableData(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    bundleId: bundleId.present ? bundleId.value : this.bundleId,
+    aliasesJson: aliasesJson ?? this.aliasesJson,
+    description: description.present ? description.value : this.description,
+    lastReferencedAt: lastReferencedAt ?? this.lastReferencedAt,
+  );
+  KnownApplicationsTableData copyWithCompanion(
+    KnownApplicationsTableCompanion data,
+  ) {
+    return KnownApplicationsTableData(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      bundleId: data.bundleId.present ? data.bundleId.value : this.bundleId,
+      aliasesJson: data.aliasesJson.present
+          ? data.aliasesJson.value
+          : this.aliasesJson,
+      description: data.description.present
+          ? data.description.value
+          : this.description,
+      lastReferencedAt: data.lastReferencedAt.present
+          ? data.lastReferencedAt.value
+          : this.lastReferencedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('KnownApplicationsTableData(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('bundleId: $bundleId, ')
+          ..write('aliasesJson: $aliasesJson, ')
+          ..write('description: $description, ')
+          ..write('lastReferencedAt: $lastReferencedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    name,
+    bundleId,
+    aliasesJson,
+    description,
+    lastReferencedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is KnownApplicationsTableData &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.bundleId == this.bundleId &&
+          other.aliasesJson == this.aliasesJson &&
+          other.description == this.description &&
+          other.lastReferencedAt == this.lastReferencedAt);
+}
+
+class KnownApplicationsTableCompanion
+    extends UpdateCompanion<KnownApplicationsTableData> {
+  final Value<String> id;
+  final Value<String> name;
+  final Value<String?> bundleId;
+  final Value<String> aliasesJson;
+  final Value<String?> description;
+  final Value<int> lastReferencedAt;
+  final Value<int> rowid;
+  const KnownApplicationsTableCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.bundleId = const Value.absent(),
+    this.aliasesJson = const Value.absent(),
+    this.description = const Value.absent(),
+    this.lastReferencedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  KnownApplicationsTableCompanion.insert({
+    required String id,
+    required String name,
+    this.bundleId = const Value.absent(),
+    this.aliasesJson = const Value.absent(),
+    this.description = const Value.absent(),
+    required int lastReferencedAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       name = Value(name),
+       lastReferencedAt = Value(lastReferencedAt);
+  static Insertable<KnownApplicationsTableData> custom({
+    Expression<String>? id,
+    Expression<String>? name,
+    Expression<String>? bundleId,
+    Expression<String>? aliasesJson,
+    Expression<String>? description,
+    Expression<int>? lastReferencedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (bundleId != null) 'bundle_id': bundleId,
+      if (aliasesJson != null) 'aliases_json': aliasesJson,
+      if (description != null) 'description': description,
+      if (lastReferencedAt != null) 'last_referenced_at': lastReferencedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  KnownApplicationsTableCompanion copyWith({
+    Value<String>? id,
+    Value<String>? name,
+    Value<String?>? bundleId,
+    Value<String>? aliasesJson,
+    Value<String?>? description,
+    Value<int>? lastReferencedAt,
+    Value<int>? rowid,
+  }) {
+    return KnownApplicationsTableCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      bundleId: bundleId ?? this.bundleId,
+      aliasesJson: aliasesJson ?? this.aliasesJson,
+      description: description ?? this.description,
+      lastReferencedAt: lastReferencedAt ?? this.lastReferencedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (bundleId.present) {
+      map['bundle_id'] = Variable<String>(bundleId.value);
+    }
+    if (aliasesJson.present) {
+      map['aliases_json'] = Variable<String>(aliasesJson.value);
+    }
+    if (description.present) {
+      map['description'] = Variable<String>(description.value);
+    }
+    if (lastReferencedAt.present) {
+      map['last_referenced_at'] = Variable<int>(lastReferencedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('KnownApplicationsTableCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('bundleId: $bundleId, ')
+          ..write('aliasesJson: $aliasesJson, ')
+          ..write('description: $description, ')
+          ..write('lastReferencedAt: $lastReferencedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $DraftCommunicationsTableTable extends DraftCommunicationsTable
+    with
+        TableInfo<
+          $DraftCommunicationsTableTable,
+          DraftCommunicationsTableData
+        > {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $DraftCommunicationsTableTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _noteIdMeta = const VerificationMeta('noteId');
+  @override
+  late final GeneratedColumn<String> noteId = GeneratedColumn<String>(
+    'note_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _typeMeta = const VerificationMeta('type');
+  @override
+  late final GeneratedColumn<String> type = GeneratedColumn<String>(
+    'type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _recipientMeta = const VerificationMeta(
+    'recipient',
+  );
+  @override
+  late final GeneratedColumn<String> recipient = GeneratedColumn<String>(
+    'recipient',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _subjectMeta = const VerificationMeta(
+    'subject',
+  );
+  @override
+  late final GeneratedColumn<String> subject = GeneratedColumn<String>(
+    'subject',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _bodyMeta = const VerificationMeta('body');
+  @override
+  late final GeneratedColumn<String> body = GeneratedColumn<String>(
+    'body',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _resolvedChannelMeta = const VerificationMeta(
+    'resolvedChannel',
+  );
+  @override
+  late final GeneratedColumn<String> resolvedChannel = GeneratedColumn<String>(
+    'resolved_channel',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('draft'),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    noteId,
+    type,
+    recipient,
+    subject,
+    body,
+    resolvedChannel,
+    status,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'draft_communications';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<DraftCommunicationsTableData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('note_id')) {
+      context.handle(
+        _noteIdMeta,
+        noteId.isAcceptableOrUnknown(data['note_id']!, _noteIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_noteIdMeta);
+    }
+    if (data.containsKey('type')) {
+      context.handle(
+        _typeMeta,
+        type.isAcceptableOrUnknown(data['type']!, _typeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_typeMeta);
+    }
+    if (data.containsKey('recipient')) {
+      context.handle(
+        _recipientMeta,
+        recipient.isAcceptableOrUnknown(data['recipient']!, _recipientMeta),
+      );
+    }
+    if (data.containsKey('subject')) {
+      context.handle(
+        _subjectMeta,
+        subject.isAcceptableOrUnknown(data['subject']!, _subjectMeta),
+      );
+    }
+    if (data.containsKey('body')) {
+      context.handle(
+        _bodyMeta,
+        body.isAcceptableOrUnknown(data['body']!, _bodyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_bodyMeta);
+    }
+    if (data.containsKey('resolved_channel')) {
+      context.handle(
+        _resolvedChannelMeta,
+        resolvedChannel.isAcceptableOrUnknown(
+          data['resolved_channel']!,
+          _resolvedChannelMeta,
+        ),
+      );
+    }
+    if (data.containsKey('status')) {
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  DraftCommunicationsTableData map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return DraftCommunicationsTableData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      noteId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}note_id'],
+      )!,
+      type: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}type'],
+      )!,
+      recipient: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}recipient'],
+      ),
+      subject: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}subject'],
+      ),
+      body: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}body'],
+      )!,
+      resolvedChannel: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}resolved_channel'],
+      ),
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}status'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $DraftCommunicationsTableTable createAlias(String alias) {
+    return $DraftCommunicationsTableTable(attachedDatabase, alias);
+  }
+}
+
+class DraftCommunicationsTableData extends DataClass
+    implements Insertable<DraftCommunicationsTableData> {
+  final String id;
+  final String noteId;
+  final String type;
+  final String? recipient;
+  final String? subject;
+  final String body;
+  final String? resolvedChannel;
+  final String status;
+  final int createdAt;
+  const DraftCommunicationsTableData({
+    required this.id,
+    required this.noteId,
+    required this.type,
+    this.recipient,
+    this.subject,
+    required this.body,
+    this.resolvedChannel,
+    required this.status,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['note_id'] = Variable<String>(noteId);
+    map['type'] = Variable<String>(type);
+    if (!nullToAbsent || recipient != null) {
+      map['recipient'] = Variable<String>(recipient);
+    }
+    if (!nullToAbsent || subject != null) {
+      map['subject'] = Variable<String>(subject);
+    }
+    map['body'] = Variable<String>(body);
+    if (!nullToAbsent || resolvedChannel != null) {
+      map['resolved_channel'] = Variable<String>(resolvedChannel);
+    }
+    map['status'] = Variable<String>(status);
+    map['created_at'] = Variable<int>(createdAt);
+    return map;
+  }
+
+  DraftCommunicationsTableCompanion toCompanion(bool nullToAbsent) {
+    return DraftCommunicationsTableCompanion(
+      id: Value(id),
+      noteId: Value(noteId),
+      type: Value(type),
+      recipient: recipient == null && nullToAbsent
+          ? const Value.absent()
+          : Value(recipient),
+      subject: subject == null && nullToAbsent
+          ? const Value.absent()
+          : Value(subject),
+      body: Value(body),
+      resolvedChannel: resolvedChannel == null && nullToAbsent
+          ? const Value.absent()
+          : Value(resolvedChannel),
+      status: Value(status),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory DraftCommunicationsTableData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return DraftCommunicationsTableData(
+      id: serializer.fromJson<String>(json['id']),
+      noteId: serializer.fromJson<String>(json['noteId']),
+      type: serializer.fromJson<String>(json['type']),
+      recipient: serializer.fromJson<String?>(json['recipient']),
+      subject: serializer.fromJson<String?>(json['subject']),
+      body: serializer.fromJson<String>(json['body']),
+      resolvedChannel: serializer.fromJson<String?>(json['resolvedChannel']),
+      status: serializer.fromJson<String>(json['status']),
+      createdAt: serializer.fromJson<int>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'noteId': serializer.toJson<String>(noteId),
+      'type': serializer.toJson<String>(type),
+      'recipient': serializer.toJson<String?>(recipient),
+      'subject': serializer.toJson<String?>(subject),
+      'body': serializer.toJson<String>(body),
+      'resolvedChannel': serializer.toJson<String?>(resolvedChannel),
+      'status': serializer.toJson<String>(status),
+      'createdAt': serializer.toJson<int>(createdAt),
+    };
+  }
+
+  DraftCommunicationsTableData copyWith({
+    String? id,
+    String? noteId,
+    String? type,
+    Value<String?> recipient = const Value.absent(),
+    Value<String?> subject = const Value.absent(),
+    String? body,
+    Value<String?> resolvedChannel = const Value.absent(),
+    String? status,
+    int? createdAt,
+  }) => DraftCommunicationsTableData(
+    id: id ?? this.id,
+    noteId: noteId ?? this.noteId,
+    type: type ?? this.type,
+    recipient: recipient.present ? recipient.value : this.recipient,
+    subject: subject.present ? subject.value : this.subject,
+    body: body ?? this.body,
+    resolvedChannel: resolvedChannel.present
+        ? resolvedChannel.value
+        : this.resolvedChannel,
+    status: status ?? this.status,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  DraftCommunicationsTableData copyWithCompanion(
+    DraftCommunicationsTableCompanion data,
+  ) {
+    return DraftCommunicationsTableData(
+      id: data.id.present ? data.id.value : this.id,
+      noteId: data.noteId.present ? data.noteId.value : this.noteId,
+      type: data.type.present ? data.type.value : this.type,
+      recipient: data.recipient.present ? data.recipient.value : this.recipient,
+      subject: data.subject.present ? data.subject.value : this.subject,
+      body: data.body.present ? data.body.value : this.body,
+      resolvedChannel: data.resolvedChannel.present
+          ? data.resolvedChannel.value
+          : this.resolvedChannel,
+      status: data.status.present ? data.status.value : this.status,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DraftCommunicationsTableData(')
+          ..write('id: $id, ')
+          ..write('noteId: $noteId, ')
+          ..write('type: $type, ')
+          ..write('recipient: $recipient, ')
+          ..write('subject: $subject, ')
+          ..write('body: $body, ')
+          ..write('resolvedChannel: $resolvedChannel, ')
+          ..write('status: $status, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    noteId,
+    type,
+    recipient,
+    subject,
+    body,
+    resolvedChannel,
+    status,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is DraftCommunicationsTableData &&
+          other.id == this.id &&
+          other.noteId == this.noteId &&
+          other.type == this.type &&
+          other.recipient == this.recipient &&
+          other.subject == this.subject &&
+          other.body == this.body &&
+          other.resolvedChannel == this.resolvedChannel &&
+          other.status == this.status &&
+          other.createdAt == this.createdAt);
+}
+
+class DraftCommunicationsTableCompanion
+    extends UpdateCompanion<DraftCommunicationsTableData> {
+  final Value<String> id;
+  final Value<String> noteId;
+  final Value<String> type;
+  final Value<String?> recipient;
+  final Value<String?> subject;
+  final Value<String> body;
+  final Value<String?> resolvedChannel;
+  final Value<String> status;
+  final Value<int> createdAt;
+  final Value<int> rowid;
+  const DraftCommunicationsTableCompanion({
+    this.id = const Value.absent(),
+    this.noteId = const Value.absent(),
+    this.type = const Value.absent(),
+    this.recipient = const Value.absent(),
+    this.subject = const Value.absent(),
+    this.body = const Value.absent(),
+    this.resolvedChannel = const Value.absent(),
+    this.status = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  DraftCommunicationsTableCompanion.insert({
+    required String id,
+    required String noteId,
+    required String type,
+    this.recipient = const Value.absent(),
+    this.subject = const Value.absent(),
+    required String body,
+    this.resolvedChannel = const Value.absent(),
+    this.status = const Value.absent(),
+    required int createdAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       noteId = Value(noteId),
+       type = Value(type),
+       body = Value(body),
+       createdAt = Value(createdAt);
+  static Insertable<DraftCommunicationsTableData> custom({
+    Expression<String>? id,
+    Expression<String>? noteId,
+    Expression<String>? type,
+    Expression<String>? recipient,
+    Expression<String>? subject,
+    Expression<String>? body,
+    Expression<String>? resolvedChannel,
+    Expression<String>? status,
+    Expression<int>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (noteId != null) 'note_id': noteId,
+      if (type != null) 'type': type,
+      if (recipient != null) 'recipient': recipient,
+      if (subject != null) 'subject': subject,
+      if (body != null) 'body': body,
+      if (resolvedChannel != null) 'resolved_channel': resolvedChannel,
+      if (status != null) 'status': status,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  DraftCommunicationsTableCompanion copyWith({
+    Value<String>? id,
+    Value<String>? noteId,
+    Value<String>? type,
+    Value<String?>? recipient,
+    Value<String?>? subject,
+    Value<String>? body,
+    Value<String?>? resolvedChannel,
+    Value<String>? status,
+    Value<int>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return DraftCommunicationsTableCompanion(
+      id: id ?? this.id,
+      noteId: noteId ?? this.noteId,
+      type: type ?? this.type,
+      recipient: recipient ?? this.recipient,
+      subject: subject ?? this.subject,
+      body: body ?? this.body,
+      resolvedChannel: resolvedChannel ?? this.resolvedChannel,
+      status: status ?? this.status,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (noteId.present) {
+      map['note_id'] = Variable<String>(noteId.value);
+    }
+    if (type.present) {
+      map['type'] = Variable<String>(type.value);
+    }
+    if (recipient.present) {
+      map['recipient'] = Variable<String>(recipient.value);
+    }
+    if (subject.present) {
+      map['subject'] = Variable<String>(subject.value);
+    }
+    if (body.present) {
+      map['body'] = Variable<String>(body.value);
+    }
+    if (resolvedChannel.present) {
+      map['resolved_channel'] = Variable<String>(resolvedChannel.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<int>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DraftCommunicationsTableCompanion(')
+          ..write('id: $id, ')
+          ..write('noteId: $noteId, ')
+          ..write('type: $type, ')
+          ..write('recipient: $recipient, ')
+          ..write('subject: $subject, ')
+          ..write('body: $body, ')
+          ..write('resolvedChannel: $resolvedChannel, ')
+          ..write('status: $status, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $AgentPromptDraftsTableTable extends AgentPromptDraftsTable
+    with TableInfo<$AgentPromptDraftsTableTable, AgentPromptDraftsTableData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $AgentPromptDraftsTableTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _noteIdMeta = const VerificationMeta('noteId');
+  @override
+  late final GeneratedColumn<String> noteId = GeneratedColumn<String>(
+    'note_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _goalMeta = const VerificationMeta('goal');
+  @override
+  late final GeneratedColumn<String> goal = GeneratedColumn<String>(
+    'goal',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _contextMeta = const VerificationMeta(
+    'context',
+  );
+  @override
+  late final GeneratedColumn<String> context = GeneratedColumn<String>(
+    'context',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _requirementsJsonMeta = const VerificationMeta(
+    'requirementsJson',
+  );
+  @override
+  late final GeneratedColumn<String> requirementsJson = GeneratedColumn<String>(
+    'requirements_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('[]'),
+  );
+  static const VerificationMeta _constraintsJsonMeta = const VerificationMeta(
+    'constraintsJson',
+  );
+  @override
+  late final GeneratedColumn<String> constraintsJson = GeneratedColumn<String>(
+    'constraints_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('[]'),
+  );
+  static const VerificationMeta _acceptanceCriteriaJsonMeta =
+      const VerificationMeta('acceptanceCriteriaJson');
+  @override
+  late final GeneratedColumn<String> acceptanceCriteriaJson =
+      GeneratedColumn<String>(
+        'acceptance_criteria_json',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        defaultValue: const Constant('[]'),
+      );
+  static const VerificationMeta _relevantFilesJsonMeta = const VerificationMeta(
+    'relevantFilesJson',
+  );
+  @override
+  late final GeneratedColumn<String> relevantFilesJson =
+      GeneratedColumn<String>(
+        'relevant_files_json',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        defaultValue: const Constant('[]'),
+      );
+  static const VerificationMeta _nonGoalsJsonMeta = const VerificationMeta(
+    'nonGoalsJson',
+  );
+  @override
+  late final GeneratedColumn<String> nonGoalsJson = GeneratedColumn<String>(
+    'non_goals_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('[]'),
+  );
+  static const VerificationMeta _openQuestionsJsonMeta = const VerificationMeta(
+    'openQuestionsJson',
+  );
+  @override
+  late final GeneratedColumn<String> openQuestionsJson =
+      GeneratedColumn<String>(
+        'open_questions_json',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        defaultValue: const Constant('[]'),
+      );
+  static const VerificationMeta _confidenceMeta = const VerificationMeta(
+    'confidence',
+  );
+  @override
+  late final GeneratedColumn<double> confidence = GeneratedColumn<double>(
+    'confidence',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('draft'),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    noteId,
+    goal,
+    context,
+    requirementsJson,
+    constraintsJson,
+    acceptanceCriteriaJson,
+    relevantFilesJson,
+    nonGoalsJson,
+    openQuestionsJson,
+    confidence,
+    status,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'agent_prompt_drafts';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<AgentPromptDraftsTableData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('note_id')) {
+      context.handle(
+        _noteIdMeta,
+        noteId.isAcceptableOrUnknown(data['note_id']!, _noteIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_noteIdMeta);
+    }
+    if (data.containsKey('goal')) {
+      context.handle(
+        _goalMeta,
+        goal.isAcceptableOrUnknown(data['goal']!, _goalMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_goalMeta);
+    }
+    if (data.containsKey('context')) {
+      context.handle(
+        _contextMeta,
+        this.context.isAcceptableOrUnknown(data['context']!, _contextMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_contextMeta);
+    }
+    if (data.containsKey('requirements_json')) {
+      context.handle(
+        _requirementsJsonMeta,
+        requirementsJson.isAcceptableOrUnknown(
+          data['requirements_json']!,
+          _requirementsJsonMeta,
+        ),
+      );
+    }
+    if (data.containsKey('constraints_json')) {
+      context.handle(
+        _constraintsJsonMeta,
+        constraintsJson.isAcceptableOrUnknown(
+          data['constraints_json']!,
+          _constraintsJsonMeta,
+        ),
+      );
+    }
+    if (data.containsKey('acceptance_criteria_json')) {
+      context.handle(
+        _acceptanceCriteriaJsonMeta,
+        acceptanceCriteriaJson.isAcceptableOrUnknown(
+          data['acceptance_criteria_json']!,
+          _acceptanceCriteriaJsonMeta,
+        ),
+      );
+    }
+    if (data.containsKey('relevant_files_json')) {
+      context.handle(
+        _relevantFilesJsonMeta,
+        relevantFilesJson.isAcceptableOrUnknown(
+          data['relevant_files_json']!,
+          _relevantFilesJsonMeta,
+        ),
+      );
+    }
+    if (data.containsKey('non_goals_json')) {
+      context.handle(
+        _nonGoalsJsonMeta,
+        nonGoalsJson.isAcceptableOrUnknown(
+          data['non_goals_json']!,
+          _nonGoalsJsonMeta,
+        ),
+      );
+    }
+    if (data.containsKey('open_questions_json')) {
+      context.handle(
+        _openQuestionsJsonMeta,
+        openQuestionsJson.isAcceptableOrUnknown(
+          data['open_questions_json']!,
+          _openQuestionsJsonMeta,
+        ),
+      );
+    }
+    if (data.containsKey('confidence')) {
+      context.handle(
+        _confidenceMeta,
+        confidence.isAcceptableOrUnknown(data['confidence']!, _confidenceMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_confidenceMeta);
+    }
+    if (data.containsKey('status')) {
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  AgentPromptDraftsTableData map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return AgentPromptDraftsTableData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      noteId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}note_id'],
+      )!,
+      goal: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}goal'],
+      )!,
+      context: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}context'],
+      )!,
+      requirementsJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}requirements_json'],
+      )!,
+      constraintsJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}constraints_json'],
+      )!,
+      acceptanceCriteriaJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}acceptance_criteria_json'],
+      )!,
+      relevantFilesJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}relevant_files_json'],
+      )!,
+      nonGoalsJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}non_goals_json'],
+      )!,
+      openQuestionsJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}open_questions_json'],
+      )!,
+      confidence: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}confidence'],
+      )!,
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}status'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $AgentPromptDraftsTableTable createAlias(String alias) {
+    return $AgentPromptDraftsTableTable(attachedDatabase, alias);
+  }
+}
+
+class AgentPromptDraftsTableData extends DataClass
+    implements Insertable<AgentPromptDraftsTableData> {
+  final String id;
+  final String noteId;
+  final String goal;
+  final String context;
+  final String requirementsJson;
+  final String constraintsJson;
+  final String acceptanceCriteriaJson;
+  final String relevantFilesJson;
+  final String nonGoalsJson;
+  final String openQuestionsJson;
+  final double confidence;
+  final String status;
+  final int createdAt;
+  const AgentPromptDraftsTableData({
+    required this.id,
+    required this.noteId,
+    required this.goal,
+    required this.context,
+    required this.requirementsJson,
+    required this.constraintsJson,
+    required this.acceptanceCriteriaJson,
+    required this.relevantFilesJson,
+    required this.nonGoalsJson,
+    required this.openQuestionsJson,
+    required this.confidence,
+    required this.status,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['note_id'] = Variable<String>(noteId);
+    map['goal'] = Variable<String>(goal);
+    map['context'] = Variable<String>(context);
+    map['requirements_json'] = Variable<String>(requirementsJson);
+    map['constraints_json'] = Variable<String>(constraintsJson);
+    map['acceptance_criteria_json'] = Variable<String>(acceptanceCriteriaJson);
+    map['relevant_files_json'] = Variable<String>(relevantFilesJson);
+    map['non_goals_json'] = Variable<String>(nonGoalsJson);
+    map['open_questions_json'] = Variable<String>(openQuestionsJson);
+    map['confidence'] = Variable<double>(confidence);
+    map['status'] = Variable<String>(status);
+    map['created_at'] = Variable<int>(createdAt);
+    return map;
+  }
+
+  AgentPromptDraftsTableCompanion toCompanion(bool nullToAbsent) {
+    return AgentPromptDraftsTableCompanion(
+      id: Value(id),
+      noteId: Value(noteId),
+      goal: Value(goal),
+      context: Value(context),
+      requirementsJson: Value(requirementsJson),
+      constraintsJson: Value(constraintsJson),
+      acceptanceCriteriaJson: Value(acceptanceCriteriaJson),
+      relevantFilesJson: Value(relevantFilesJson),
+      nonGoalsJson: Value(nonGoalsJson),
+      openQuestionsJson: Value(openQuestionsJson),
+      confidence: Value(confidence),
+      status: Value(status),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory AgentPromptDraftsTableData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return AgentPromptDraftsTableData(
+      id: serializer.fromJson<String>(json['id']),
+      noteId: serializer.fromJson<String>(json['noteId']),
+      goal: serializer.fromJson<String>(json['goal']),
+      context: serializer.fromJson<String>(json['context']),
+      requirementsJson: serializer.fromJson<String>(json['requirementsJson']),
+      constraintsJson: serializer.fromJson<String>(json['constraintsJson']),
+      acceptanceCriteriaJson: serializer.fromJson<String>(
+        json['acceptanceCriteriaJson'],
+      ),
+      relevantFilesJson: serializer.fromJson<String>(json['relevantFilesJson']),
+      nonGoalsJson: serializer.fromJson<String>(json['nonGoalsJson']),
+      openQuestionsJson: serializer.fromJson<String>(json['openQuestionsJson']),
+      confidence: serializer.fromJson<double>(json['confidence']),
+      status: serializer.fromJson<String>(json['status']),
+      createdAt: serializer.fromJson<int>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'noteId': serializer.toJson<String>(noteId),
+      'goal': serializer.toJson<String>(goal),
+      'context': serializer.toJson<String>(context),
+      'requirementsJson': serializer.toJson<String>(requirementsJson),
+      'constraintsJson': serializer.toJson<String>(constraintsJson),
+      'acceptanceCriteriaJson': serializer.toJson<String>(
+        acceptanceCriteriaJson,
+      ),
+      'relevantFilesJson': serializer.toJson<String>(relevantFilesJson),
+      'nonGoalsJson': serializer.toJson<String>(nonGoalsJson),
+      'openQuestionsJson': serializer.toJson<String>(openQuestionsJson),
+      'confidence': serializer.toJson<double>(confidence),
+      'status': serializer.toJson<String>(status),
+      'createdAt': serializer.toJson<int>(createdAt),
+    };
+  }
+
+  AgentPromptDraftsTableData copyWith({
+    String? id,
+    String? noteId,
+    String? goal,
+    String? context,
+    String? requirementsJson,
+    String? constraintsJson,
+    String? acceptanceCriteriaJson,
+    String? relevantFilesJson,
+    String? nonGoalsJson,
+    String? openQuestionsJson,
+    double? confidence,
+    String? status,
+    int? createdAt,
+  }) => AgentPromptDraftsTableData(
+    id: id ?? this.id,
+    noteId: noteId ?? this.noteId,
+    goal: goal ?? this.goal,
+    context: context ?? this.context,
+    requirementsJson: requirementsJson ?? this.requirementsJson,
+    constraintsJson: constraintsJson ?? this.constraintsJson,
+    acceptanceCriteriaJson:
+        acceptanceCriteriaJson ?? this.acceptanceCriteriaJson,
+    relevantFilesJson: relevantFilesJson ?? this.relevantFilesJson,
+    nonGoalsJson: nonGoalsJson ?? this.nonGoalsJson,
+    openQuestionsJson: openQuestionsJson ?? this.openQuestionsJson,
+    confidence: confidence ?? this.confidence,
+    status: status ?? this.status,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  AgentPromptDraftsTableData copyWithCompanion(
+    AgentPromptDraftsTableCompanion data,
+  ) {
+    return AgentPromptDraftsTableData(
+      id: data.id.present ? data.id.value : this.id,
+      noteId: data.noteId.present ? data.noteId.value : this.noteId,
+      goal: data.goal.present ? data.goal.value : this.goal,
+      context: data.context.present ? data.context.value : this.context,
+      requirementsJson: data.requirementsJson.present
+          ? data.requirementsJson.value
+          : this.requirementsJson,
+      constraintsJson: data.constraintsJson.present
+          ? data.constraintsJson.value
+          : this.constraintsJson,
+      acceptanceCriteriaJson: data.acceptanceCriteriaJson.present
+          ? data.acceptanceCriteriaJson.value
+          : this.acceptanceCriteriaJson,
+      relevantFilesJson: data.relevantFilesJson.present
+          ? data.relevantFilesJson.value
+          : this.relevantFilesJson,
+      nonGoalsJson: data.nonGoalsJson.present
+          ? data.nonGoalsJson.value
+          : this.nonGoalsJson,
+      openQuestionsJson: data.openQuestionsJson.present
+          ? data.openQuestionsJson.value
+          : this.openQuestionsJson,
+      confidence: data.confidence.present
+          ? data.confidence.value
+          : this.confidence,
+      status: data.status.present ? data.status.value : this.status,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AgentPromptDraftsTableData(')
+          ..write('id: $id, ')
+          ..write('noteId: $noteId, ')
+          ..write('goal: $goal, ')
+          ..write('context: $context, ')
+          ..write('requirementsJson: $requirementsJson, ')
+          ..write('constraintsJson: $constraintsJson, ')
+          ..write('acceptanceCriteriaJson: $acceptanceCriteriaJson, ')
+          ..write('relevantFilesJson: $relevantFilesJson, ')
+          ..write('nonGoalsJson: $nonGoalsJson, ')
+          ..write('openQuestionsJson: $openQuestionsJson, ')
+          ..write('confidence: $confidence, ')
+          ..write('status: $status, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    noteId,
+    goal,
+    context,
+    requirementsJson,
+    constraintsJson,
+    acceptanceCriteriaJson,
+    relevantFilesJson,
+    nonGoalsJson,
+    openQuestionsJson,
+    confidence,
+    status,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is AgentPromptDraftsTableData &&
+          other.id == this.id &&
+          other.noteId == this.noteId &&
+          other.goal == this.goal &&
+          other.context == this.context &&
+          other.requirementsJson == this.requirementsJson &&
+          other.constraintsJson == this.constraintsJson &&
+          other.acceptanceCriteriaJson == this.acceptanceCriteriaJson &&
+          other.relevantFilesJson == this.relevantFilesJson &&
+          other.nonGoalsJson == this.nonGoalsJson &&
+          other.openQuestionsJson == this.openQuestionsJson &&
+          other.confidence == this.confidence &&
+          other.status == this.status &&
+          other.createdAt == this.createdAt);
+}
+
+class AgentPromptDraftsTableCompanion
+    extends UpdateCompanion<AgentPromptDraftsTableData> {
+  final Value<String> id;
+  final Value<String> noteId;
+  final Value<String> goal;
+  final Value<String> context;
+  final Value<String> requirementsJson;
+  final Value<String> constraintsJson;
+  final Value<String> acceptanceCriteriaJson;
+  final Value<String> relevantFilesJson;
+  final Value<String> nonGoalsJson;
+  final Value<String> openQuestionsJson;
+  final Value<double> confidence;
+  final Value<String> status;
+  final Value<int> createdAt;
+  final Value<int> rowid;
+  const AgentPromptDraftsTableCompanion({
+    this.id = const Value.absent(),
+    this.noteId = const Value.absent(),
+    this.goal = const Value.absent(),
+    this.context = const Value.absent(),
+    this.requirementsJson = const Value.absent(),
+    this.constraintsJson = const Value.absent(),
+    this.acceptanceCriteriaJson = const Value.absent(),
+    this.relevantFilesJson = const Value.absent(),
+    this.nonGoalsJson = const Value.absent(),
+    this.openQuestionsJson = const Value.absent(),
+    this.confidence = const Value.absent(),
+    this.status = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  AgentPromptDraftsTableCompanion.insert({
+    required String id,
+    required String noteId,
+    required String goal,
+    required String context,
+    this.requirementsJson = const Value.absent(),
+    this.constraintsJson = const Value.absent(),
+    this.acceptanceCriteriaJson = const Value.absent(),
+    this.relevantFilesJson = const Value.absent(),
+    this.nonGoalsJson = const Value.absent(),
+    this.openQuestionsJson = const Value.absent(),
+    required double confidence,
+    this.status = const Value.absent(),
+    required int createdAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       noteId = Value(noteId),
+       goal = Value(goal),
+       context = Value(context),
+       confidence = Value(confidence),
+       createdAt = Value(createdAt);
+  static Insertable<AgentPromptDraftsTableData> custom({
+    Expression<String>? id,
+    Expression<String>? noteId,
+    Expression<String>? goal,
+    Expression<String>? context,
+    Expression<String>? requirementsJson,
+    Expression<String>? constraintsJson,
+    Expression<String>? acceptanceCriteriaJson,
+    Expression<String>? relevantFilesJson,
+    Expression<String>? nonGoalsJson,
+    Expression<String>? openQuestionsJson,
+    Expression<double>? confidence,
+    Expression<String>? status,
+    Expression<int>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (noteId != null) 'note_id': noteId,
+      if (goal != null) 'goal': goal,
+      if (context != null) 'context': context,
+      if (requirementsJson != null) 'requirements_json': requirementsJson,
+      if (constraintsJson != null) 'constraints_json': constraintsJson,
+      if (acceptanceCriteriaJson != null)
+        'acceptance_criteria_json': acceptanceCriteriaJson,
+      if (relevantFilesJson != null) 'relevant_files_json': relevantFilesJson,
+      if (nonGoalsJson != null) 'non_goals_json': nonGoalsJson,
+      if (openQuestionsJson != null) 'open_questions_json': openQuestionsJson,
+      if (confidence != null) 'confidence': confidence,
+      if (status != null) 'status': status,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  AgentPromptDraftsTableCompanion copyWith({
+    Value<String>? id,
+    Value<String>? noteId,
+    Value<String>? goal,
+    Value<String>? context,
+    Value<String>? requirementsJson,
+    Value<String>? constraintsJson,
+    Value<String>? acceptanceCriteriaJson,
+    Value<String>? relevantFilesJson,
+    Value<String>? nonGoalsJson,
+    Value<String>? openQuestionsJson,
+    Value<double>? confidence,
+    Value<String>? status,
+    Value<int>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return AgentPromptDraftsTableCompanion(
+      id: id ?? this.id,
+      noteId: noteId ?? this.noteId,
+      goal: goal ?? this.goal,
+      context: context ?? this.context,
+      requirementsJson: requirementsJson ?? this.requirementsJson,
+      constraintsJson: constraintsJson ?? this.constraintsJson,
+      acceptanceCriteriaJson:
+          acceptanceCriteriaJson ?? this.acceptanceCriteriaJson,
+      relevantFilesJson: relevantFilesJson ?? this.relevantFilesJson,
+      nonGoalsJson: nonGoalsJson ?? this.nonGoalsJson,
+      openQuestionsJson: openQuestionsJson ?? this.openQuestionsJson,
+      confidence: confidence ?? this.confidence,
+      status: status ?? this.status,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (noteId.present) {
+      map['note_id'] = Variable<String>(noteId.value);
+    }
+    if (goal.present) {
+      map['goal'] = Variable<String>(goal.value);
+    }
+    if (context.present) {
+      map['context'] = Variable<String>(context.value);
+    }
+    if (requirementsJson.present) {
+      map['requirements_json'] = Variable<String>(requirementsJson.value);
+    }
+    if (constraintsJson.present) {
+      map['constraints_json'] = Variable<String>(constraintsJson.value);
+    }
+    if (acceptanceCriteriaJson.present) {
+      map['acceptance_criteria_json'] = Variable<String>(
+        acceptanceCriteriaJson.value,
+      );
+    }
+    if (relevantFilesJson.present) {
+      map['relevant_files_json'] = Variable<String>(relevantFilesJson.value);
+    }
+    if (nonGoalsJson.present) {
+      map['non_goals_json'] = Variable<String>(nonGoalsJson.value);
+    }
+    if (openQuestionsJson.present) {
+      map['open_questions_json'] = Variable<String>(openQuestionsJson.value);
+    }
+    if (confidence.present) {
+      map['confidence'] = Variable<double>(confidence.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<int>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AgentPromptDraftsTableCompanion(')
+          ..write('id: $id, ')
+          ..write('noteId: $noteId, ')
+          ..write('goal: $goal, ')
+          ..write('context: $context, ')
+          ..write('requirementsJson: $requirementsJson, ')
+          ..write('constraintsJson: $constraintsJson, ')
+          ..write('acceptanceCriteriaJson: $acceptanceCriteriaJson, ')
+          ..write('relevantFilesJson: $relevantFilesJson, ')
+          ..write('nonGoalsJson: $nonGoalsJson, ')
+          ..write('openQuestionsJson: $openQuestionsJson, ')
+          ..write('confidence: $confidence, ')
+          ..write('status: $status, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $InterpretationFeedbackTableTable extends InterpretationFeedbackTable
+    with
+        TableInfo<
+          $InterpretationFeedbackTableTable,
+          InterpretationFeedbackTableData
+        > {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $InterpretationFeedbackTableTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _noteIdMeta = const VerificationMeta('noteId');
+  @override
+  late final GeneratedColumn<String> noteId = GeneratedColumn<String>(
+    'note_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _correctedFieldMeta = const VerificationMeta(
+    'correctedField',
+  );
+  @override
+  late final GeneratedColumn<String> correctedField = GeneratedColumn<String>(
+    'corrected_field',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _originalValueMeta = const VerificationMeta(
+    'originalValue',
+  );
+  @override
+  late final GeneratedColumn<String> originalValue = GeneratedColumn<String>(
+    'original_value',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _correctedValueMeta = const VerificationMeta(
+    'correctedValue',
+  );
+  @override
+  late final GeneratedColumn<String> correctedValue = GeneratedColumn<String>(
+    'corrected_value',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    noteId,
+    correctedField,
+    originalValue,
+    correctedValue,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'interpretation_feedback';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<InterpretationFeedbackTableData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('note_id')) {
+      context.handle(
+        _noteIdMeta,
+        noteId.isAcceptableOrUnknown(data['note_id']!, _noteIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_noteIdMeta);
+    }
+    if (data.containsKey('corrected_field')) {
+      context.handle(
+        _correctedFieldMeta,
+        correctedField.isAcceptableOrUnknown(
+          data['corrected_field']!,
+          _correctedFieldMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_correctedFieldMeta);
+    }
+    if (data.containsKey('original_value')) {
+      context.handle(
+        _originalValueMeta,
+        originalValue.isAcceptableOrUnknown(
+          data['original_value']!,
+          _originalValueMeta,
+        ),
+      );
+    }
+    if (data.containsKey('corrected_value')) {
+      context.handle(
+        _correctedValueMeta,
+        correctedValue.isAcceptableOrUnknown(
+          data['corrected_value']!,
+          _correctedValueMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_correctedValueMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  InterpretationFeedbackTableData map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return InterpretationFeedbackTableData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      noteId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}note_id'],
+      )!,
+      correctedField: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}corrected_field'],
+      )!,
+      originalValue: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}original_value'],
+      ),
+      correctedValue: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}corrected_value'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $InterpretationFeedbackTableTable createAlias(String alias) {
+    return $InterpretationFeedbackTableTable(attachedDatabase, alias);
+  }
+}
+
+class InterpretationFeedbackTableData extends DataClass
+    implements Insertable<InterpretationFeedbackTableData> {
+  final String id;
+  final String noteId;
+  final String correctedField;
+  final String? originalValue;
+  final String correctedValue;
+  final int createdAt;
+  const InterpretationFeedbackTableData({
+    required this.id,
+    required this.noteId,
+    required this.correctedField,
+    this.originalValue,
+    required this.correctedValue,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['note_id'] = Variable<String>(noteId);
+    map['corrected_field'] = Variable<String>(correctedField);
+    if (!nullToAbsent || originalValue != null) {
+      map['original_value'] = Variable<String>(originalValue);
+    }
+    map['corrected_value'] = Variable<String>(correctedValue);
+    map['created_at'] = Variable<int>(createdAt);
+    return map;
+  }
+
+  InterpretationFeedbackTableCompanion toCompanion(bool nullToAbsent) {
+    return InterpretationFeedbackTableCompanion(
+      id: Value(id),
+      noteId: Value(noteId),
+      correctedField: Value(correctedField),
+      originalValue: originalValue == null && nullToAbsent
+          ? const Value.absent()
+          : Value(originalValue),
+      correctedValue: Value(correctedValue),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory InterpretationFeedbackTableData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return InterpretationFeedbackTableData(
+      id: serializer.fromJson<String>(json['id']),
+      noteId: serializer.fromJson<String>(json['noteId']),
+      correctedField: serializer.fromJson<String>(json['correctedField']),
+      originalValue: serializer.fromJson<String?>(json['originalValue']),
+      correctedValue: serializer.fromJson<String>(json['correctedValue']),
+      createdAt: serializer.fromJson<int>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'noteId': serializer.toJson<String>(noteId),
+      'correctedField': serializer.toJson<String>(correctedField),
+      'originalValue': serializer.toJson<String?>(originalValue),
+      'correctedValue': serializer.toJson<String>(correctedValue),
+      'createdAt': serializer.toJson<int>(createdAt),
+    };
+  }
+
+  InterpretationFeedbackTableData copyWith({
+    String? id,
+    String? noteId,
+    String? correctedField,
+    Value<String?> originalValue = const Value.absent(),
+    String? correctedValue,
+    int? createdAt,
+  }) => InterpretationFeedbackTableData(
+    id: id ?? this.id,
+    noteId: noteId ?? this.noteId,
+    correctedField: correctedField ?? this.correctedField,
+    originalValue: originalValue.present
+        ? originalValue.value
+        : this.originalValue,
+    correctedValue: correctedValue ?? this.correctedValue,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  InterpretationFeedbackTableData copyWithCompanion(
+    InterpretationFeedbackTableCompanion data,
+  ) {
+    return InterpretationFeedbackTableData(
+      id: data.id.present ? data.id.value : this.id,
+      noteId: data.noteId.present ? data.noteId.value : this.noteId,
+      correctedField: data.correctedField.present
+          ? data.correctedField.value
+          : this.correctedField,
+      originalValue: data.originalValue.present
+          ? data.originalValue.value
+          : this.originalValue,
+      correctedValue: data.correctedValue.present
+          ? data.correctedValue.value
+          : this.correctedValue,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('InterpretationFeedbackTableData(')
+          ..write('id: $id, ')
+          ..write('noteId: $noteId, ')
+          ..write('correctedField: $correctedField, ')
+          ..write('originalValue: $originalValue, ')
+          ..write('correctedValue: $correctedValue, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    noteId,
+    correctedField,
+    originalValue,
+    correctedValue,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is InterpretationFeedbackTableData &&
+          other.id == this.id &&
+          other.noteId == this.noteId &&
+          other.correctedField == this.correctedField &&
+          other.originalValue == this.originalValue &&
+          other.correctedValue == this.correctedValue &&
+          other.createdAt == this.createdAt);
+}
+
+class InterpretationFeedbackTableCompanion
+    extends UpdateCompanion<InterpretationFeedbackTableData> {
+  final Value<String> id;
+  final Value<String> noteId;
+  final Value<String> correctedField;
+  final Value<String?> originalValue;
+  final Value<String> correctedValue;
+  final Value<int> createdAt;
+  final Value<int> rowid;
+  const InterpretationFeedbackTableCompanion({
+    this.id = const Value.absent(),
+    this.noteId = const Value.absent(),
+    this.correctedField = const Value.absent(),
+    this.originalValue = const Value.absent(),
+    this.correctedValue = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  InterpretationFeedbackTableCompanion.insert({
+    required String id,
+    required String noteId,
+    required String correctedField,
+    this.originalValue = const Value.absent(),
+    required String correctedValue,
+    required int createdAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       noteId = Value(noteId),
+       correctedField = Value(correctedField),
+       correctedValue = Value(correctedValue),
+       createdAt = Value(createdAt);
+  static Insertable<InterpretationFeedbackTableData> custom({
+    Expression<String>? id,
+    Expression<String>? noteId,
+    Expression<String>? correctedField,
+    Expression<String>? originalValue,
+    Expression<String>? correctedValue,
+    Expression<int>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (noteId != null) 'note_id': noteId,
+      if (correctedField != null) 'corrected_field': correctedField,
+      if (originalValue != null) 'original_value': originalValue,
+      if (correctedValue != null) 'corrected_value': correctedValue,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  InterpretationFeedbackTableCompanion copyWith({
+    Value<String>? id,
+    Value<String>? noteId,
+    Value<String>? correctedField,
+    Value<String?>? originalValue,
+    Value<String>? correctedValue,
+    Value<int>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return InterpretationFeedbackTableCompanion(
+      id: id ?? this.id,
+      noteId: noteId ?? this.noteId,
+      correctedField: correctedField ?? this.correctedField,
+      originalValue: originalValue ?? this.originalValue,
+      correctedValue: correctedValue ?? this.correctedValue,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (noteId.present) {
+      map['note_id'] = Variable<String>(noteId.value);
+    }
+    if (correctedField.present) {
+      map['corrected_field'] = Variable<String>(correctedField.value);
+    }
+    if (originalValue.present) {
+      map['original_value'] = Variable<String>(originalValue.value);
+    }
+    if (correctedValue.present) {
+      map['corrected_value'] = Variable<String>(correctedValue.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<int>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('InterpretationFeedbackTableCompanion(')
+          ..write('id: $id, ')
+          ..write('noteId: $noteId, ')
+          ..write('correctedField: $correctedField, ')
+          ..write('originalValue: $originalValue, ')
+          ..write('correctedValue: $correctedValue, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AiDatabase extends GeneratedDatabase {
   _$AiDatabase(QueryExecutor e) : super(e);
   $AiDatabaseManager get managers => $AiDatabaseManager(this);
@@ -6951,6 +10436,18 @@ abstract class _$AiDatabase extends GeneratedDatabase {
       $TopicClustersTableTable(this);
   late final $TopicMembershipsTableTable topicMembershipsTable =
       $TopicMembershipsTableTable(this);
+  late final $NoteInterpretationsTableTable noteInterpretationsTable =
+      $NoteInterpretationsTableTable(this);
+  late final $KnownProjectsTableTable knownProjectsTable =
+      $KnownProjectsTableTable(this);
+  late final $KnownApplicationsTableTable knownApplicationsTable =
+      $KnownApplicationsTableTable(this);
+  late final $DraftCommunicationsTableTable draftCommunicationsTable =
+      $DraftCommunicationsTableTable(this);
+  late final $AgentPromptDraftsTableTable agentPromptDraftsTable =
+      $AgentPromptDraftsTableTable(this);
+  late final $InterpretationFeedbackTableTable interpretationFeedbackTable =
+      $InterpretationFeedbackTableTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -6968,6 +10465,12 @@ abstract class _$AiDatabase extends GeneratedDatabase {
     noteRelationshipsTable,
     topicClustersTable,
     topicMembershipsTable,
+    noteInterpretationsTable,
+    knownProjectsTable,
+    knownApplicationsTable,
+    draftCommunicationsTable,
+    agentPromptDraftsTable,
+    interpretationFeedbackTable,
   ];
 }
 
@@ -10526,6 +14029,1807 @@ typedef $$TopicMembershipsTableTableProcessedTableManager =
       TopicMembershipsTableData,
       PrefetchHooks Function()
     >;
+typedef $$NoteInterpretationsTableTableCreateCompanionBuilder =
+    NoteInterpretationsTableCompanion Function({
+      required String noteId,
+      Value<int> schemaVersion,
+      required String rawTranscript,
+      required String normalizedText,
+      required String primaryLanguage,
+      Value<String> mixedLanguagesJson,
+      Value<String> intentsJson,
+      Value<String> entitiesJson,
+      Value<String> projectCandidatesJson,
+      Value<String?> agentPromptJson,
+      required String provenanceJson,
+      required int createdAt,
+      required int updatedAt,
+      Value<int> rowid,
+    });
+typedef $$NoteInterpretationsTableTableUpdateCompanionBuilder =
+    NoteInterpretationsTableCompanion Function({
+      Value<String> noteId,
+      Value<int> schemaVersion,
+      Value<String> rawTranscript,
+      Value<String> normalizedText,
+      Value<String> primaryLanguage,
+      Value<String> mixedLanguagesJson,
+      Value<String> intentsJson,
+      Value<String> entitiesJson,
+      Value<String> projectCandidatesJson,
+      Value<String?> agentPromptJson,
+      Value<String> provenanceJson,
+      Value<int> createdAt,
+      Value<int> updatedAt,
+      Value<int> rowid,
+    });
+
+class $$NoteInterpretationsTableTableFilterComposer
+    extends Composer<_$AiDatabase, $NoteInterpretationsTableTable> {
+  $$NoteInterpretationsTableTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get noteId => $composableBuilder(
+    column: $table.noteId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get schemaVersion => $composableBuilder(
+    column: $table.schemaVersion,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get rawTranscript => $composableBuilder(
+    column: $table.rawTranscript,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get normalizedText => $composableBuilder(
+    column: $table.normalizedText,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get primaryLanguage => $composableBuilder(
+    column: $table.primaryLanguage,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get mixedLanguagesJson => $composableBuilder(
+    column: $table.mixedLanguagesJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get intentsJson => $composableBuilder(
+    column: $table.intentsJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get entitiesJson => $composableBuilder(
+    column: $table.entitiesJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get projectCandidatesJson => $composableBuilder(
+    column: $table.projectCandidatesJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get agentPromptJson => $composableBuilder(
+    column: $table.agentPromptJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get provenanceJson => $composableBuilder(
+    column: $table.provenanceJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$NoteInterpretationsTableTableOrderingComposer
+    extends Composer<_$AiDatabase, $NoteInterpretationsTableTable> {
+  $$NoteInterpretationsTableTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get noteId => $composableBuilder(
+    column: $table.noteId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get schemaVersion => $composableBuilder(
+    column: $table.schemaVersion,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get rawTranscript => $composableBuilder(
+    column: $table.rawTranscript,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get normalizedText => $composableBuilder(
+    column: $table.normalizedText,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get primaryLanguage => $composableBuilder(
+    column: $table.primaryLanguage,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get mixedLanguagesJson => $composableBuilder(
+    column: $table.mixedLanguagesJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get intentsJson => $composableBuilder(
+    column: $table.intentsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get entitiesJson => $composableBuilder(
+    column: $table.entitiesJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get projectCandidatesJson => $composableBuilder(
+    column: $table.projectCandidatesJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get agentPromptJson => $composableBuilder(
+    column: $table.agentPromptJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get provenanceJson => $composableBuilder(
+    column: $table.provenanceJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$NoteInterpretationsTableTableAnnotationComposer
+    extends Composer<_$AiDatabase, $NoteInterpretationsTableTable> {
+  $$NoteInterpretationsTableTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get noteId =>
+      $composableBuilder(column: $table.noteId, builder: (column) => column);
+
+  GeneratedColumn<int> get schemaVersion => $composableBuilder(
+    column: $table.schemaVersion,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get rawTranscript => $composableBuilder(
+    column: $table.rawTranscript,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get normalizedText => $composableBuilder(
+    column: $table.normalizedText,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get primaryLanguage => $composableBuilder(
+    column: $table.primaryLanguage,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get mixedLanguagesJson => $composableBuilder(
+    column: $table.mixedLanguagesJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get intentsJson => $composableBuilder(
+    column: $table.intentsJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get entitiesJson => $composableBuilder(
+    column: $table.entitiesJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get projectCandidatesJson => $composableBuilder(
+    column: $table.projectCandidatesJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get agentPromptJson => $composableBuilder(
+    column: $table.agentPromptJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get provenanceJson => $composableBuilder(
+    column: $table.provenanceJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<int> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$NoteInterpretationsTableTableTableManager
+    extends
+        RootTableManager<
+          _$AiDatabase,
+          $NoteInterpretationsTableTable,
+          NoteInterpretationsTableData,
+          $$NoteInterpretationsTableTableFilterComposer,
+          $$NoteInterpretationsTableTableOrderingComposer,
+          $$NoteInterpretationsTableTableAnnotationComposer,
+          $$NoteInterpretationsTableTableCreateCompanionBuilder,
+          $$NoteInterpretationsTableTableUpdateCompanionBuilder,
+          (
+            NoteInterpretationsTableData,
+            BaseReferences<
+              _$AiDatabase,
+              $NoteInterpretationsTableTable,
+              NoteInterpretationsTableData
+            >,
+          ),
+          NoteInterpretationsTableData,
+          PrefetchHooks Function()
+        > {
+  $$NoteInterpretationsTableTableTableManager(
+    _$AiDatabase db,
+    $NoteInterpretationsTableTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$NoteInterpretationsTableTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$NoteInterpretationsTableTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$NoteInterpretationsTableTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> noteId = const Value.absent(),
+                Value<int> schemaVersion = const Value.absent(),
+                Value<String> rawTranscript = const Value.absent(),
+                Value<String> normalizedText = const Value.absent(),
+                Value<String> primaryLanguage = const Value.absent(),
+                Value<String> mixedLanguagesJson = const Value.absent(),
+                Value<String> intentsJson = const Value.absent(),
+                Value<String> entitiesJson = const Value.absent(),
+                Value<String> projectCandidatesJson = const Value.absent(),
+                Value<String?> agentPromptJson = const Value.absent(),
+                Value<String> provenanceJson = const Value.absent(),
+                Value<int> createdAt = const Value.absent(),
+                Value<int> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => NoteInterpretationsTableCompanion(
+                noteId: noteId,
+                schemaVersion: schemaVersion,
+                rawTranscript: rawTranscript,
+                normalizedText: normalizedText,
+                primaryLanguage: primaryLanguage,
+                mixedLanguagesJson: mixedLanguagesJson,
+                intentsJson: intentsJson,
+                entitiesJson: entitiesJson,
+                projectCandidatesJson: projectCandidatesJson,
+                agentPromptJson: agentPromptJson,
+                provenanceJson: provenanceJson,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String noteId,
+                Value<int> schemaVersion = const Value.absent(),
+                required String rawTranscript,
+                required String normalizedText,
+                required String primaryLanguage,
+                Value<String> mixedLanguagesJson = const Value.absent(),
+                Value<String> intentsJson = const Value.absent(),
+                Value<String> entitiesJson = const Value.absent(),
+                Value<String> projectCandidatesJson = const Value.absent(),
+                Value<String?> agentPromptJson = const Value.absent(),
+                required String provenanceJson,
+                required int createdAt,
+                required int updatedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => NoteInterpretationsTableCompanion.insert(
+                noteId: noteId,
+                schemaVersion: schemaVersion,
+                rawTranscript: rawTranscript,
+                normalizedText: normalizedText,
+                primaryLanguage: primaryLanguage,
+                mixedLanguagesJson: mixedLanguagesJson,
+                intentsJson: intentsJson,
+                entitiesJson: entitiesJson,
+                projectCandidatesJson: projectCandidatesJson,
+                agentPromptJson: agentPromptJson,
+                provenanceJson: provenanceJson,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$NoteInterpretationsTableTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AiDatabase,
+      $NoteInterpretationsTableTable,
+      NoteInterpretationsTableData,
+      $$NoteInterpretationsTableTableFilterComposer,
+      $$NoteInterpretationsTableTableOrderingComposer,
+      $$NoteInterpretationsTableTableAnnotationComposer,
+      $$NoteInterpretationsTableTableCreateCompanionBuilder,
+      $$NoteInterpretationsTableTableUpdateCompanionBuilder,
+      (
+        NoteInterpretationsTableData,
+        BaseReferences<
+          _$AiDatabase,
+          $NoteInterpretationsTableTable,
+          NoteInterpretationsTableData
+        >,
+      ),
+      NoteInterpretationsTableData,
+      PrefetchHooks Function()
+    >;
+typedef $$KnownProjectsTableTableCreateCompanionBuilder =
+    KnownProjectsTableCompanion Function({
+      required String id,
+      required String name,
+      required String normalizedName,
+      Value<String> aliasesJson,
+      Value<String?> description,
+      required int lastReferencedAt,
+      Value<int> rowid,
+    });
+typedef $$KnownProjectsTableTableUpdateCompanionBuilder =
+    KnownProjectsTableCompanion Function({
+      Value<String> id,
+      Value<String> name,
+      Value<String> normalizedName,
+      Value<String> aliasesJson,
+      Value<String?> description,
+      Value<int> lastReferencedAt,
+      Value<int> rowid,
+    });
+
+class $$KnownProjectsTableTableFilterComposer
+    extends Composer<_$AiDatabase, $KnownProjectsTableTable> {
+  $$KnownProjectsTableTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get normalizedName => $composableBuilder(
+    column: $table.normalizedName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get aliasesJson => $composableBuilder(
+    column: $table.aliasesJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get lastReferencedAt => $composableBuilder(
+    column: $table.lastReferencedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$KnownProjectsTableTableOrderingComposer
+    extends Composer<_$AiDatabase, $KnownProjectsTableTable> {
+  $$KnownProjectsTableTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get normalizedName => $composableBuilder(
+    column: $table.normalizedName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get aliasesJson => $composableBuilder(
+    column: $table.aliasesJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get lastReferencedAt => $composableBuilder(
+    column: $table.lastReferencedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$KnownProjectsTableTableAnnotationComposer
+    extends Composer<_$AiDatabase, $KnownProjectsTableTable> {
+  $$KnownProjectsTableTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get normalizedName => $composableBuilder(
+    column: $table.normalizedName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get aliasesJson => $composableBuilder(
+    column: $table.aliasesJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get lastReferencedAt => $composableBuilder(
+    column: $table.lastReferencedAt,
+    builder: (column) => column,
+  );
+}
+
+class $$KnownProjectsTableTableTableManager
+    extends
+        RootTableManager<
+          _$AiDatabase,
+          $KnownProjectsTableTable,
+          KnownProjectsTableData,
+          $$KnownProjectsTableTableFilterComposer,
+          $$KnownProjectsTableTableOrderingComposer,
+          $$KnownProjectsTableTableAnnotationComposer,
+          $$KnownProjectsTableTableCreateCompanionBuilder,
+          $$KnownProjectsTableTableUpdateCompanionBuilder,
+          (
+            KnownProjectsTableData,
+            BaseReferences<
+              _$AiDatabase,
+              $KnownProjectsTableTable,
+              KnownProjectsTableData
+            >,
+          ),
+          KnownProjectsTableData,
+          PrefetchHooks Function()
+        > {
+  $$KnownProjectsTableTableTableManager(
+    _$AiDatabase db,
+    $KnownProjectsTableTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$KnownProjectsTableTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$KnownProjectsTableTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$KnownProjectsTableTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String> normalizedName = const Value.absent(),
+                Value<String> aliasesJson = const Value.absent(),
+                Value<String?> description = const Value.absent(),
+                Value<int> lastReferencedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => KnownProjectsTableCompanion(
+                id: id,
+                name: name,
+                normalizedName: normalizedName,
+                aliasesJson: aliasesJson,
+                description: description,
+                lastReferencedAt: lastReferencedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String name,
+                required String normalizedName,
+                Value<String> aliasesJson = const Value.absent(),
+                Value<String?> description = const Value.absent(),
+                required int lastReferencedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => KnownProjectsTableCompanion.insert(
+                id: id,
+                name: name,
+                normalizedName: normalizedName,
+                aliasesJson: aliasesJson,
+                description: description,
+                lastReferencedAt: lastReferencedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$KnownProjectsTableTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AiDatabase,
+      $KnownProjectsTableTable,
+      KnownProjectsTableData,
+      $$KnownProjectsTableTableFilterComposer,
+      $$KnownProjectsTableTableOrderingComposer,
+      $$KnownProjectsTableTableAnnotationComposer,
+      $$KnownProjectsTableTableCreateCompanionBuilder,
+      $$KnownProjectsTableTableUpdateCompanionBuilder,
+      (
+        KnownProjectsTableData,
+        BaseReferences<
+          _$AiDatabase,
+          $KnownProjectsTableTable,
+          KnownProjectsTableData
+        >,
+      ),
+      KnownProjectsTableData,
+      PrefetchHooks Function()
+    >;
+typedef $$KnownApplicationsTableTableCreateCompanionBuilder =
+    KnownApplicationsTableCompanion Function({
+      required String id,
+      required String name,
+      Value<String?> bundleId,
+      Value<String> aliasesJson,
+      Value<String?> description,
+      required int lastReferencedAt,
+      Value<int> rowid,
+    });
+typedef $$KnownApplicationsTableTableUpdateCompanionBuilder =
+    KnownApplicationsTableCompanion Function({
+      Value<String> id,
+      Value<String> name,
+      Value<String?> bundleId,
+      Value<String> aliasesJson,
+      Value<String?> description,
+      Value<int> lastReferencedAt,
+      Value<int> rowid,
+    });
+
+class $$KnownApplicationsTableTableFilterComposer
+    extends Composer<_$AiDatabase, $KnownApplicationsTableTable> {
+  $$KnownApplicationsTableTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get bundleId => $composableBuilder(
+    column: $table.bundleId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get aliasesJson => $composableBuilder(
+    column: $table.aliasesJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get lastReferencedAt => $composableBuilder(
+    column: $table.lastReferencedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$KnownApplicationsTableTableOrderingComposer
+    extends Composer<_$AiDatabase, $KnownApplicationsTableTable> {
+  $$KnownApplicationsTableTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get bundleId => $composableBuilder(
+    column: $table.bundleId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get aliasesJson => $composableBuilder(
+    column: $table.aliasesJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get lastReferencedAt => $composableBuilder(
+    column: $table.lastReferencedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$KnownApplicationsTableTableAnnotationComposer
+    extends Composer<_$AiDatabase, $KnownApplicationsTableTable> {
+  $$KnownApplicationsTableTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get bundleId =>
+      $composableBuilder(column: $table.bundleId, builder: (column) => column);
+
+  GeneratedColumn<String> get aliasesJson => $composableBuilder(
+    column: $table.aliasesJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get lastReferencedAt => $composableBuilder(
+    column: $table.lastReferencedAt,
+    builder: (column) => column,
+  );
+}
+
+class $$KnownApplicationsTableTableTableManager
+    extends
+        RootTableManager<
+          _$AiDatabase,
+          $KnownApplicationsTableTable,
+          KnownApplicationsTableData,
+          $$KnownApplicationsTableTableFilterComposer,
+          $$KnownApplicationsTableTableOrderingComposer,
+          $$KnownApplicationsTableTableAnnotationComposer,
+          $$KnownApplicationsTableTableCreateCompanionBuilder,
+          $$KnownApplicationsTableTableUpdateCompanionBuilder,
+          (
+            KnownApplicationsTableData,
+            BaseReferences<
+              _$AiDatabase,
+              $KnownApplicationsTableTable,
+              KnownApplicationsTableData
+            >,
+          ),
+          KnownApplicationsTableData,
+          PrefetchHooks Function()
+        > {
+  $$KnownApplicationsTableTableTableManager(
+    _$AiDatabase db,
+    $KnownApplicationsTableTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$KnownApplicationsTableTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$KnownApplicationsTableTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$KnownApplicationsTableTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String?> bundleId = const Value.absent(),
+                Value<String> aliasesJson = const Value.absent(),
+                Value<String?> description = const Value.absent(),
+                Value<int> lastReferencedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => KnownApplicationsTableCompanion(
+                id: id,
+                name: name,
+                bundleId: bundleId,
+                aliasesJson: aliasesJson,
+                description: description,
+                lastReferencedAt: lastReferencedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String name,
+                Value<String?> bundleId = const Value.absent(),
+                Value<String> aliasesJson = const Value.absent(),
+                Value<String?> description = const Value.absent(),
+                required int lastReferencedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => KnownApplicationsTableCompanion.insert(
+                id: id,
+                name: name,
+                bundleId: bundleId,
+                aliasesJson: aliasesJson,
+                description: description,
+                lastReferencedAt: lastReferencedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$KnownApplicationsTableTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AiDatabase,
+      $KnownApplicationsTableTable,
+      KnownApplicationsTableData,
+      $$KnownApplicationsTableTableFilterComposer,
+      $$KnownApplicationsTableTableOrderingComposer,
+      $$KnownApplicationsTableTableAnnotationComposer,
+      $$KnownApplicationsTableTableCreateCompanionBuilder,
+      $$KnownApplicationsTableTableUpdateCompanionBuilder,
+      (
+        KnownApplicationsTableData,
+        BaseReferences<
+          _$AiDatabase,
+          $KnownApplicationsTableTable,
+          KnownApplicationsTableData
+        >,
+      ),
+      KnownApplicationsTableData,
+      PrefetchHooks Function()
+    >;
+typedef $$DraftCommunicationsTableTableCreateCompanionBuilder =
+    DraftCommunicationsTableCompanion Function({
+      required String id,
+      required String noteId,
+      required String type,
+      Value<String?> recipient,
+      Value<String?> subject,
+      required String body,
+      Value<String?> resolvedChannel,
+      Value<String> status,
+      required int createdAt,
+      Value<int> rowid,
+    });
+typedef $$DraftCommunicationsTableTableUpdateCompanionBuilder =
+    DraftCommunicationsTableCompanion Function({
+      Value<String> id,
+      Value<String> noteId,
+      Value<String> type,
+      Value<String?> recipient,
+      Value<String?> subject,
+      Value<String> body,
+      Value<String?> resolvedChannel,
+      Value<String> status,
+      Value<int> createdAt,
+      Value<int> rowid,
+    });
+
+class $$DraftCommunicationsTableTableFilterComposer
+    extends Composer<_$AiDatabase, $DraftCommunicationsTableTable> {
+  $$DraftCommunicationsTableTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get noteId => $composableBuilder(
+    column: $table.noteId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get type => $composableBuilder(
+    column: $table.type,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get recipient => $composableBuilder(
+    column: $table.recipient,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get subject => $composableBuilder(
+    column: $table.subject,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get body => $composableBuilder(
+    column: $table.body,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get resolvedChannel => $composableBuilder(
+    column: $table.resolvedChannel,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$DraftCommunicationsTableTableOrderingComposer
+    extends Composer<_$AiDatabase, $DraftCommunicationsTableTable> {
+  $$DraftCommunicationsTableTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get noteId => $composableBuilder(
+    column: $table.noteId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get type => $composableBuilder(
+    column: $table.type,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get recipient => $composableBuilder(
+    column: $table.recipient,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get subject => $composableBuilder(
+    column: $table.subject,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get body => $composableBuilder(
+    column: $table.body,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get resolvedChannel => $composableBuilder(
+    column: $table.resolvedChannel,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$DraftCommunicationsTableTableAnnotationComposer
+    extends Composer<_$AiDatabase, $DraftCommunicationsTableTable> {
+  $$DraftCommunicationsTableTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get noteId =>
+      $composableBuilder(column: $table.noteId, builder: (column) => column);
+
+  GeneratedColumn<String> get type =>
+      $composableBuilder(column: $table.type, builder: (column) => column);
+
+  GeneratedColumn<String> get recipient =>
+      $composableBuilder(column: $table.recipient, builder: (column) => column);
+
+  GeneratedColumn<String> get subject =>
+      $composableBuilder(column: $table.subject, builder: (column) => column);
+
+  GeneratedColumn<String> get body =>
+      $composableBuilder(column: $table.body, builder: (column) => column);
+
+  GeneratedColumn<String> get resolvedChannel => $composableBuilder(
+    column: $table.resolvedChannel,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$DraftCommunicationsTableTableTableManager
+    extends
+        RootTableManager<
+          _$AiDatabase,
+          $DraftCommunicationsTableTable,
+          DraftCommunicationsTableData,
+          $$DraftCommunicationsTableTableFilterComposer,
+          $$DraftCommunicationsTableTableOrderingComposer,
+          $$DraftCommunicationsTableTableAnnotationComposer,
+          $$DraftCommunicationsTableTableCreateCompanionBuilder,
+          $$DraftCommunicationsTableTableUpdateCompanionBuilder,
+          (
+            DraftCommunicationsTableData,
+            BaseReferences<
+              _$AiDatabase,
+              $DraftCommunicationsTableTable,
+              DraftCommunicationsTableData
+            >,
+          ),
+          DraftCommunicationsTableData,
+          PrefetchHooks Function()
+        > {
+  $$DraftCommunicationsTableTableTableManager(
+    _$AiDatabase db,
+    $DraftCommunicationsTableTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$DraftCommunicationsTableTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$DraftCommunicationsTableTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$DraftCommunicationsTableTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> noteId = const Value.absent(),
+                Value<String> type = const Value.absent(),
+                Value<String?> recipient = const Value.absent(),
+                Value<String?> subject = const Value.absent(),
+                Value<String> body = const Value.absent(),
+                Value<String?> resolvedChannel = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<int> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => DraftCommunicationsTableCompanion(
+                id: id,
+                noteId: noteId,
+                type: type,
+                recipient: recipient,
+                subject: subject,
+                body: body,
+                resolvedChannel: resolvedChannel,
+                status: status,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String noteId,
+                required String type,
+                Value<String?> recipient = const Value.absent(),
+                Value<String?> subject = const Value.absent(),
+                required String body,
+                Value<String?> resolvedChannel = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                required int createdAt,
+                Value<int> rowid = const Value.absent(),
+              }) => DraftCommunicationsTableCompanion.insert(
+                id: id,
+                noteId: noteId,
+                type: type,
+                recipient: recipient,
+                subject: subject,
+                body: body,
+                resolvedChannel: resolvedChannel,
+                status: status,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$DraftCommunicationsTableTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AiDatabase,
+      $DraftCommunicationsTableTable,
+      DraftCommunicationsTableData,
+      $$DraftCommunicationsTableTableFilterComposer,
+      $$DraftCommunicationsTableTableOrderingComposer,
+      $$DraftCommunicationsTableTableAnnotationComposer,
+      $$DraftCommunicationsTableTableCreateCompanionBuilder,
+      $$DraftCommunicationsTableTableUpdateCompanionBuilder,
+      (
+        DraftCommunicationsTableData,
+        BaseReferences<
+          _$AiDatabase,
+          $DraftCommunicationsTableTable,
+          DraftCommunicationsTableData
+        >,
+      ),
+      DraftCommunicationsTableData,
+      PrefetchHooks Function()
+    >;
+typedef $$AgentPromptDraftsTableTableCreateCompanionBuilder =
+    AgentPromptDraftsTableCompanion Function({
+      required String id,
+      required String noteId,
+      required String goal,
+      required String context,
+      Value<String> requirementsJson,
+      Value<String> constraintsJson,
+      Value<String> acceptanceCriteriaJson,
+      Value<String> relevantFilesJson,
+      Value<String> nonGoalsJson,
+      Value<String> openQuestionsJson,
+      required double confidence,
+      Value<String> status,
+      required int createdAt,
+      Value<int> rowid,
+    });
+typedef $$AgentPromptDraftsTableTableUpdateCompanionBuilder =
+    AgentPromptDraftsTableCompanion Function({
+      Value<String> id,
+      Value<String> noteId,
+      Value<String> goal,
+      Value<String> context,
+      Value<String> requirementsJson,
+      Value<String> constraintsJson,
+      Value<String> acceptanceCriteriaJson,
+      Value<String> relevantFilesJson,
+      Value<String> nonGoalsJson,
+      Value<String> openQuestionsJson,
+      Value<double> confidence,
+      Value<String> status,
+      Value<int> createdAt,
+      Value<int> rowid,
+    });
+
+class $$AgentPromptDraftsTableTableFilterComposer
+    extends Composer<_$AiDatabase, $AgentPromptDraftsTableTable> {
+  $$AgentPromptDraftsTableTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get noteId => $composableBuilder(
+    column: $table.noteId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get goal => $composableBuilder(
+    column: $table.goal,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get context => $composableBuilder(
+    column: $table.context,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get requirementsJson => $composableBuilder(
+    column: $table.requirementsJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get constraintsJson => $composableBuilder(
+    column: $table.constraintsJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get acceptanceCriteriaJson => $composableBuilder(
+    column: $table.acceptanceCriteriaJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get relevantFilesJson => $composableBuilder(
+    column: $table.relevantFilesJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get nonGoalsJson => $composableBuilder(
+    column: $table.nonGoalsJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get openQuestionsJson => $composableBuilder(
+    column: $table.openQuestionsJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get confidence => $composableBuilder(
+    column: $table.confidence,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$AgentPromptDraftsTableTableOrderingComposer
+    extends Composer<_$AiDatabase, $AgentPromptDraftsTableTable> {
+  $$AgentPromptDraftsTableTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get noteId => $composableBuilder(
+    column: $table.noteId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get goal => $composableBuilder(
+    column: $table.goal,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get context => $composableBuilder(
+    column: $table.context,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get requirementsJson => $composableBuilder(
+    column: $table.requirementsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get constraintsJson => $composableBuilder(
+    column: $table.constraintsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get acceptanceCriteriaJson => $composableBuilder(
+    column: $table.acceptanceCriteriaJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get relevantFilesJson => $composableBuilder(
+    column: $table.relevantFilesJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get nonGoalsJson => $composableBuilder(
+    column: $table.nonGoalsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get openQuestionsJson => $composableBuilder(
+    column: $table.openQuestionsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get confidence => $composableBuilder(
+    column: $table.confidence,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$AgentPromptDraftsTableTableAnnotationComposer
+    extends Composer<_$AiDatabase, $AgentPromptDraftsTableTable> {
+  $$AgentPromptDraftsTableTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get noteId =>
+      $composableBuilder(column: $table.noteId, builder: (column) => column);
+
+  GeneratedColumn<String> get goal =>
+      $composableBuilder(column: $table.goal, builder: (column) => column);
+
+  GeneratedColumn<String> get context =>
+      $composableBuilder(column: $table.context, builder: (column) => column);
+
+  GeneratedColumn<String> get requirementsJson => $composableBuilder(
+    column: $table.requirementsJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get constraintsJson => $composableBuilder(
+    column: $table.constraintsJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get acceptanceCriteriaJson => $composableBuilder(
+    column: $table.acceptanceCriteriaJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get relevantFilesJson => $composableBuilder(
+    column: $table.relevantFilesJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get nonGoalsJson => $composableBuilder(
+    column: $table.nonGoalsJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get openQuestionsJson => $composableBuilder(
+    column: $table.openQuestionsJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get confidence => $composableBuilder(
+    column: $table.confidence,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$AgentPromptDraftsTableTableTableManager
+    extends
+        RootTableManager<
+          _$AiDatabase,
+          $AgentPromptDraftsTableTable,
+          AgentPromptDraftsTableData,
+          $$AgentPromptDraftsTableTableFilterComposer,
+          $$AgentPromptDraftsTableTableOrderingComposer,
+          $$AgentPromptDraftsTableTableAnnotationComposer,
+          $$AgentPromptDraftsTableTableCreateCompanionBuilder,
+          $$AgentPromptDraftsTableTableUpdateCompanionBuilder,
+          (
+            AgentPromptDraftsTableData,
+            BaseReferences<
+              _$AiDatabase,
+              $AgentPromptDraftsTableTable,
+              AgentPromptDraftsTableData
+            >,
+          ),
+          AgentPromptDraftsTableData,
+          PrefetchHooks Function()
+        > {
+  $$AgentPromptDraftsTableTableTableManager(
+    _$AiDatabase db,
+    $AgentPromptDraftsTableTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$AgentPromptDraftsTableTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$AgentPromptDraftsTableTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$AgentPromptDraftsTableTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> noteId = const Value.absent(),
+                Value<String> goal = const Value.absent(),
+                Value<String> context = const Value.absent(),
+                Value<String> requirementsJson = const Value.absent(),
+                Value<String> constraintsJson = const Value.absent(),
+                Value<String> acceptanceCriteriaJson = const Value.absent(),
+                Value<String> relevantFilesJson = const Value.absent(),
+                Value<String> nonGoalsJson = const Value.absent(),
+                Value<String> openQuestionsJson = const Value.absent(),
+                Value<double> confidence = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<int> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => AgentPromptDraftsTableCompanion(
+                id: id,
+                noteId: noteId,
+                goal: goal,
+                context: context,
+                requirementsJson: requirementsJson,
+                constraintsJson: constraintsJson,
+                acceptanceCriteriaJson: acceptanceCriteriaJson,
+                relevantFilesJson: relevantFilesJson,
+                nonGoalsJson: nonGoalsJson,
+                openQuestionsJson: openQuestionsJson,
+                confidence: confidence,
+                status: status,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String noteId,
+                required String goal,
+                required String context,
+                Value<String> requirementsJson = const Value.absent(),
+                Value<String> constraintsJson = const Value.absent(),
+                Value<String> acceptanceCriteriaJson = const Value.absent(),
+                Value<String> relevantFilesJson = const Value.absent(),
+                Value<String> nonGoalsJson = const Value.absent(),
+                Value<String> openQuestionsJson = const Value.absent(),
+                required double confidence,
+                Value<String> status = const Value.absent(),
+                required int createdAt,
+                Value<int> rowid = const Value.absent(),
+              }) => AgentPromptDraftsTableCompanion.insert(
+                id: id,
+                noteId: noteId,
+                goal: goal,
+                context: context,
+                requirementsJson: requirementsJson,
+                constraintsJson: constraintsJson,
+                acceptanceCriteriaJson: acceptanceCriteriaJson,
+                relevantFilesJson: relevantFilesJson,
+                nonGoalsJson: nonGoalsJson,
+                openQuestionsJson: openQuestionsJson,
+                confidence: confidence,
+                status: status,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$AgentPromptDraftsTableTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AiDatabase,
+      $AgentPromptDraftsTableTable,
+      AgentPromptDraftsTableData,
+      $$AgentPromptDraftsTableTableFilterComposer,
+      $$AgentPromptDraftsTableTableOrderingComposer,
+      $$AgentPromptDraftsTableTableAnnotationComposer,
+      $$AgentPromptDraftsTableTableCreateCompanionBuilder,
+      $$AgentPromptDraftsTableTableUpdateCompanionBuilder,
+      (
+        AgentPromptDraftsTableData,
+        BaseReferences<
+          _$AiDatabase,
+          $AgentPromptDraftsTableTable,
+          AgentPromptDraftsTableData
+        >,
+      ),
+      AgentPromptDraftsTableData,
+      PrefetchHooks Function()
+    >;
+typedef $$InterpretationFeedbackTableTableCreateCompanionBuilder =
+    InterpretationFeedbackTableCompanion Function({
+      required String id,
+      required String noteId,
+      required String correctedField,
+      Value<String?> originalValue,
+      required String correctedValue,
+      required int createdAt,
+      Value<int> rowid,
+    });
+typedef $$InterpretationFeedbackTableTableUpdateCompanionBuilder =
+    InterpretationFeedbackTableCompanion Function({
+      Value<String> id,
+      Value<String> noteId,
+      Value<String> correctedField,
+      Value<String?> originalValue,
+      Value<String> correctedValue,
+      Value<int> createdAt,
+      Value<int> rowid,
+    });
+
+class $$InterpretationFeedbackTableTableFilterComposer
+    extends Composer<_$AiDatabase, $InterpretationFeedbackTableTable> {
+  $$InterpretationFeedbackTableTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get noteId => $composableBuilder(
+    column: $table.noteId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get correctedField => $composableBuilder(
+    column: $table.correctedField,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get originalValue => $composableBuilder(
+    column: $table.originalValue,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get correctedValue => $composableBuilder(
+    column: $table.correctedValue,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$InterpretationFeedbackTableTableOrderingComposer
+    extends Composer<_$AiDatabase, $InterpretationFeedbackTableTable> {
+  $$InterpretationFeedbackTableTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get noteId => $composableBuilder(
+    column: $table.noteId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get correctedField => $composableBuilder(
+    column: $table.correctedField,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get originalValue => $composableBuilder(
+    column: $table.originalValue,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get correctedValue => $composableBuilder(
+    column: $table.correctedValue,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$InterpretationFeedbackTableTableAnnotationComposer
+    extends Composer<_$AiDatabase, $InterpretationFeedbackTableTable> {
+  $$InterpretationFeedbackTableTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get noteId =>
+      $composableBuilder(column: $table.noteId, builder: (column) => column);
+
+  GeneratedColumn<String> get correctedField => $composableBuilder(
+    column: $table.correctedField,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get originalValue => $composableBuilder(
+    column: $table.originalValue,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get correctedValue => $composableBuilder(
+    column: $table.correctedValue,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$InterpretationFeedbackTableTableTableManager
+    extends
+        RootTableManager<
+          _$AiDatabase,
+          $InterpretationFeedbackTableTable,
+          InterpretationFeedbackTableData,
+          $$InterpretationFeedbackTableTableFilterComposer,
+          $$InterpretationFeedbackTableTableOrderingComposer,
+          $$InterpretationFeedbackTableTableAnnotationComposer,
+          $$InterpretationFeedbackTableTableCreateCompanionBuilder,
+          $$InterpretationFeedbackTableTableUpdateCompanionBuilder,
+          (
+            InterpretationFeedbackTableData,
+            BaseReferences<
+              _$AiDatabase,
+              $InterpretationFeedbackTableTable,
+              InterpretationFeedbackTableData
+            >,
+          ),
+          InterpretationFeedbackTableData,
+          PrefetchHooks Function()
+        > {
+  $$InterpretationFeedbackTableTableTableManager(
+    _$AiDatabase db,
+    $InterpretationFeedbackTableTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$InterpretationFeedbackTableTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$InterpretationFeedbackTableTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$InterpretationFeedbackTableTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> noteId = const Value.absent(),
+                Value<String> correctedField = const Value.absent(),
+                Value<String?> originalValue = const Value.absent(),
+                Value<String> correctedValue = const Value.absent(),
+                Value<int> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => InterpretationFeedbackTableCompanion(
+                id: id,
+                noteId: noteId,
+                correctedField: correctedField,
+                originalValue: originalValue,
+                correctedValue: correctedValue,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String noteId,
+                required String correctedField,
+                Value<String?> originalValue = const Value.absent(),
+                required String correctedValue,
+                required int createdAt,
+                Value<int> rowid = const Value.absent(),
+              }) => InterpretationFeedbackTableCompanion.insert(
+                id: id,
+                noteId: noteId,
+                correctedField: correctedField,
+                originalValue: originalValue,
+                correctedValue: correctedValue,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$InterpretationFeedbackTableTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AiDatabase,
+      $InterpretationFeedbackTableTable,
+      InterpretationFeedbackTableData,
+      $$InterpretationFeedbackTableTableFilterComposer,
+      $$InterpretationFeedbackTableTableOrderingComposer,
+      $$InterpretationFeedbackTableTableAnnotationComposer,
+      $$InterpretationFeedbackTableTableCreateCompanionBuilder,
+      $$InterpretationFeedbackTableTableUpdateCompanionBuilder,
+      (
+        InterpretationFeedbackTableData,
+        BaseReferences<
+          _$AiDatabase,
+          $InterpretationFeedbackTableTable,
+          InterpretationFeedbackTableData
+        >,
+      ),
+      InterpretationFeedbackTableData,
+      PrefetchHooks Function()
+    >;
 
 class $AiDatabaseManager {
   final _$AiDatabase _db;
@@ -10563,4 +15867,32 @@ class $AiDatabaseManager {
       $$TopicClustersTableTableTableManager(_db, _db.topicClustersTable);
   $$TopicMembershipsTableTableTableManager get topicMembershipsTable =>
       $$TopicMembershipsTableTableTableManager(_db, _db.topicMembershipsTable);
+  $$NoteInterpretationsTableTableTableManager get noteInterpretationsTable =>
+      $$NoteInterpretationsTableTableTableManager(
+        _db,
+        _db.noteInterpretationsTable,
+      );
+  $$KnownProjectsTableTableTableManager get knownProjectsTable =>
+      $$KnownProjectsTableTableTableManager(_db, _db.knownProjectsTable);
+  $$KnownApplicationsTableTableTableManager get knownApplicationsTable =>
+      $$KnownApplicationsTableTableTableManager(
+        _db,
+        _db.knownApplicationsTable,
+      );
+  $$DraftCommunicationsTableTableTableManager get draftCommunicationsTable =>
+      $$DraftCommunicationsTableTableTableManager(
+        _db,
+        _db.draftCommunicationsTable,
+      );
+  $$AgentPromptDraftsTableTableTableManager get agentPromptDraftsTable =>
+      $$AgentPromptDraftsTableTableTableManager(
+        _db,
+        _db.agentPromptDraftsTable,
+      );
+  $$InterpretationFeedbackTableTableTableManager
+  get interpretationFeedbackTable =>
+      $$InterpretationFeedbackTableTableTableManager(
+        _db,
+        _db.interpretationFeedbackTable,
+      );
 }

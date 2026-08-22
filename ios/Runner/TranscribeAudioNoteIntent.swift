@@ -84,7 +84,7 @@ struct TranscribeAudioNoteIntent: AppIntent {
         )
 
         let finalNoteText: String
-        if let text = transcribedText?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty {
+        if let text = transcribedText?.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines), !text.isEmpty {
             finalNoteText = text
         } else {
             let dateStr = DateFormatter.localizedString(from: Date(), dateStyle: .medium, timeStyle: .short)

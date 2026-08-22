@@ -181,46 +181,61 @@ class _TopicsScreenState extends State<TopicsScreen>
 
         return Stack(
           children: [
-            // Background ambient grid / connections canvas
             Positioned.fill(
-              child: AnimatedBuilder(
-                animation: _pulseCtrl,
-                builder: (context, _) {
-                  return CustomPaint(
-                    painter: _KnowledgeGraphPainter(
-                      center: center,
-                      topics: topics,
-                      radius: radius,
-                      pulse: _pulseCtrl.value,
-                      accent: Theme.of(context).colorScheme.primary,
-                      selectedTopic: _selectedTopic,
-                    ),
-                  );
-                },
+              child: InteractiveViewer(
+                boundaryMargin: const EdgeInsets.all(160),
+                minScale: 0.5,
+                maxScale: 2.5,
+                child: SizedBox(
+                  width: constraints.maxWidth,
+                  height: constraints.maxHeight,
+                  child: Stack(
+                    children: [
+                      // Background ambient grid / connections canvas
+                      Positioned.fill(
+                        child: AnimatedBuilder(
+                          animation: _pulseCtrl,
+                          builder: (context, _) {
+                            return CustomPaint(
+                              painter: _KnowledgeGraphPainter(
+                                center: center,
+                                topics: topics,
+                                radius: radius,
+                                pulse: _pulseCtrl.value,
+                                accent: Theme.of(context).colorScheme.primary,
+                                selectedTopic: _selectedTopic,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+
+                      // Central Brain Node
+                      Positioned(
+                        left: center.dx - 46,
+                        top: center.dy - 46,
+                        child: _buildCentralBrainNode(),
+                      ),
+
+                      // Orbiting Intent / Topic Nodes
+                      ...topics.asMap().entries.map((entry) {
+                        final idx = entry.key;
+                        final topic = entry.value;
+                        final angle = (2 * math.pi / topics.length) * idx - (math.pi / 2);
+                        final nodeX = center.dx + radius * math.cos(angle) - 40;
+                        final nodeY = center.dy + radius * math.sin(angle) - 40;
+
+                        return Positioned(
+                          left: nodeX,
+                          top: nodeY,
+                          child: _buildTopicNode(topic),
+                        );
+                      }),
+                    ],
+                  ),
+                ),
               ),
             ),
-
-            // Central Brain Node
-            Positioned(
-              left: center.dx - 46,
-              top: center.dy - 46,
-              child: _buildCentralBrainNode(),
-            ),
-
-            // Orbiting Intent / Topic Nodes
-            ...topics.asMap().entries.map((entry) {
-              final idx = entry.key;
-              final topic = entry.value;
-              final angle = (2 * math.pi / topics.length) * idx - (math.pi / 2);
-              final nodeX = center.dx + radius * math.cos(angle) - 40;
-              final nodeY = center.dy + radius * math.sin(angle) - 40;
-
-              return Positioned(
-                left: nodeX,
-                top: nodeY,
-                child: _buildTopicNode(topic),
-              );
-            }),
 
             // Bottom Selected Topic / Node Inspector Sheet
             Positioned(

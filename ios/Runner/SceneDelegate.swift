@@ -85,15 +85,7 @@ class SceneDelegate: FlutterSceneDelegate, AVSpeechSynthesizerDelegate {
 
         actionChannel = channel
         OfflineSpeechService.shared.register(with: flutterViewController)
-
-        let mlxChannel = FlutterMethodChannel(
-            name: "notechoes/mlx_text_generation",
-            binaryMessenger: flutterViewController.binaryMessenger
-        )
-        self.mlxChannel = mlxChannel
-        mlxChannel.setMethodCallHandler { call, result in
-            Self.handleMLXMethodCall(call, result: result)
-        }
+        MLXTextGenerationChannelService.shared.register(with: flutterViewController)
 
         let pdfVisionChannel = FlutterMethodChannel(
             name: "notechoes/pdf_vision",
@@ -405,7 +397,10 @@ class SceneDelegate: FlutterSceneDelegate, AVSpeechSynthesizerDelegate {
                 try session.setActive(true)
                 speechSynthesizer.stopSpeaking(at: .immediate)
                 let language = arguments["language"] as? String ?? "en-US"
-                let voice = bestInstalledVoice(for: language)
+                let requestedVoiceId = arguments["voiceIdentifier"] as? String
+                let voice = self.bestInstalledVoice(for: language, identifier: requestedVoiceId)
+                let customRate = (arguments["rate"] as? Double) ?? 0.88
+                let customPitch = (arguments["pitch"] as? Double) ?? 0.98
                 let suppliedSegments = arguments["segments"] as? [String]
                 let sentences = suppliedSegments?.filter {
                     !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -421,8 +416,8 @@ class SceneDelegate: FlutterSceneDelegate, AVSpeechSynthesizerDelegate {
                     speechSegmentIndices[ObjectIdentifier(utterance)] =
                         startIndex + index
                     utterance.voice = voice
-                    utterance.rate = AVSpeechUtteranceDefaultSpeechRate * 0.88
-                    utterance.pitchMultiplier = 0.98
+                    utterance.rate = Float(AVSpeechUtteranceDefaultSpeechRate) * Float(customRate)
+                    utterance.pitchMultiplier = Float(customPitch)
                     utterance.volume = 1.0
                     utterance.preUtteranceDelay = index == 0 ? 0.02 : 0.06
                     utterance.postUtteranceDelay = 0.05
@@ -431,6 +426,7 @@ class SceneDelegate: FlutterSceneDelegate, AVSpeechSynthesizerDelegate {
                 result([
                     "started": true,
                     "voice": voice?.name ?? "System voice",
+                    "voiceIdentifier": voice?.identifier ?? "",
                     "quality": voiceQualityName(voice?.quality)
                 ])
             } catch {
@@ -441,6 +437,17 @@ class SceneDelegate: FlutterSceneDelegate, AVSpeechSynthesizerDelegate {
             speechSegmentIndices.removeAll()
             finalSpeechSegmentIndex = nil
             result(true)
+        case "getAvailableVoices":
+            let voices = AVSpeechSynthesisVoice.speechVoices().map { v in
+                return [
+                    "identifier": v.identifier,
+                    "name": v.name,
+                    "language": v.language,
+                    "quality": voiceQualityName(v.quality),
+                    "gender": v.gender == .female ? "female" : (v.gender == .male ? "male" : "unspecified")
+                ]
+            }
+            result(voices)
         case "audioStatus":
             let session = AVAudioSession.sharedInstance()
             result([
@@ -493,12 +500,18 @@ class SceneDelegate: FlutterSceneDelegate, AVSpeechSynthesizerDelegate {
     }
 
     private func bestInstalledVoice(
-        for requestedLanguage: String
+        for requestedLanguage: String,
+        identifier: String? = nil
     ) -> AVSpeechSynthesisVoice? {
+        let allVoices = AVSpeechSynthesisVoice.speechVoices()
+        if let id = identifier, let matched = allVoices.first(where: { $0.identifier == id }) {
+            return matched
+        }
+
         let normalized = requestedLanguage.lowercased()
         let languageCode = normalized.split(separator: "-").first.map(String.init)
             ?? normalized
-        let matching = AVSpeechSynthesisVoice.speechVoices().filter { voice in
+        let matching = allVoices.filter { voice in
             let candidate = voice.language.lowercased()
             return candidate == normalized || candidate.hasPrefix("\(languageCode)-")
         }
@@ -538,7 +551,7 @@ class SceneDelegate: FlutterSceneDelegate, AVSpeechSynthesizerDelegate {
         }
     }
 
-    private static func handleMLXMethodCall(
+    private func handleMLXMethodCall(
         _ call: FlutterMethodCall,
         result: @escaping FlutterResult
     ) {
@@ -548,7 +561,14 @@ class SceneDelegate: FlutterSceneDelegate, AVSpeechSynthesizerDelegate {
         case "load":
             Task {
                 do {
-                    try await MLXTextGenerationService.shared.load()
+                    try await MLXTextGenerationService.shared.load { [weak self] fraction, statusText in
+                        DispatchQueue.main.async {
+                            self?.mlxChannel?.invokeMethod("onMLXDownloadProgress", arguments: [
+                                "progress": fraction,
+                                "statusText": statusText
+                            ])
+                        }
+                    }
                     await MainActor.run { result(true) }
                 } catch {
                     await MainActor.run {
