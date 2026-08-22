@@ -293,6 +293,26 @@ actor WhisperModelManager {
             try fm.removeItem(at: staging)
         }
 
+        // Also clean up any lingering legacy/cache directories
+        let cleanupSubpaths = [
+            "WhisperKitModels",
+            "models/openai_whisper-base",
+            "openai_whisper-base",
+            "huggingface/models/argmaxinc/whisperkit-coreml"
+        ]
+        if let appSupport = try? fm.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: false) {
+            for sub in cleanupSubpaths {
+                let target = appSupport.appendingPathComponent(sub)
+                if fm.fileExists(atPath: target.path) { try? fm.removeItem(at: target) }
+            }
+        }
+        if let caches = try? fm.url(for: .cachesDirectory, in: .userDomainMask, appropriateFor: nil, create: false) {
+            for sub in cleanupSubpaths {
+                let target = caches.appendingPathComponent(sub)
+                if fm.fileExists(atPath: target.path) { try? fm.removeItem(at: target) }
+            }
+        }
+
         currentState = .missing
         downloadProgress = 0.0
         completedBytes = 0
@@ -441,19 +461,40 @@ actor WhisperModelManager {
         if verified { return }
 
         let fm = FileManager.default
-        guard let appSupport = try? fm.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: false) else {
-            return
-        }
+        var legacyCandidates: [URL] = []
 
-        let legacyCandidates = [
-            appSupport.appendingPathComponent("WhisperKitModels/openai_whisper-base"),
-            appSupport.appendingPathComponent("WhisperKitModels"),
-            appSupport.appendingPathComponent("openai_whisper-base")
+        let subpaths = [
+            "WhisperKitModels/openai_whisper-base",
+            "WhisperKitModels",
+            "models/openai_whisper-base",
+            "openai_whisper-base",
+            "huggingface/models/argmaxinc/whisperkit-coreml/openai_whisper-base",
+            "huggingface/models/argmaxinc/whisperkit-coreml",
+            "NoteEchoes/Models/Whisper/openai_whisper-base",
+            "Models/Whisper/openai_whisper-base"
         ]
 
+        if let appSupport = try? fm.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: false) {
+            for sub in subpaths {
+                legacyCandidates.append(appSupport.appendingPathComponent(sub))
+            }
+        }
+        if let caches = try? fm.url(for: .cachesDirectory, in: .userDomainMask, appropriateFor: nil, create: false) {
+            for sub in subpaths {
+                legacyCandidates.append(caches.appendingPathComponent(sub))
+            }
+        }
+        if let docs = try? fm.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: false) {
+            for sub in subpaths {
+                legacyCandidates.append(docs.appendingPathComponent(sub))
+            }
+        }
+
         for candidate in legacyCandidates {
+            if candidate.standardizedFileURL == canonical.standardizedFileURL { continue }
             if let direct = findDirectModelFolder(in: candidate) {
-                NSLog("[WhisperModelManager] Migrating legacy Whisper model from \(direct.path) to canonical location.")
+                if direct.standardizedFileURL == canonical.standardizedFileURL { continue }
+                NSLog("[WhisperModelManager] Migrating existing Whisper model from \(direct.path) to canonical location.")
                 try? promoteStagingToCanonical(source: direct, destination: canonical)
                 try? writeMetadataRecord()
                 break

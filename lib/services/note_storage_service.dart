@@ -115,6 +115,12 @@ class NoteStorageService {
       debugPrint('Shared note-backup read failed: $error');
     }
 
+    final existingIds = database
+        .select('SELECT note_id FROM notes;')
+        .map((row) => row['note_id'] as String)
+        .toSet();
+
+    var totalRecovered = 0;
     for (final payload in candidates) {
       try {
         final decoded = jsonDecode(payload) as List<dynamic>;
@@ -122,14 +128,15 @@ class NoteStorageService {
         database.execute('BEGIN IMMEDIATE;');
         try {
           for (final value in decoded) {
-            _upsert(
-              database,
-              NoteModel.fromJson(Map<String, dynamic>.from(value as Map)),
+            final note = NoteModel.fromJson(
+              Map<String, dynamic>.from(value as Map),
             );
+            if (existingIds.add(note.noteId)) {
+              _upsert(database, note);
+              totalRecovered++;
+            }
           }
           database.execute('COMMIT;');
-          debugPrint('Recovered ${decoded.length} notes from safety backup.');
-          return decoded.length;
         } catch (_) {
           database.execute('ROLLBACK;');
           rethrow;
@@ -138,7 +145,10 @@ class NoteStorageService {
         debugPrint('Ignored an unreadable note backup: $error');
       }
     }
-    return 0;
+    if (totalRecovered > 0) {
+      debugPrint('Recovered $totalRecovered new notes from safety backup.');
+    }
+    return totalRecovered;
   }
 
   Future<void> _writeRecoveryBackup(Database database) async {
@@ -209,8 +219,7 @@ class NoteStorageService {
   /// the App Group bridge on a UIScene-based iOS launch.
   Future<bool> syncRecoveryBackup() async {
     final database = await _database();
-    final wasEmpty = _noteCount(database) == 0;
-    final recovered = wasEmpty ? await _recoverFromBackup(database) : 0;
+    final recovered = await _recoverFromBackup(database);
     if (_noteCount(database) > 0) {
       await _writeRecoveryBackup(database);
     }
