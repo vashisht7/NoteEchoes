@@ -75,11 +75,14 @@ class _AiModelSettingsPageState extends State<AiModelSettingsPage>
     });
 
     _qwenProgressSub?.cancel();
-    _qwenProgressSub = QwenLlamaProvider.instance.progressStream.listen((event) {
+    _qwenProgressSub = QwenLlamaProvider.instance.progressStream.listen((
+      event,
+    ) {
       if (mounted) {
         setState(() {
           _qwenDownloading = true;
-          _qwenProgress = (event['progress'] as num?)?.toDouble() ?? _qwenProgress;
+          _qwenProgress =
+              (event['progress'] as num?)?.toDouble() ?? _qwenProgress;
           _qwenStatusText = (event['statusText'] as String?) ?? _qwenStatusText;
         });
       }
@@ -168,10 +171,17 @@ class _AiModelSettingsPageState extends State<AiModelSettingsPage>
                   'Multilingual Whisper Base; accuracy varies by language and audio quality. '
                   'Recognizes Telugu, English, Hindi and code-mixed speech fully on-device.',
               size: '147 MB download',
-              languages: ['Telugu', 'English', 'Hindi', 'Multilingual (Telugu & English Mixed)'],
+              languages: [
+                'Telugu',
+                'English',
+                'Hindi',
+                'Multilingual (Telugu & English Mixed)',
+              ],
               isInstalled: _whisperInstalled,
               isDownloading: _whisperDownloading,
-              downloadProgress: _whisperDownloading ? (_whisperProgress > 0 ? _whisperProgress : 0.05) : 0,
+              downloadProgress: _whisperDownloading
+                  ? (_whisperProgress > 0 ? _whisperProgress : 0.05)
+                  : 0,
               statusText: _whisperStatusText,
               warningText: _whisperWarning,
               onDownload: _whisperDownloading ? null : _startWhisperDownload,
@@ -201,21 +211,23 @@ class _AiModelSettingsPageState extends State<AiModelSettingsPage>
               onDelete: _embeddingInstalled ? _deleteEmbedding : null,
             ),
             const SizedBox(height: 20),
-            const _SectionHeader('On-Device LLM (Summaries & Chat)'),
+            const _SectionHeader('On-Device NoteEchoes Intelligence'),
             const SizedBox(height: 8),
             _ModelCard(
-              name: 'Qwen3-0.6B MLX 4-bit',
+              name: 'NoteEchoes Core v4 MLX 4-bit',
               description:
-                  'Quantized neural model for instant structured note summaries, '
-                  'calendar/event extraction, journal reflections, and grounded document Q&A.',
-              size: '351 MB download',
-              languages: ['Multilingual', 'English', 'Telugu', 'Hindi'],
+                  'The exact verified NoteEchoes action model for notes, tasks, reminders, '
+                  'checklists, summaries, and grounded queries. English supports every action; '
+                  'Telugu and Hindi support core actions except email and prompt generation.',
+              size: '839 MiB download',
+              languages: ['English', 'Telugu', 'Hindi', 'Romanized & mixed'],
               isInstalled: _qwenInstalled,
               isDownloading: _qwenDownloading,
               downloadProgress: _qwenProgress,
               statusText: _qwenStatusText,
               warningText: _qwenWarning,
               onDownload: _runtime.llmSupported ? _startQwenDownload : null,
+              onCancel: _qwenDownloading ? _cancelQwenDownload : null,
               onDelete: _qwenInstalled ? _deleteQwen : null,
               notAvailableReason: _runtime.llmSupported
                   ? null
@@ -317,9 +329,11 @@ class _AiModelSettingsPageState extends State<AiModelSettingsPage>
             _whisperStatusText = '';
             _whisperInstalled = isReady;
           });
-          _showToast(isReady
-              ? 'Whisper Multilingual is ready! Telugu, English & mixed speech enabled.'
-              : 'Download completed — verified status: ${_models.whisper.reason.isNotEmpty ? _models.whisper.reason : "Ready"}');
+          _showToast(
+            isReady
+                ? 'Whisper Multilingual is ready! Telugu, English & mixed speech enabled.'
+                : 'Download completed — verified status: ${_models.whisper.reason.isNotEmpty ? _models.whisper.reason : "Ready"}',
+          );
         } catch (error) {
           if (!mounted) return;
           await _syncModelStatus();
@@ -379,11 +393,12 @@ class _AiModelSettingsPageState extends State<AiModelSettingsPage>
 
   void _startQwenDownload() {
     _showDownloadSheet(
-      modelName: 'Qwen3-0.6B MLX 4-bit',
-      modelSize: '351 MB',
+      modelName: 'NoteEchoes Core v4 MLX 4-bit',
+      modelSize: '839 MiB',
       details:
-          'Downloads the local LLM weights for smart note summaries, auto-titling, '
-          'action extraction, and offline document chat. Stored in Application Support.',
+          'Downloads the exact evaluated NoteEchoes model from Hugging Face, then verifies '
+          'every runtime file before enabling it. Keep NoteEchoes open during this one-time '
+          'download and allow at least 2 GB of free storage during installation.',
       onConfirm: () async {
         setState(() {
           _qwenDownloading = true;
@@ -406,7 +421,7 @@ class _AiModelSettingsPageState extends State<AiModelSettingsPage>
             _qwenStatusText = '';
           });
           _showToast(
-            'Qwen3 is ready! Reorganized and indexed ${allNotes.length} notes.',
+            'NoteEchoes Core v4 is verified and ready. Reindexed ${allNotes.length} notes.',
           );
         } catch (error) {
           if (!mounted) return;
@@ -421,16 +436,27 @@ class _AiModelSettingsPageState extends State<AiModelSettingsPage>
     );
   }
 
+  Future<void> _cancelQwenDownload() async {
+    await QwenLlamaProvider.instance.cancelDownload();
+    if (!mounted) return;
+    setState(() {
+      _qwenDownloading = false;
+      _qwenProgress = 0;
+      _qwenStatusText = 'Download cancelled. Tap Download to retry.';
+    });
+    _showToast('Model download cancelled. Tap Download to retry.');
+  }
+
   Future<void> _deleteQwen() async {
     final confirmed = await _showDeleteDialog(
-      'Qwen3-0.6B MLX 4-bit',
+      'NoteEchoes Core v4 MLX 4-bit',
       'This removes the downloaded model files. Basic keyword search and Apple transcription will continue to work.',
     );
     if (confirmed == true) {
       await _models.removeQwen();
       if (!mounted) return;
       await _syncModelStatus();
-      _showToast('Qwen model files were removed.');
+      _showToast('NoteEchoes Core v4 model files were removed.');
     }
   }
 
@@ -735,6 +761,7 @@ class _ModelCard extends StatelessWidget {
   final String statusText;
   final String? warningText;
   final VoidCallback? onDownload;
+  final VoidCallback? onCancel;
   final VoidCallback? onDelete;
   final String? notAvailableReason;
 
@@ -749,6 +776,7 @@ class _ModelCard extends StatelessWidget {
     required this.statusText,
     this.warningText,
     this.onDownload,
+    this.onCancel,
     this.onDelete,
     this.notAvailableReason,
   });
@@ -899,9 +927,20 @@ class _ModelCard extends StatelessWidget {
               const SizedBox(height: 6),
               Text(
                 statusText,
-                style: GoogleFonts.inter(
-                  fontSize: 11,
-                  color: Colors.white54,
+                style: GoogleFonts.inter(fontSize: 11, color: Colors.white54),
+              ),
+            ],
+            if (onCancel != null) ...[
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: onCancel,
+                  icon: const Icon(Icons.pause_rounded, size: 16),
+                  label: Text(
+                    'Pause Download',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                  ),
                 ),
               ),
             ],
@@ -916,7 +955,7 @@ class _ModelCard extends StatelessWidget {
                 onPressed: onDownload,
                 icon: const Icon(Icons.download_rounded, size: 16),
                 label: Text(
-                  'Download ($size)',
+                  warningText == null ? 'Download ($size)' : 'Repair Model',
                   style: GoogleFonts.inter(fontWeight: FontWeight.w600),
                 ),
                 style: FilledButton.styleFrom(

@@ -267,7 +267,7 @@ Grounded Answer:''';
           prompt: userPrompt,
           systemPrompt: systemPrompt,
           fromJson: (json) => json['answer'] as String? ?? '',
-          modelId: 'qwen3-0.6b-4bit',
+          modelId: 'noteechoes-qwen25-core-v4-mlx-4bit',
           modelVersion: '3.0.0',
           promptVersion: '1.0',
           schemaVersion: 1,

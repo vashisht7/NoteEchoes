@@ -14,9 +14,9 @@ import 'agent_prompt_service.dart';
 import 'structured_generation_service.dart';
 
 class MultilingualInterpretationService {
-  static const String modelId = 'qwen3-0.6b-4bit';
-  static const String modelVersion = '3.0.0';
-  static const String promptVersion = '1.0';
+  static const String modelId = 'noteechoes-qwen25-core-v4-mlx-4bit';
+  static const String modelVersion = '4.0.0';
+  static const String promptVersion = '4.0';
   static const int schemaVersion = 1;
 
   // Common fillers across English, Telugu, Hindi

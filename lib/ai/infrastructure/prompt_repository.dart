@@ -10,7 +10,37 @@ class PromptRepository {
 
   PromptRepository._internal();
 
-  static const String promptVersion = 'v1.0';
+  static const String promptVersion = 'v4.0';
+
+  static const String coreActionV4SystemPrompt = '''
+You are the private on-device NoteEchoes core interpreter.
+
+Turn the user's exact words into one compact JSON object. Output JSON only.
+
+Use exactly these keys in this order:
+v, language, mode, kind, title, summary, actions, query_terms, ask.
+
+Rules:
+- v is 4.
+- Preserve the user's Telugu, Hindi, English, or mixed-language style.
+- mode is capture for notes, ideas, decisions, updates, tasks, reminders, and calendar requests.
+- mode is query only for questions about saved notes or memories.
+- kind describes the saved memory. Use task_list when tasks are requested and none for queries.
+- actions may contain only task, reminder, or calendar_event.
+- Each action has exactly: kind, text, items, date, time, people, place.
+- text is the user's requested action. Never invent workflow steps.
+- For a checklist or enumerated tasks, put every independently spoken item in items, in spoken order.
+- Treat phrases such as first task/second task, first/second/third, and equivalent Telugu or Hindi enumeration as separate items.
+- Split and/also/then only when both sides are independently actionable. Never invent workflow steps.
+- If exactly one task is spoken, put that one grounded task in items. Otherwise use [].
+- Keep relative dates and times exactly as spoken. Do not calculate them.
+- The app, not the model, asks for confirmation before reminders or calendar writes.
+- If a reminder or calendar request lacks an executable date or time, put one short question in ask.
+- For a saved-note query, use mode=query, kind=none, title=null, summary=null, actions=[], and useful query_terms.
+- Email, message, and agent-prompt generation are outside this model. Store such speech as a normal note with no actions.
+- Use null for missing title, summary, date, time, place, or ask. Use [] for empty lists.
+- Never claim that an action was completed, sent, scheduled, or saved.
+''';
 
   List<AiMessage> noteAnalysisPrompt({
     required String noteContent,
@@ -18,38 +48,14 @@ class PromptRepository {
     required String noteCreatedAtIso8601,
     String? existingTranscript,
   }) {
-    final systemPrompt = '''
-You are a local AI assistant analysing personal notes. Output ONLY valid JSON.
-Detect language (en/te/hi). Generate a minimal 3-6 word title.
-Extract: topics, people, places, action_items, events, reminders, travel_details.
-For dates: resolve relative expressions using the provided note_created_at ($noteCreatedAtIso8601) as base date.
-Output schema: { 
-  "note_id": "$noteId", 
-  "model_version": "$promptVersion", 
-  "detected_language": "string", 
-  "note_type": "string", 
-  "generated_title": "string", 
-  "summary": "string", 
-  "english_retrieval_summary": "string", 
-  "topics": ["string"], 
-  "people": ["string"], 
-  "places": ["string"], 
-  "suggested_tags": ["string"], 
-  "action_items": ["string"], 
-  "events": ["string"], 
-  "reminders": ["string"], 
-  "travel_details": ["string"], 
-  "analysed_at": "string" 
-}
-Confidence must be 0.0-1.0. Mark uncertain dates with `is_uncertain: true`.
-''';
-
-    final userContent = existingTranscript != null
-        ? 'Note Transcript: $existingTranscript\n\nNote Content: $noteContent'
-        : 'Note Content: $noteContent';
+    // The compact model was trained on the user's raw utterance. Prefixes such
+    // as "Note Content:" shift its routing behavior, so keep this message exact.
+    final userContent = existingTranscript?.trim().isNotEmpty == true
+        ? existingTranscript!.trim()
+        : noteContent.trim();
 
     return [
-      AiMessage(role: AiRole.system, content: systemPrompt),
+      const AiMessage(role: AiRole.system, content: coreActionV4SystemPrompt),
       AiMessage(role: AiRole.user, content: userContent),
     ];
   }

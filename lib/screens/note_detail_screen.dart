@@ -127,7 +127,14 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
     };
     final referencedChecklistIds = <String>{};
     _blocks = savedBlocks.isEmpty
-        ? [_TextBlock(text: note?.textContent ?? '')]
+        ? _checklist.isNotEmpty
+              // Voice checklists keep the raw transcript in NoteModel for
+              // retrieval, but the editor presents only actionable rows.
+              ? _checklist.map<dynamic>((item) {
+                  referencedChecklistIds.add(item.id);
+                  return _ChecklistBlock(item);
+                }).toList()
+              : [_TextBlock(text: note?.textContent ?? '')]
         : savedBlocks.map<dynamic>((block) {
             if (block.type == NoteBlockType.table) {
               return _TableBlock(

@@ -88,7 +88,9 @@ class ModelAvailabilityService extends ChangeNotifier {
 
   static const _mlxChannel = MethodChannel('noteechoes/mlx_text_generation');
 
-  LocalModelStatus qwen = const LocalModelStatus.checking('qwen3-0.6b');
+  LocalModelStatus qwen = const LocalModelStatus.checking(
+    'noteechoes-qwen25-core-v4-mlx-4bit',
+  );
   LocalModelStatus whisper = const LocalModelStatus.checking('whisper-base');
   LocalModelStatus embedding = const LocalModelStatus.checking(
     E5EmbeddingService.modelVersion,

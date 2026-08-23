@@ -3,8 +3,6 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
-import '../models/note_model.dart';
-import 'ai_categorization_engine.dart';
 import 'note_service.dart';
 
 /// Drains the `PendingVoiceNoteStore` queue that is populated by the
@@ -25,8 +23,6 @@ final class ActionButtonNoteIngestionService with WidgetsBindingObserver {
   static const MethodChannel _channel = MethodChannel(
     'com.vashisht.notechoes/action_button',
   );
-
-  final AiCategorizationEngine _categorizationEngine = AiCategorizationEngine();
 
   bool _isImporting = false;
   bool _observerAttached = false;
@@ -77,27 +73,14 @@ final class ActionButtonNoteIngestionService with WidgetsBindingObserver {
           continue;
         }
 
-        final analysis = _categorizationEngine.analyzeNote(text);
-
-        final tagsSet = <String>{'voice-memo'};
-        tagsSet.addAll(analysis.categories);
-
-        final note = NoteModel(
+        await NoteService().createFromVoiceTranscription(
+          text,
           noteId: id,
-          title: analysis.title,
-          contentType: analysis.contentType,
-          mediaAssets: const [],
-          summarySnippet: analysis.summarySnippet,
-          textContent: text,
           createdAt: createdAt,
-          tags: tagsSet.toList(),
-          isPinned: false,
-          checklist: analysis.extractedChecklist,
         );
 
         // Acknowledge only after the note is durably committed. If persistence
         // fails, the App Intent queue retains the item for the next launch.
-        await NoteService().addNote(note);
         await _acknowledge(id);
         imported++;
         debugPrint('notechoes: imported voice note "$id" ($imported so far)');

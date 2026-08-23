@@ -7,6 +7,8 @@ import '../providers/text_generation_provider.dart';
 import '../domain/ai_models.dart';
 // Use an alias to avoid name clash with the legacy engine's NoteAnalysisResult.
 import '../domain/note_analysis.dart' as domain;
+import '../domain/core_action_v4_adapter.dart';
+import '../domain/core_action_v4_guardrails.dart';
 import '../infrastructure/prompt_repository.dart';
 import '../../services/ai_categorization_engine.dart' as legacy;
 
@@ -19,23 +21,26 @@ class QwenLlamaProvider implements TextGenerationProvider {
 
   bool _isLoaded = false;
   static const _channel = MethodChannel('noteechoes/mlx_text_generation');
-  final _progressController = StreamController<Map<String, dynamic>>.broadcast();
+  final _progressController =
+      StreamController<Map<String, dynamic>>.broadcast();
 
   Stream<Map<String, dynamic>> get progressStream => _progressController.stream;
 
   Future<void> _handleNativeCall(MethodCall call) async {
     if (call.method == 'onMLXDownloadProgress') {
       if (call.arguments is Map) {
-        _progressController.add(Map<String, dynamic>.from(call.arguments as Map));
+        _progressController.add(
+          Map<String, dynamic>.from(call.arguments as Map),
+        );
       }
     }
   }
 
   @override
-  String get displayName => 'Qwen3-0.6B MLX 4-bit';
+  String get displayName => 'NoteEchoes Core v4 MLX 4-bit';
 
   @override
-  String get modelVersion => 'qwen3-0.6b-mlx-4bit';
+  String get modelVersion => 'noteechoes-qwen25-core-v4-mlx-4bit';
 
   @override
   bool get isLoaded => _isLoaded;
@@ -59,6 +64,11 @@ class QwenLlamaProvider implements TextGenerationProvider {
   @override
   Future<void> unload() async {
     await _channel.invokeMethod<void>('unload');
+    _isLoaded = false;
+  }
+
+  Future<void> cancelDownload() async {
+    await _channel.invokeMethod<bool>('cancelDownload');
     _isLoaded = false;
   }
 
@@ -174,6 +184,19 @@ class QwenLlamaProvider implements TextGenerationProvider {
       final json =
           jsonDecode(response.substring(start, end + 1))
               as Map<String, dynamic>;
+      if (json['v'] == 4) {
+        final guarded = CoreActionV4Guardrails.normalize(
+          json,
+          noteContent: noteContent,
+        );
+        return CoreActionV4Adapter.toNoteAnalysis(
+          guarded,
+          noteContent: noteContent,
+          noteId: noteId,
+          modelVersion: modelVersion,
+          analysedAt: DateTime.now(),
+        );
+      }
       json['note_id'] = noteId;
       json['model_version'] = modelVersion;
       json['analysed_at'] = DateTime.now().toIso8601String();

@@ -11,6 +11,14 @@ For the complete technical blueprint, directory index mapping every Dart/Swift f
 For the device-download strategy, free product scope, monetization options, and
 custom-model roadmap, see **[future_plans.md](future_plans.md)**.
 
+For the production NoteEchoes Core v4 integration, start with:
+
+- **[NOTECHOES_CORE_V4_IOS_HANDOFF.md](NOTECHOES_CORE_V4_IOS_HANDOFF.md)** — exact model revision, download flow, verification, and release handoff
+- **[NOTECHOES_DART_MODEL_API.md](NOTECHOES_DART_MODEL_API.md)** — Dart-facing request/response contract and natural-language examples
+- **[NOTECHOES_MODEL_AND_CHECKLIST_RECOVERY_PLAN.md](NOTECHOES_MODEL_AND_CHECKLIST_RECOVERY_PLAN.md)** — checklist behavior, application wiring, tests, and remaining work
+- **[NOTECHOES_MODEL_DATASET_AND_PREPARATION.md](NOTECHOES_MODEL_DATASET_AND_PREPARATION.md)** — training data, evaluation, model preparation, and artifact inventory
+- **[NOTECHOES_SPEAKING_GUIDE.md](NOTECHOES_SPEAKING_GUIDE.md)** — practical English, Hindi, and Telugu voice examples
+
 ---
 
 ## 🌟 Key Features
@@ -37,7 +45,7 @@ custom-model roadmap, see **[future_plans.md](future_plans.md)**.
 |    • Keep-style dual-column masonry grid with voice memo wave badges and formatted timestamps                 |
 |                                                                                                               |
 | 4. 🧠 Local On-Device AI Architecture (Phases 1-12)                                                            |
-|    • Qwen3-0.6B 4-bit through MLX Swift; downloaded on first use (~351 MB)                                    |
+|    • NoteEchoes Core v4 (Qwen2.5-1.5B MLX 4-bit); pinned download on first use (~839 MiB)                     |
 |    • Multilingual transcription supplied by Apple's Transcribe Audio Shortcut action                          |
 |    • SQLite / Drift database with persistent background AI job queue & FTS5 full-text search                  |
 |    • Grounded document Q&A and cross-notebook semantic synthesis                                              |
@@ -76,7 +84,10 @@ flutter run -d ios
 In Xcode, select your Apple team and connected iPhone. Keep the App Group
 `group.com.vashisht.notechoes` enabled. If Xcode asks, trust the official MLX
 build plugin. The AI model is downloaded from the model settings page and is
-not stored in the application bundle.
+not stored in the application bundle. The app downloads the immutable revision
+`ab5704d40dc4096e7460fb10443e99fc891b7196` from
+[`Vashisht7/noteechoes-qwen25-core-v4-mlx-4bit`](https://huggingface.co/Vashisht7/noteechoes-qwen25-core-v4-mlx-4bit)
+and verifies the expected files before enabling local inference.
 
 The unsigned iPhone release build measured approximately 77 MB on August 14,
 2026. Final App Store download and installed sizes can differ because of signing,

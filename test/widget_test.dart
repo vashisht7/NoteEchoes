@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:notechoes_app/main.dart';
 import 'package:notechoes_app/screens/home_screen.dart';
+import 'package:notechoes_app/screens/note_detail_screen.dart';
 import 'package:notechoes_app/services/ai_categorization_engine.dart';
 import 'package:notechoes_app/services/note_service.dart';
 import 'package:notechoes_app/models/note_model.dart';
@@ -55,6 +56,18 @@ void main() {
   });
 
   group('NoteService Integration Tests', () {
+    test('natural enumerated voice speech saves as checklist', () async {
+      final note = await NoteService().createFromVoiceTranscription(
+        'First task, I want to check whether the model works. Second, I want to check whether the app works.',
+      );
+
+      expect(note.checklist.map((item) => item.text), [
+        'check whether the model works',
+        'check whether the app works',
+      ]);
+      await NoteService().waitForPendingIndexingForTesting();
+    });
+
     test(
       'createFromVoiceTranscription saves note with AI categories',
       () async {
@@ -94,6 +107,38 @@ void main() {
       expect(restored.contentBlocks.length, 2);
       expect(restored.contentBlocks.last.tableCells[1][0], 'పని');
       expect(restored.contentBlocks.last.searchableText, contains('स्थिति'));
+    });
+
+    testWidgets('voice checklist editor hides duplicate transcript', (
+      tester,
+    ) async {
+      final note = NoteModel(
+        noteId: 'pure-checklist',
+        title: 'Checklist',
+        contentType: NoteContentType.textOnly,
+        summarySnippet: 'First task model. Second task app.',
+        textContent: 'First task model. Second task app.',
+        createdAt: DateTime(2026),
+        tags: const ['voice-memo', 'tasks'],
+        checklist: [
+          CheckListItem(id: 'one', text: 'Check the model'),
+          CheckListItem(id: 'two', text: 'Check the app'),
+        ],
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(home: NoteDetailScreen(existingNote: note)),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Check the model'), findsOneWidget);
+      expect(find.text('Check the app'), findsOneWidget);
+      expect(find.text('First task model. Second task app.'), findsNothing);
+      expect(find.byTooltip('Mark complete'), findsNWidgets(2));
+
+      await tester.tap(find.byTooltip('Mark complete').first);
+      await tester.pump();
+      expect(find.byTooltip('Mark incomplete'), findsOneWidget);
     });
   });
 

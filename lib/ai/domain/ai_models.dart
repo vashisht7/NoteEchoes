@@ -149,10 +149,7 @@ class AiMessage {
 
   const AiMessage({required this.role, required this.content});
 
-  Map<String, dynamic> toJson() => {
-        'role': role.name,
-        'content': content,
-      };
+  Map<String, dynamic> toJson() => {'role': role.name, 'content': content};
 }
 
 enum AiRole { system, user, assistant }
@@ -178,7 +175,7 @@ class GenerationOptions {
   /// Conservative options for structured JSON extraction.
   static const structured = GenerationOptions(
     maxTokens: 1024,
-    temperature: 0.1,
+    temperature: 0.0,
     topP: 0.95,
     topK: 10,
     thinkingEnabled: false,
@@ -265,4 +262,3 @@ class AiProvenance {
         : null,
   );
 }
-

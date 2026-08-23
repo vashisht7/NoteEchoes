@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../models/note_model.dart';
 import 'ai_categorization_engine.dart';
+import 'spoken_checklist_parser.dart';
 import 'note_storage_service.dart';
 import '../ai/infrastructure/knowledge_service.dart';
 import '../ai/infrastructure/model_availability_service.dart';
@@ -170,7 +171,11 @@ class NoteService extends ChangeNotifier {
 
   /// Creates and saves a note directly from voice transcription or speech
   /// using the on-device AI categorization engine.
-  Future<NoteModel> createFromVoiceTranscription(String spokenText) async {
+  Future<NoteModel> createFromVoiceTranscription(
+    String spokenText, {
+    String? noteId,
+    DateTime? createdAt,
+  }) async {
     final analysis = AiCategorizationEngine().analyzeNote(spokenText);
     final tagsSet = <String>{'voice-memo'};
     tagsSet.addAll(analysis.categories);
@@ -182,6 +187,12 @@ class NoteService extends ChangeNotifier {
     // A verified Qwen installation upgrades spoken notes from keyword rules to
     // content-aware titles, topics and action extraction. The lightweight path
     // remains available when no model is downloaded.
+    try {
+      await ModelAvailabilityService.instance.refresh();
+    } catch (error) {
+      debugPrint('Could not refresh local model status: $error');
+    }
+
     if (ModelAvailabilityService.instance.qwen.isReady) {
       try {
         final provider = QwenLlamaProvider.instance;
@@ -207,15 +218,47 @@ class NoteService extends ChangeNotifier {
       }
     }
 
+    // Natural speech normally has no markdown bullets. Preserve an explicit
+    // spoken enumeration ("first task ... second ...") even when a compact
+    // model or the offline fallback returns a single task/plain note.
+    final spokenChecklist = SpokenChecklistParser.extract(spokenText);
+    if (spokenChecklist.length >= 2) {
+      checklist = spokenChecklist
+          .asMap()
+          .entries
+          .map(
+            (entry) => CheckListItem(
+              id: '${noteId ?? 'echo'}-spoken-${entry.key}',
+              text: entry.value,
+            ),
+          )
+          .toList();
+      tagsSet.add('tasks');
+      if (title == analysis.title) title = 'Checklist';
+    }
+
     final note = NoteModel(
-      noteId: "echo_${DateTime.now().millisecondsSinceEpoch}",
+      noteId: noteId?.trim().isNotEmpty == true
+          ? noteId!.trim()
+          : "echo_${DateTime.now().millisecondsSinceEpoch}",
       title: title,
       contentType: NoteContentType.textOnly,
       summarySnippet: summary,
       textContent: spokenText.trim(),
-      createdAt: DateTime.now(),
+      createdAt: createdAt ?? DateTime.now(),
       tags: tagsSet.toList(),
       checklist: checklist,
+      contentBlocks: checklist.isEmpty
+          ? const []
+          : checklist
+                .map(
+                  (item) => NoteBlockData.checklist(
+                    checklistId: item.id,
+                    checklistText: item.text,
+                    checklistCompleted: item.isCompleted,
+                  ),
+                )
+                .toList(),
       isPinned: false,
     );
 
