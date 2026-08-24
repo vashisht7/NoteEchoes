@@ -118,7 +118,15 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
     _isPinned = note?.isPinned ?? false;
     _contentType = note?.contentType ?? NoteContentType.textOnly;
     _mediaAssets = List.from(note?.mediaAssets ?? []);
-    _checklist = List.from(note?.checklist ?? []);
+    _checklist = (note?.checklist ?? const <CheckListItem>[])
+        .map(
+          (item) => CheckListItem(
+            id: item.id,
+            text: item.text,
+            isCompleted: item.isCompleted,
+          ),
+        )
+        .toList();
     _createdAt = note?.createdAt ?? DateTime.now();
     _noteId = note?.noteId ?? "echo_${DateTime.now().microsecondsSinceEpoch}";
     final savedBlocks = note?.contentBlocks ?? const <NoteBlockData>[];
@@ -459,26 +467,71 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
 
   Widget _buildChecklistBlock(_ChecklistBlock block) {
     final item = block.item;
-    return Padding(
+    return AnimatedContainer(
       key: block.key,
-      padding: const EdgeInsets.symmetric(vertical: 2),
+      duration: const Duration(milliseconds: 180),
+      margin: const EdgeInsets.symmetric(vertical: 3),
+      padding: const EdgeInsets.fromLTRB(8, 4, 2, 4),
+      decoration: BoxDecoration(
+        color: item.isCompleted
+            ? Colors.white.withValues(alpha: 0.025)
+            : Colors.white.withValues(alpha: 0.045),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: item.isCompleted
+              ? Colors.white.withValues(alpha: 0.055)
+              : Colors.white.withValues(alpha: 0.085),
+        ),
+      ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          IconButton(
-            tooltip: item.isCompleted ? 'Mark incomplete' : 'Mark complete',
-            icon: Icon(
-              item.isCompleted
-                  ? Icons.check_circle_rounded
-                  : Icons.radio_button_unchecked_rounded,
-              color: item.isCompleted
-                  ? Theme.of(context).colorScheme.primary
-                  : Colors.white38,
-              size: 20,
+          Semantics(
+            button: true,
+            checked: item.isCompleted,
+            label: item.isCompleted ? 'Mark incomplete' : 'Mark complete',
+            child: Tooltip(
+              message: item.isCompleted ? 'Mark incomplete' : 'Mark complete',
+              child: InkResponse(
+                radius: 24,
+                onTap: () async {
+                  setState(() => item.isCompleted = !item.isCompleted);
+                  if (widget.existingNote != null) {
+                    await NoteService().toggleCheckItem(_noteId, item.id);
+                  }
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  width: 30,
+                  height: 30,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: item.isCompleted
+                        ? Theme.of(context).colorScheme.primary
+                        : Colors.transparent,
+                    border: Border.all(
+                      width: 1.6,
+                      color: item.isCompleted
+                          ? Theme.of(context).colorScheme.primary
+                          : Colors.white38,
+                    ),
+                  ),
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 140),
+                    child: item.isCompleted
+                        ? const Icon(
+                            Icons.check_rounded,
+                            key: ValueKey('done'),
+                            size: 18,
+                            color: Colors.white,
+                          )
+                        : const SizedBox(key: ValueKey('pending')),
+                  ),
+                ),
+              ),
             ),
-            onPressed: () =>
-                setState(() => item.isCompleted = !item.isCompleted),
           ),
+          const SizedBox(width: 10),
           Expanded(
             child: TextFormField(
               key: ValueKey('checklist_${item.id}'),
@@ -488,31 +541,57 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
               style: TextStyle(
                 fontSize: 16,
                 height: 1.45,
-                color: item.isCompleted ? Colors.white38 : Colors.white,
+                color: item.isCompleted
+                    ? Colors.white.withValues(alpha: 0.46)
+                    : Colors.white,
                 decoration: item.isCompleted
                     ? TextDecoration.lineThrough
                     : null,
+                decorationColor: Colors.white38,
               ),
               decoration: const InputDecoration(
                 hintText: 'Checklist item',
                 hintStyle: TextStyle(color: Colors.white24),
                 border: InputBorder.none,
                 isDense: true,
-                contentPadding: EdgeInsets.symmetric(vertical: 12),
+                contentPadding: EdgeInsets.symmetric(vertical: 10),
               ),
             ),
           ),
-          IconButton(
-            tooltip: 'Remove checklist item',
+          PopupMenuButton<String>(
+            tooltip: 'Checklist item options',
+            color: const Color(0xFF202024),
             icon: const Icon(
-              Icons.close_rounded,
-              size: 16,
-              color: Colors.white24,
+              Icons.more_horiz_rounded,
+              size: 19,
+              color: Colors.white38,
             ),
-            onPressed: () => setState(() {
-              _blocks.remove(block);
-              _checklist.removeWhere((entry) => entry.id == item.id);
-            }),
+            onSelected: (value) {
+              if (value != 'remove') return;
+              setState(() {
+                _blocks.remove(block);
+                _checklist.removeWhere((entry) => entry.id == item.id);
+              });
+            },
+            itemBuilder: (_) => const [
+              PopupMenuItem(
+                value: 'remove',
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.delete_outline_rounded,
+                      size: 19,
+                      color: Color(0xFFFF6B6B),
+                    ),
+                    SizedBox(width: 10),
+                    Text(
+                      'Remove item',
+                      style: TextStyle(color: Color(0xFFFF8A8A)),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),

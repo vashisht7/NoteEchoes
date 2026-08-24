@@ -19,13 +19,27 @@ class AppleCalendarBridge implements CalendarProvider {
     }
   }
 
+  Future<bool> requestReminderPermissions() async {
+    if (!Platform.isIOS) return false;
+    try {
+      final result = await _channel.invokeMethod<bool>(
+        'requestReminderPermissions',
+      );
+      return result ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
   @override
   Future<(CalendarWriteResult, String?)> createEvent(
     CalendarEvent event,
   ) async {
     try {
-      final result =
-          await _channel.invokeMethod<String>('createEvent', event.toJson());
+      final result = await _channel.invokeMethod<String>(
+        'createEvent',
+        event.toJson(),
+      );
       if (result != null) {
         return (CalendarWriteResult.success, result);
       }
@@ -40,10 +54,12 @@ class AppleCalendarBridge implements CalendarProvider {
     Reminder reminder,
   ) async {
     try {
-      final result = await _channel.invokeMethod<String>(
-        'createReminder',
-        reminder.toJson(),
-      );
+      final result = await _channel.invokeMethod<String>('createReminder', {
+        'title': reminder.title,
+        'notes': reminder.evidenceText,
+        if (reminder.triggerDate != null)
+          'dueDateMs': reminder.triggerDate!.millisecondsSinceEpoch.toDouble(),
+      });
       if (result != null) {
         return (CalendarWriteResult.success, result);
       }

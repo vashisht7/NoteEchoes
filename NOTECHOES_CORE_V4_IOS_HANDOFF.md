@@ -58,6 +58,12 @@ Publish the verified NoteEchoes Core v4 MLX 4-bit model, update the Flutter/iOS 
 - Changed generated voice checklist notes to persist ordered checklist content blocks and open as a pure minimal checklist. The raw transcript remains stored for retrieval/recovery but is no longer repeated above the visible rows. Each row remains editable and toggles between incomplete and checked/struck-through states.
 - Added `NOTECHOES_DART_MODEL_API.md` documenting the local MLX calling contract, immutable configuration, and natural Dart task/reminder/calendar examples. The local model is correctly described as an on-device provider rather than a web endpoint.
 - The updated minimal-checklist suite passed 33 focused tests. Built, signed, installed, and launched the updated iOS Release on the connected phone. Preserved it at `/Users/vashishtdevasani/Downloads/NoteEchoes-Minimal-Checklist-Release-2026-08-23/Runner.app`.
+- Polished checklist rows with a larger animated circular control, subtle row surface, and a clear overflow menu containing `Remove item` instead of an ambiguous close icon.
+- Checklist completion now persists immediately, updates durable content blocks, and re-indexes `☑`/`☐` state. The voice assistant answers completed/pending counts from live note state before generic model retrieval.
+- Added a product-side concise-title guarantee: model titles are limited to a meaningful 2–6 words and the app enforces a maximum of six words/48 characters.
+- Connected explicit future-dated reminder captures to Apple Reminders. The native bridge now passes the correct millisecond alarm field and requests Reminders-only permission; vague or past reminders remain unscheduled.
+- Added checklist-state and concise-title regression tests. The focused release suite now passes 34/34 tests.
+- Bumped the application to `2.9.2 (6)`, produced a signed 106.4 MB iOS Release, verified its signature, and installed it in place over bundle `com.vashisht.notechoes` on the connected iPhone without uninstalling or clearing its data container. The preserved standalone build is `/Users/vashishtdevasani/Downloads/NoteEchoes-2.9.2-Core-v4-Release-2026-08-23/Runner.app`.
 
 ## Verified performance
 

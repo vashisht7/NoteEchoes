@@ -265,6 +265,17 @@ class SceneDelegate: FlutterSceneDelegate, AVSpeechSynthesizerDelegate {
         result: @escaping FlutterResult
     ) {
         switch call.method {
+        case "requestReminderPermissions":
+            if #available(iOS 17.0, *) {
+                eventStore.requestFullAccessToReminders { granted, _ in
+                    DispatchQueue.main.async { result(granted) }
+                }
+            } else {
+                eventStore.requestAccess(to: .reminder) { granted, _ in
+                    DispatchQueue.main.async { result(granted) }
+                }
+            }
+
         case "requestPermissions":
             if #available(iOS 17.0, *) {
                 eventStore.requestFullAccessToEvents { grantedEvents, _ in

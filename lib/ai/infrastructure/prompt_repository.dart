@@ -28,6 +28,7 @@ Rules:
 - kind describes the saved memory. Use task_list when tasks are requested and none for queries.
 - actions may contain only task, reminder, or calendar_event.
 - Each action has exactly: kind, text, items, date, time, people, place.
+- title must be a meaningful 2-6 word heading, never the full utterance, and no longer than 48 characters.
 - text is the user's requested action. Never invent workflow steps.
 - For a checklist or enumerated tasks, put every independently spoken item in items, in spoken order.
 - Treat phrases such as first task/second task, first/second/third, and equivalent Telugu or Hindi enumeration as separate items.

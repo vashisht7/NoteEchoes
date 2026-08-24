@@ -19,11 +19,12 @@ import '../ai/infrastructure/ai_database.dart';
 import '../theme/app_preferences.dart';
 import 'note_service.dart';
 import 'speech_output_service.dart';
+import 'checklist_status_service.dart';
 
 enum VoiceAssistantState {
   listening, // Real mic recording + live amplitude ripple
-  thinking,  // Orbital Note scanning + Grounded Hybrid Retrieval
-  speaking,  // Spoken response + synchronized Karaoke lyric glow
+  thinking, // Orbital Note scanning + Grounded Hybrid Retrieval
+  speaking, // Spoken response + synchronized Karaoke lyric glow
 }
 
 class SpokenLyricLine {
@@ -41,7 +42,8 @@ class SpokenLyricLine {
 }
 
 class VoiceAssistantService extends ChangeNotifier {
-  static final VoiceAssistantService _instance = VoiceAssistantService._internal();
+  static final VoiceAssistantService _instance =
+      VoiceAssistantService._internal();
   factory VoiceAssistantService() => _instance;
 
   VoiceAssistantService._internal() {
@@ -50,7 +52,9 @@ class VoiceAssistantService extends ChangeNotifier {
 
   final AudioRecorder _audioRecorder = AudioRecorder();
   static const _speechOutputChannel = MethodChannel('noteechoes/speech_output');
-  static const _offlineSpeechChannel = MethodChannel('noteechoes/offline_speech');
+  static const _offlineSpeechChannel = MethodChannel(
+    'noteechoes/offline_speech',
+  );
 
   VoiceAssistantState _state = VoiceAssistantState.listening;
   VoiceAssistantState get state => _state;
@@ -61,7 +65,8 @@ class VoiceAssistantService extends ChangeNotifier {
 
   // Live streaming user transcript
   final List<String> _userTranscriptLines = [];
-  List<String> get userTranscriptLines => List.unmodifiable(_userTranscriptLines);
+  List<String> get userTranscriptLines =>
+      List.unmodifiable(_userTranscriptLines);
 
   String _currentActiveUserSentence = "Listening to your voice…";
   String get currentActiveUserSentence => _currentActiveUserSentence;
@@ -165,7 +170,8 @@ class VoiceAssistantService extends ChangeNotifier {
         const Duration(milliseconds: 250),
         onTimeout: () => Directory.systemTemp,
       );
-      final audioPath = '${tempDir.path}/voice_assistant_${DateTime.now().millisecondsSinceEpoch}.m4a';
+      final audioPath =
+          '${tempDir.path}/voice_assistant_${DateTime.now().millisecondsSinceEpoch}.m4a';
       _currentRecordingPath = audioPath;
 
       await _audioRecorder.start(
@@ -174,14 +180,16 @@ class VoiceAssistantService extends ChangeNotifier {
       );
 
       _amplitudeSub?.cancel();
-      _amplitudeSub = _audioRecorder.onAmplitudeChanged(const Duration(milliseconds: 60)).listen((amp) {
-        if (_state == VoiceAssistantState.listening) {
-          // Normalize -60dB -> 0dB to 0.0 -> 1.0
-          final normalized = ((amp.current + 50.0) / 50.0).clamp(0.08, 1.0);
-          _micAmplitude = normalized;
-          notifyListeners();
-        }
-      });
+      _amplitudeSub = _audioRecorder
+          .onAmplitudeChanged(const Duration(milliseconds: 60))
+          .listen((amp) {
+            if (_state == VoiceAssistantState.listening) {
+              // Normalize -60dB -> 0dB to 0.0 -> 1.0
+              final normalized = ((amp.current + 50.0) / 50.0).clamp(0.08, 1.0);
+              _micAmplitude = normalized;
+              notifyListeners();
+            }
+          });
     } catch (e) {
       debugPrint("[VoiceAssistant] Failed to start audio recorder: $e");
       _currentActiveUserSentence = "Ready to discuss your notes.";
@@ -224,10 +232,8 @@ class VoiceAssistantService extends ChangeNotifier {
           if (path != null && File(path).existsSync()) {
             final langCode = AppPreferences.instance.speechLanguageCode;
             final audioLang = AudioLanguageExt.fromBcp47(langCode);
-            final provenance = await OfflineSpeechBridge.instance.transcribeAudioFile(
-              audioPath: path,
-              language: audioLang,
-            );
+            final provenance = await OfflineSpeechBridge.instance
+                .transcribeAudioFile(audioPath: path, language: audioLang);
             if (provenance.text.trim().isNotEmpty) {
               userSpokenText = provenance.text.trim();
             }
@@ -256,7 +262,31 @@ class VoiceAssistantService extends ChangeNotifier {
 
     // Perform Grounded Retrieval
     try {
-      final queryLang = LanguageDetectionService.detect(userSpokenText).primaryLanguage;
+      final checklistAnswer = ChecklistStatusService.answer(
+        userSpokenText,
+        NoteService().allNotes,
+      );
+      if (checklistAnswer != null) {
+        _fullGeneratedResponse = checklistAnswer.text;
+        _summaryTitle = checklistAnswer.note.title;
+        _aiLyricLines = [
+          SpokenLyricLine(
+            text: checklistAnswer.text,
+            startTime: Duration.zero,
+            duration: Duration(
+              milliseconds: (checklistAnswer.text.length * 48).clamp(
+                1800,
+                6500,
+              ),
+            ),
+          ),
+        ];
+        return await transitionToSpeakingState();
+      }
+
+      final queryLang = LanguageDetectionService.detect(
+        userSpokenText,
+      ).primaryLanguage;
       final candidates = await HybridRetrievalService.retrieveCandidates(
         query: userSpokenText,
         database: AiDatabase(),
@@ -270,7 +300,9 @@ class VoiceAssistantService extends ChangeNotifier {
       );
 
       _fullGeneratedResponse = answer.displayText;
-      _summaryTitle = candidates.isNotEmpty ? candidates.first.title : "Notes Summary";
+      _summaryTitle = candidates.isNotEmpty
+          ? candidates.first.title
+          : "Notes Summary";
 
       // Setup lyric lines for Karaoke
       final parts = answer.displayText
@@ -281,8 +313,14 @@ class VoiceAssistantService extends ChangeNotifier {
 
       var elapsed = Duration.zero;
       _aiLyricLines = parts.map((text) {
-        final duration = Duration(milliseconds: (text.length * 48).clamp(1400, 5200));
-        final line = SpokenLyricLine(text: text, startTime: elapsed, duration: duration);
+        final duration = Duration(
+          milliseconds: (text.length * 48).clamp(1400, 5200),
+        );
+        final line = SpokenLyricLine(
+          text: text,
+          startTime: elapsed,
+          duration: duration,
+        );
         elapsed += duration;
         return line;
       }).toList();
@@ -293,7 +331,7 @@ class VoiceAssistantService extends ChangeNotifier {
             text: answer.displayText,
             startTime: Duration.zero,
             duration: const Duration(milliseconds: 3000),
-          )
+          ),
         ];
       }
     } catch (e) {
@@ -333,7 +371,9 @@ class VoiceAssistantService extends ChangeNotifier {
       };
     }
     try {
-      final Map? status = await _speechOutputChannel.invokeMapMethod('audioStatus');
+      final Map? status = await _speechOutputChannel.invokeMapMethod(
+        'audioStatus',
+      );
       if (status != null) {
         return status.cast<String, dynamic>();
       }
@@ -394,7 +434,9 @@ class VoiceAssistantService extends ChangeNotifier {
     final n = max(_contextualNotes.length, 1);
     final stepAngle = 360.0 / n;
 
-    _orbitalStepTimer = Timer.periodic(const Duration(milliseconds: 800), (timer) {
+    _orbitalStepTimer = Timer.periodic(const Duration(milliseconds: 800), (
+      timer,
+    ) {
       if (_state == VoiceAssistantState.thinking) {
         _activeOrbitNoteIndex = (_activeOrbitNoteIndex + 1) % n;
         _orbitalAngleDegrees += stepAngle;
@@ -409,32 +451,41 @@ class VoiceAssistantService extends ChangeNotifier {
     var elapsed = Duration.zero;
 
     if (allNotes.isEmpty) {
-      lines.add(SpokenLyricLine(
-        text: "You do not have any saved notes in NoteEchoes yet.",
-        startTime: elapsed,
-        duration: const Duration(milliseconds: 2000),
-      ));
+      lines.add(
+        SpokenLyricLine(
+          text: "You do not have any saved notes in NoteEchoes yet.",
+          startTime: elapsed,
+          duration: const Duration(milliseconds: 2000),
+        ),
+      );
       elapsed += const Duration(milliseconds: 2000);
-      lines.add(SpokenLyricLine(
-        text: "Tap the microphone button or Action Button to capture your first thought!",
-        startTime: elapsed,
-        duration: const Duration(milliseconds: 2500),
-      ));
+      lines.add(
+        SpokenLyricLine(
+          text:
+              "Tap the microphone button or Action Button to capture your first thought!",
+          startTime: elapsed,
+          duration: const Duration(milliseconds: 2500),
+        ),
+      );
     } else {
-      lines.add(SpokenLyricLine(
-        text: "Here is what I found in your notes:",
-        startTime: elapsed,
-        duration: const Duration(milliseconds: 1600),
-      ));
+      lines.add(
+        SpokenLyricLine(
+          text: "Here is what I found in your notes:",
+          startTime: elapsed,
+          duration: const Duration(milliseconds: 1600),
+        ),
+      );
       elapsed += const Duration(milliseconds: 1600);
 
       for (int i = 0; i < min(allNotes.length, 3); i++) {
         final note = allNotes[i];
-        lines.add(SpokenLyricLine(
-          text: "${i + 1}. ${note.title}",
-          startTime: elapsed,
-          duration: const Duration(milliseconds: 2000),
-        ));
+        lines.add(
+          SpokenLyricLine(
+            text: "${i + 1}. ${note.title}",
+            startTime: elapsed,
+            duration: const Duration(milliseconds: 2000),
+          ),
+        );
         elapsed += const Duration(milliseconds: 2000);
       }
     }
@@ -443,30 +494,40 @@ class VoiceAssistantService extends ChangeNotifier {
     _fullGeneratedResponse = lines.map((l) => l.text).join('\n\n');
   }
 
-  String get _speechLocale => switch (AppPreferences.instance.speechLanguageCode) {
-    'te' => 'te-IN',
-    'hi' => 'hi-IN',
-    _ => 'en-US',
-  };
+  String get _speechLocale =>
+      switch (AppPreferences.instance.speechLanguageCode) {
+        'te' => 'te-IN',
+        'hi' => 'hi-IN',
+        _ => 'en-US',
+      };
 
   Future<void> _speakRemainingResponse() async {
     if (Platform.environment.containsKey('FLUTTER_TEST')) return;
     if (_aiLyricLines.isEmpty) return;
-    final text = _aiLyricLines.skip(_activeLyricIndex).map((line) => line.text).join(' ');
-    final segments = _aiLyricLines.skip(_activeLyricIndex).map((line) => line.text).toList();
+    final text = _aiLyricLines
+        .skip(_activeLyricIndex)
+        .map((line) => line.text)
+        .join(' ');
+    final segments = _aiLyricLines
+        .skip(_activeLyricIndex)
+        .map((line) => line.text)
+        .toList();
 
     try {
-      await _speechOutputChannel.invokeMethod<Object?>('speak', {
-        'text': text,
-        'segments': segments,
-        'startIndex': _activeLyricIndex,
-        'language': _speechLocale,
-      }).timeout(const Duration(milliseconds: 200), onTimeout: () => null);
+      await _speechOutputChannel
+          .invokeMethod<Object?>('speak', {
+            'text': text,
+            'segments': segments,
+            'startIndex': _activeLyricIndex,
+            'language': _speechLocale,
+          })
+          .timeout(const Duration(milliseconds: 200), onTimeout: () => null);
       _audioOutputError = null;
     } on MissingPluginException {
       _audioOutputError = 'Spoken output is available when running on iPhone.';
     } on PlatformException catch (error) {
-      _audioOutputError = error.message ?? 'Could not play the spoken response.';
+      _audioOutputError =
+          error.message ?? 'Could not play the spoken response.';
     } catch (_) {}
     notifyListeners();
   }

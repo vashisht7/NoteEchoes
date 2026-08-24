@@ -48,7 +48,7 @@ Future<void> interpret(String naturalSpeech) async {
     print(item.task);
   }
 
-  // Proposals: show confirmation before writing to iOS.
+  // Lower-level callers receive structured reminder/event proposals.
   for (final reminder in result.reminders) {
     print(reminder.title);
   }
@@ -110,8 +110,9 @@ final result = await QwenLlamaProvider.instance.generateNoteAnalysis(
 );
 
 final proposal = result.reminders.single;
-// Present proposal.title and proposal.triggerDate for confirmation.
-// Only after confirmation should CalendarProvider.createReminder be called.
+// Low-level callers may present a confirmation and then call
+// CalendarProvider.createReminder. The normal NoteService voice-capture path
+// writes an explicit, future-dated "remind me" command to Apple Reminders.
 ```
 
 Natural examples:
@@ -124,6 +125,12 @@ Repu morning 9 ki Ravi ki call cheyyalani gurthu cheyyi.
 ```
 
 If the user says “remind me later,” the product must ask for a specific time rather than silently scheduling it.
+
+For the normal application flow, call `NoteService.createFromVoiceTranscription`.
+When the model returns an explicit reminder with a valid future time, NoteEchoes
+requests Reminders access and creates an `EKReminder` with an alarm. Apple then
+shows the reminder on the Lock Screen according to the user's Reminders
+notification settings. Vague or past times are not scheduled.
 
 ## Natural calendar call
 
@@ -187,7 +194,35 @@ For a note with `note.checklist.isNotEmpty`:
 - Render only the checklist rows; do not repeat the raw transcript.
 - Use an empty circle for incomplete and a filled check for complete.
 - Tapping the circle toggles `isCompleted` and persists it through `NoteService.toggleCheckItem`.
+- Persist the completion state immediately; do not wait for the editor to close.
+- Re-index the updated `☑`/`☐` state so memory questions use the current list.
 - Completed text uses a strikethrough and quieter color.
 - Keep the raw transcript stored internally for retrieval and recovery.
 
 The home card already follows this rule. The checklist editor now also opens generated voice checklists as pure interactive rows rather than showing the transcript followed by the same rows.
+
+## Checklist progress memory
+
+Checklist counts are a deterministic app API, not a generative-model guess:
+
+```dart
+final answer = ChecklistStatusService.answer(
+  'How many tasks are done and pending?',
+  NoteService().allNotes,
+);
+
+print(answer?.text);
+// Release Checklist has 3 tasks: 1 completed and 2 pending.
+```
+
+The voice assistant invokes this before generic retrieval. It reads the latest
+persisted `CheckListItem.isCompleted` values and responds in English, Telugu, or
+Hindi. If the question contains a checklist title, that checklist is preferred;
+otherwise the latest checklist is used.
+
+## Voice-title guarantee
+
+The model is asked for a meaningful 2–6 word title. The app then applies
+`VoiceNoteTitleService.concise`, which removes conversational prefixes and
+enforces six words and 48 characters. This prevents the entire transcription
+from appearing as a heading even when the compact model echoes the input.

@@ -4,11 +4,15 @@ import 'package:flutter/foundation.dart';
 import '../models/note_model.dart';
 import 'ai_categorization_engine.dart';
 import 'spoken_checklist_parser.dart';
+import 'voice_note_title_service.dart';
 import 'note_storage_service.dart';
+import '../ai/domain/note_analysis.dart';
 import '../ai/infrastructure/knowledge_service.dart';
 import '../ai/infrastructure/model_availability_service.dart';
 import '../ai/infrastructure/qwen_llama_provider.dart';
 import '../ai/infrastructure/semantic_knowledge_service.dart';
+import '../platform/ios/apple_calendar_bridge.dart';
+import '../ai/providers/calendar_provider.dart';
 
 class NoteService extends ChangeNotifier {
   static final NoteService _instance = NoteService._internal();
@@ -183,6 +187,7 @@ class NoteService extends ChangeNotifier {
     var title = analysis.title;
     var summary = analysis.summarySnippet;
     var checklist = analysis.extractedChecklist;
+    var reminders = const <Reminder>[];
 
     // A verified Qwen installation upgrades spoken notes from keyword rules to
     // content-aware titles, topics and action extraction. The lightweight path
@@ -213,6 +218,7 @@ class NoteService extends ChangeNotifier {
         checklist = richAnalysis.actionItems
             .map((item) => CheckListItem(id: item.id, text: item.task))
             .toList();
+        reminders = richAnalysis.reminders;
       } catch (error) {
         debugPrint('Enhanced voice-note categorization fell back: $error');
       }
@@ -236,6 +242,11 @@ class NoteService extends ChangeNotifier {
       tagsSet.add('tasks');
       if (title == analysis.title) title = 'Checklist';
     }
+
+    title = VoiceNoteTitleService.concise(
+      proposedTitle: title,
+      spokenText: spokenText,
+    );
 
     final note = NoteModel(
       noteId: noteId?.trim().isNotEmpty == true
@@ -263,7 +274,32 @@ class NoteService extends ChangeNotifier {
     );
 
     await addNote(note);
+    await _scheduleExplicitAppleReminders(reminders);
     return note;
+  }
+
+  Future<void> _scheduleExplicitAppleReminders(List<Reminder> reminders) async {
+    final executable = reminders
+        .where(
+          (reminder) =>
+              reminder.triggerDate != null &&
+              reminder.triggerDate!.isAfter(DateTime.now()),
+        )
+        .toList();
+    if (executable.isEmpty) return;
+
+    final bridge = AppleCalendarBridge();
+    final allowed = await bridge.requestReminderPermissions();
+    if (!allowed) {
+      debugPrint('Apple Reminders permission was not granted.');
+      return;
+    }
+    for (final reminder in executable) {
+      final (result, _) = await bridge.createReminder(reminder);
+      if (result != CalendarWriteResult.success) {
+        debugPrint('Could not create Apple Reminder: ${reminder.title}');
+      }
+    }
   }
 
   Future<void> updateNote(NoteModel note) async {
@@ -333,10 +369,51 @@ class NoteService extends ChangeNotifier {
       final note = _notes[noteIndex];
       final itemIndex = note.checklist.indexWhere((i) => i.id == itemId);
       if (itemIndex != -1) {
-        note.checklist[itemIndex].isCompleted =
-            !note.checklist[itemIndex].isCompleted;
+        final updatedChecklist = note.checklist
+            .map(
+              (item) => CheckListItem(
+                id: item.id,
+                text: item.text,
+                isCompleted: item.id == itemId
+                    ? !item.isCompleted
+                    : item.isCompleted,
+              ),
+            )
+            .toList();
+        final stateById = {
+          for (final item in updatedChecklist) item.id: item.isCompleted,
+        };
+        final updatedBlocks = note.contentBlocks
+            .map(
+              (block) => block.type == NoteBlockType.checklist
+                  ? NoteBlockData.checklist(
+                      checklistId: block.checklistId,
+                      checklistText: block.checklistText,
+                      checklistCompleted:
+                          stateById[block.checklistId] ??
+                          block.checklistCompleted,
+                    )
+                  : block,
+            )
+            .toList();
+        final searchableChecklist = updatedBlocks.isNotEmpty
+            ? updatedBlocks
+                  .map((block) => block.searchableText)
+                  .where((text) => text.trim().isNotEmpty)
+                  .join('\n')
+            : updatedChecklist
+                  .map((item) => '${item.isCompleted ? '☑' : '☐'} ${item.text}')
+                  .join('\n');
+        final updated = note.copyWith(
+          checklist: updatedChecklist,
+          contentBlocks: updatedBlocks,
+          textContent: searchableChecklist,
+          summarySnippet: searchableChecklist,
+        );
+        _notes[noteIndex] = updated;
         notifyListeners();
-        await _persistNote(note);
+        await _persistNote(updated);
+        _scheduleNoteIndexing(updated);
       }
     }
   }
