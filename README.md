@@ -13,6 +13,8 @@ custom-model roadmap, see **[future_plans.md](future_plans.md)**.
 
 For the production NoteEchoes Core v4 integration, start with:
 
+- **[NOTECHOES_MODEL_BOOK.md](NOTECHOES_MODEL_BOOK.md)** — book-length model guide: purpose, dataset, training, evaluation, MLX artifacts, local API, prompting, and limitations
+- **[NOTECHOES_APP_ARCHITECTURE_BOOK.md](NOTECHOES_APP_ARCHITECTURE_BOOK.md)** — book-length application guide: architecture, important Dart/Swift files, storage, reminders, notifications, Live Activities, Topics, signing, and release workflow
 - **[NOTECHOES_CORE_V4_IOS_HANDOFF.md](NOTECHOES_CORE_V4_IOS_HANDOFF.md)** — exact model revision, download flow, verification, and release handoff
 - **[NOTECHOES_DART_MODEL_API.md](NOTECHOES_DART_MODEL_API.md)** — Dart-facing request/response contract and natural-language examples
 - **[NOTECHOES_MODEL_AND_CHECKLIST_RECOVERY_PLAN.md](NOTECHOES_MODEL_AND_CHECKLIST_RECOVERY_PLAN.md)** — checklist behavior, application wiring, tests, and remaining work
