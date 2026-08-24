@@ -162,11 +162,20 @@ updating Lock Screen surface:
 await LockScreenActivityService.instance.show(note);
 ```
 
-For checklists it displays up to three pending rows and completion progress.
-`NoteService.toggleCheckItem` updates the active surface immediately. Editing
-the note updates it; deleting the note removes it. Long press the home tile
-again for `Remove from Lock Screen`, or use the close control in the Live
-Activity.
+For checklists it displays up to four rows with real interactive checkboxes.
+A Lock Screen tap updates the Live Activity immediately and is also stored in
+the shared App Group action queue. When NoteEchoes becomes active,
+`NoteService.applyLockScreenChecklistActions()` applies the exact completed
+state to the SQLite note, content blocks, home-card progress badge, search
+index, and current Live Activity. This makes the Lock Screen and home screen
+converge without placing the notes database inside the extension.
+
+`NoteService.toggleCheckItem` continues to update the active surface when a
+row is changed inside the app. Editing the note updates it; deleting the note
+removes it. The Lock Screen has a full-size `Remove` capsule which ends the
+Live Activity immediately. A pinned plain-text note sends its complete text
+rather than only its summary; the extension reduces font size and increases
+its line allowance for longer content, within Apple's Live Activity height.
 
 iOS controls Live Activity lifetime and can end one after its system maximum.
 NoteEchoes keeps it active until the user removes it within that Apple-managed

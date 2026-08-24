@@ -55,6 +55,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     // live after the first frame, so this is the earliest safe moment.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ActionButtonNoteIngestionService.instance.initialize();
+      unawaited(_noteService.applyLockScreenChecklistActions());
       unawaited(_refreshModelsAndIndex());
       _recoverySyncTimer = Timer(const Duration(seconds: 1), () async {
         final recovered = await NoteStorageService().syncRecoveryBackup();
@@ -84,6 +85,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed ||
         state == AppLifecycleState.inactive) {
       _fetchPendingVoiceNotes();
+      unawaited(_noteService.applyLockScreenChecklistActions());
       unawaited(_refreshModelsAndIndex());
     }
   }

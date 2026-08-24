@@ -3,10 +3,22 @@ import Flutter
 
 @available(iOS 16.2, *)
 enum LockScreenActivityCoordinator {
+    private static let appGroup = "group.com.vashisht.notechoes"
+    private static let checklistActionsKey =
+        "noteechoes_lock_screen_checklist_actions_v1"
+
     static func handle(
         _ call: FlutterMethodCall,
         result: @escaping FlutterResult
     ) {
+        if call.method == "consumeChecklistActions" {
+            let defaults = UserDefaults(suiteName: appGroup)
+            let actions = defaults?.array(forKey: checklistActionsKey) ?? []
+            defaults?.removeObject(forKey: checklistActionsKey)
+            result(actions)
+            return
+        }
+
         guard let arguments = call.arguments as? [String: Any],
               let noteId = arguments["noteId"] as? String else {
             result(FlutterError(
@@ -31,7 +43,7 @@ enum LockScreenActivityCoordinator {
             }
             let title = arguments["title"] as? String ?? "NoteEchoes"
             let subtitle = arguments["subtitle"] as? String ?? ""
-            let items = (arguments["items"] as? [String] ?? []).prefix(3)
+            let items = checklistItems(from: arguments).prefix(4)
             let completed = arguments["completed"] as? Int ?? 0
             let total = arguments["total"] as? Int ?? 0
             let state = NoteEchoesActivityAttributes.ContentState(
@@ -86,9 +98,7 @@ enum LockScreenActivityCoordinator {
             }
             let state = NoteEchoesActivityAttributes.ContentState(
                 subtitle: arguments["subtitle"] as? String ?? "",
-                items: Array(
-                    (arguments["items"] as? [String] ?? []).prefix(3)
-                ),
+                items: Array(checklistItems(from: arguments).prefix(4)),
                 completed: arguments["completed"] as? Int ?? 0,
                 total: arguments["total"] as? Int ?? 0
             )
@@ -109,6 +119,25 @@ enum LockScreenActivityCoordinator {
     ) -> Activity<NoteEchoesActivityAttributes>? {
         Activity<NoteEchoesActivityAttributes>.activities.first {
             $0.attributes.noteId == noteId
+        }
+    }
+
+    private static func checklistItems(
+        from arguments: [String: Any]
+    ) -> [NoteEchoesActivityAttributes.ChecklistItem] {
+        guard let values = arguments["items"] as? [[String: Any]] else {
+            return []
+        }
+        return values.compactMap { value in
+            guard let id = value["id"] as? String,
+                  let text = value["text"] as? String else {
+                return nil
+            }
+            return NoteEchoesActivityAttributes.ChecklistItem(
+                id: id,
+                text: text,
+                isCompleted: value["isCompleted"] as? Bool ?? false
+            )
         }
     }
 }

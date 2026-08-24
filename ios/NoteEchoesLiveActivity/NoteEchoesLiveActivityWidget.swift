@@ -3,26 +3,31 @@ import AppIntents
 import SwiftUI
 import WidgetKit
 
+private let noteEchoesAppGroup = "group.com.vashisht.notechoes"
+private let checklistActionsKey = "noteechoes_lock_screen_checklist_actions_v1"
+
 struct NoteEchoesLiveActivityWidget: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: NoteEchoesActivityAttributes.self) { context in
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 9) {
                 HStack(spacing: 7) {
-                    Image(systemName: context.state.total > 0
-                          ? "checklist"
-                          : "note.text")
+                    Image(systemName: context.state.total > 0 ? "checklist" : "note.text")
                         .foregroundStyle(.red)
                     Text("NoteEchoes")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
                     Spacer()
-                    Button(intent: RemoveLockScreenNoteIntent(
-                        noteId: context.attributes.noteId
-                    )) {
-                        Image(systemName: "xmark.circle.fill")
+                    Button(intent: RemoveLockScreenNoteIntent(noteId: context.attributes.noteId)) {
+                        Label("Remove", systemImage: "xmark")
+                            .font(.caption2.weight(.semibold))
                             .foregroundStyle(.secondary)
+                            .padding(.horizontal, 9)
+                            .padding(.vertical, 6)
+                            .background(.quaternary, in: Capsule())
+                            .contentShape(Capsule())
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel("Remove from Lock Screen")
                 }
 
                 Text(context.attributes.title)
@@ -30,30 +35,48 @@ struct NoteEchoesLiveActivityWidget: Widget {
                     .lineLimit(2)
 
                 if !context.state.items.isEmpty {
-                    VStack(alignment: .leading, spacing: 5) {
-                        ForEach(context.state.items.prefix(3), id: \.self) { item in
-                            HStack(spacing: 7) {
-                                Image(systemName: "circle")
-                                    .font(.system(size: 9))
-                                    .foregroundStyle(.secondary)
-                                Text(item)
-                                    .font(.caption)
-                                    .lineLimit(1)
+                    VStack(alignment: .leading, spacing: 4) {
+                        ForEach(context.state.items.prefix(4)) { item in
+                            Button(intent: ToggleLockScreenChecklistIntent(
+                                noteId: context.attributes.noteId,
+                                itemId: item.id,
+                                completed: !item.isCompleted
+                            )) {
+                                HStack(spacing: 8) {
+                                    Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
+                                        .font(.system(size: 15, weight: .medium))
+                                        .foregroundStyle(item.isCompleted ? .green : .secondary)
+                                    Text(item.text)
+                                        .font(.caption)
+                                        .strikethrough(item.isCompleted)
+                                        .foregroundStyle(item.isCompleted ? .secondary : .primary)
+                                        .lineLimit(1)
+                                    Spacer(minLength: 0)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .contentShape(Rectangle())
                             }
+                            .buttonStyle(.plain)
                         }
                     }
                     if context.state.total > 0 {
-                        ProgressView(
-                            value: Double(context.state.completed),
-                            total: Double(context.state.total)
-                        )
-                        .tint(.red)
+                        HStack(spacing: 8) {
+                            ProgressView(
+                                value: Double(context.state.completed),
+                                total: Double(context.state.total)
+                            )
+                            .tint(.red)
+                            Text("\(context.state.completed)/\(context.state.total)")
+                                .font(.caption2.monospacedDigit())
+                                .foregroundStyle(.secondary)
+                        }
                     }
                 } else if !context.state.subtitle.isEmpty {
                     Text(context.state.subtitle)
-                        .font(.subheadline)
+                        .font(adaptiveTextFont(context.state.subtitle))
                         .foregroundStyle(.secondary)
-                        .lineLimit(2)
+                        .lineLimit(adaptiveLineLimit(context.state.subtitle))
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
             .padding(16)
@@ -62,7 +85,7 @@ struct NoteEchoesLiveActivityWidget: Widget {
         } dynamicIsland: { context in
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
-                    Image(systemName: "note.text")
+                    Image(systemName: context.state.total > 0 ? "checklist" : "note.text")
                         .foregroundStyle(.red)
                 }
                 DynamicIslandExpandedRegion(.center) {
@@ -77,11 +100,11 @@ struct NoteEchoesLiveActivityWidget: Widget {
                         .lineLimit(1)
                 }
             } compactLeading: {
-                Image(systemName: "note.text")
+                Image(systemName: context.state.total > 0 ? "checklist" : "note.text")
                     .foregroundStyle(.red)
             } compactTrailing: {
                 if context.state.total > 0 {
-                    Text("\(context.state.total - context.state.completed)")
+                    Text("\(max(0, context.state.total - context.state.completed))")
                 } else {
                     Image(systemName: "pin.fill")
                 }
@@ -91,20 +114,81 @@ struct NoteEchoesLiveActivityWidget: Widget {
             }
         }
     }
+
+    private func adaptiveTextFont(_ text: String) -> Font {
+        if text.count > 320 { return .caption2 }
+        if text.count > 180 { return .caption }
+        return .subheadline
+    }
+
+    private func adaptiveLineLimit(_ text: String) -> Int {
+        if text.count > 320 { return 12 }
+        if text.count > 180 { return 10 }
+        return 8
+    }
+}
+
+struct ToggleLockScreenChecklistIntent: LiveActivityIntent {
+    static var title: LocalizedStringResource = "Update Checklist Item"
+    static var openAppWhenRun: Bool = false
+
+    @Parameter(title: "Note ID") var noteId: String
+    @Parameter(title: "Item ID") var itemId: String
+    @Parameter(title: "Completed") var completed: Bool
+
+    init() {
+        noteId = ""
+        itemId = ""
+        completed = false
+    }
+
+    init(noteId: String, itemId: String, completed: Bool) {
+        self.noteId = noteId
+        self.itemId = itemId
+        self.completed = completed
+    }
+
+    func perform() async throws -> some IntentResult {
+        enqueueChecklistAction()
+        for activity in Activity<NoteEchoesActivityAttributes>.activities
+            where activity.attributes.noteId == noteId {
+            var state = activity.content.state
+            if let index = state.items.firstIndex(where: { $0.id == itemId }) {
+                let oldVisibleCompleted = state.items.filter(\.isCompleted).count
+                state.items[index].isCompleted = completed
+                let newVisibleCompleted = state.items.filter(\.isCompleted).count
+                state.completed = min(
+                    state.total,
+                    max(0, state.completed - oldVisibleCompleted + newVisibleCompleted)
+                )
+                state.subtitle = "\(state.completed) of \(state.total) completed"
+                await activity.update(ActivityContent(state: state, staleDate: nil))
+            }
+        }
+        return .result()
+    }
+
+    private func enqueueChecklistAction() {
+        guard let defaults = UserDefaults(suiteName: noteEchoesAppGroup) else { return }
+        var actions = defaults.array(forKey: checklistActionsKey) ?? []
+        actions.append([
+            "noteId": noteId,
+            "itemId": itemId,
+            "completed": completed,
+            "createdAt": Date().timeIntervalSince1970,
+        ])
+        defaults.set(actions, forKey: checklistActionsKey)
+    }
 }
 
 struct RemoveLockScreenNoteIntent: LiveActivityIntent {
     static var title: LocalizedStringResource = "Remove from Lock Screen"
+    static var openAppWhenRun: Bool = false
 
     @Parameter(title: "Note ID") var noteId: String
 
-    init() {
-        noteId = ""
-    }
-
-    init(noteId: String) {
-        self.noteId = noteId
-    }
+    init() { noteId = "" }
+    init(noteId: String) { self.noteId = noteId }
 
     func perform() async throws -> some IntentResult {
         for activity in Activity<NoteEchoesActivityAttributes>.activities

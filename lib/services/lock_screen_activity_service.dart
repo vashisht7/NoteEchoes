@@ -44,6 +44,25 @@ class LockScreenActivityService {
     } catch (_) {}
   }
 
+  /// Returns durable checklist changes made from the Lock Screen and clears
+  /// the native queue only after it has been transferred to Flutter.
+  Future<List<Map<String, dynamic>>> consumeChecklistActions() async {
+    if (!Platform.isIOS) return const [];
+    try {
+      final values =
+          await _channel.invokeMethod<List<dynamic>>(
+            'consumeChecklistActions',
+          ) ??
+          const [];
+      return values
+          .whereType<Map>()
+          .map((value) => Map<String, dynamic>.from(value))
+          .toList();
+    } catch (_) {
+      return const [];
+    }
+  }
+
   Map<String, dynamic> _payload(NoteModel note) {
     final completed = note.checklist.where((item) => item.isCompleted).length;
     return {
@@ -51,13 +70,18 @@ class LockScreenActivityService {
       'title': note.title,
       'subtitle': note.checklist.isNotEmpty
           ? '$completed of ${note.checklist.length} completed'
-          : (note.summarySnippet.isNotEmpty
-                ? note.summarySnippet
-                : note.textContent),
+          : (note.textContent.isNotEmpty
+                ? note.textContent
+                : note.summarySnippet),
       'items': note.checklist
-          .where((item) => !item.isCompleted)
-          .map((item) => item.text)
-          .take(3)
+          .map(
+            (item) => {
+              'id': item.id,
+              'text': item.text,
+              'isCompleted': item.isCompleted,
+            },
+          )
+          .take(4)
           .toList(),
       'completed': completed,
       'total': note.checklist.length,

@@ -73,6 +73,9 @@ Publish the verified NoteEchoes Core v4 MLX 4-bit model, update the Flutter/iOS 
 - Added the signed `NoteEchoesLiveActivity` WidgetKit extension and Dart/native bridge. Long-pressing any home note now offers `Add to Lock Screen`; checklists show pending rows and completion progress, edits synchronize, deleting removes the activity, and the Lock Screen close button ends it.
 - Elevated home notes into rounded 18-point tiles with increased spacing, soft depth shadows, and a cleaner rounded long-press action sheet. Removed a visually redundant action-menu treatment.
 - Bumped to `2.9.4 (8)`. The final app and embedded extension both compile and pass strict code-sign verification. iOS initially rejected an intermediate extension with an empty inherited build number; explicit extension version metadata fixed it, and the corrected package installed and launched successfully in place without clearing user data. Final signed build: `/Users/vashishtdevasani/Downloads/NoteEchoes-2.9.4-Lock-Screen-Final-2026-08-23/Runner.app`.
+- Reworked the Live Activity into a genuinely interactive Lock Screen surface. Checklist rows are now App Intent buttons with checked/unchecked state, immediate progress updates, and a durable App Group action queue. On app activation, NoteService applies the exact state to SQLite, content blocks, indexing, the home-card progress badge, and the active Live Activity.
+- Replaced the small nonresponsive X treatment with a full-size `Remove` capsule backed by a non-launching Live Activity intent. Plain-text pins now send the full note and use adaptive typography with up to 8–12 visible lines, subject to Apple's Live Activity height.
+- Bumped to `2.9.5 (9)`. The Runner and WidgetKit extension compiled in Release configuration, the extension's signed entitlements contain `group.com.vashisht.notechoes`, and strict deep signature verification passed. The release was installed in place and launched on the connected iPhone without uninstalling or clearing its data container. Preserved build: `/Users/vashishtdevasani/Downloads/NoteEchoes-2.9.5-Interactive-Lock-Screen-2026-08-23/Runner.app`.
 
 ## Verified performance
 
@@ -84,7 +87,7 @@ Publish the verified NoteEchoes Core v4 MLX 4-bit model, update the Flutter/iOS 
 ## Remaining work
 
 - Run human-authored voice acceptance tests in English, Telugu, Hindi, and Romanized speech. The automated release suites and physical download/load path are complete, but real microphone/ASR conditions still need product acceptance testing.
-- Commit and push the local app changes only if the repository owner explicitly wants these existing dirty-worktree changes published to GitHub.
+- On the phone, pin a new checklist and a long plain-text note. Verify checkbox feedback while locked, reopen NoteEchoes to confirm its home-card progress, and confirm the `Remove` capsule dismisses the activity. The implementation, signed build, and automated state paths are complete; this final interaction requires a human Lock Screen tap.
 
 ## Blockers and user actions
 
@@ -95,7 +98,7 @@ Publish the verified NoteEchoes Core v4 MLX 4-bit model, update the Flutter/iOS 
 - Never place a Hugging Face access token in the application or this handoff file.
 - Never upload user notes, private datasets, Kaggle credentials, or other secrets.
 - Do not remove or overwrite unrelated existing worktree changes.
-- The app worktree remains intentionally dirty because it contained user changes before this work. No Git commit or push was made.
+- The application is updated in place; do not uninstall it during ordinary upgrades because uninstalling would remove the iOS app data container.
 
 ## Documentation index
 

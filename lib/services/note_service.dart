@@ -79,6 +79,93 @@ class NoteService extends ChangeNotifier {
     if (changed) notifyListeners();
   }
 
+  /// Applies checklist taps made directly on an iOS Live Activity. The native
+  /// extension keeps these actions in the shared App Group until the app next
+  /// becomes active, so a Lock Screen tap is never lost.
+  Future<void> applyLockScreenChecklistActions() async {
+    await initStorage();
+    final actions = await LockScreenActivityService.instance
+        .consumeChecklistActions();
+    if (actions.isEmpty) return;
+
+    final latestByItem = <String, Map<String, dynamic>>{};
+    for (final action in actions) {
+      final noteId = action['noteId'] as String? ?? '';
+      final itemId = action['itemId'] as String? ?? '';
+      if (noteId.isNotEmpty && itemId.isNotEmpty) {
+        latestByItem['$noteId\u0000$itemId'] = action;
+      }
+    }
+
+    final changedNotes = <NoteModel>[];
+    for (final action in latestByItem.values) {
+      final noteId = action['noteId'] as String;
+      final itemId = action['itemId'] as String;
+      final completed = action['completed'] as bool? ?? false;
+      final noteIndex = _notes.indexWhere((note) => note.noteId == noteId);
+      if (noteIndex == -1) continue;
+      final note = _notes[noteIndex];
+      final currentIndex = note.checklist.indexWhere(
+        (item) => item.id == itemId,
+      );
+      if (currentIndex == -1 ||
+          note.checklist[currentIndex].isCompleted == completed) {
+        continue;
+      }
+
+      final checklist = note.checklist
+          .map(
+            (item) => CheckListItem(
+              id: item.id,
+              text: item.text,
+              isCompleted: item.id == itemId ? completed : item.isCompleted,
+            ),
+          )
+          .toList();
+      final stateById = {
+        for (final item in checklist) item.id: item.isCompleted,
+      };
+      final blocks = note.contentBlocks
+          .map(
+            (block) => block.type == NoteBlockType.checklist
+                ? NoteBlockData.checklist(
+                    checklistId: block.checklistId,
+                    checklistText: block.checklistText,
+                    checklistCompleted:
+                        stateById[block.checklistId] ??
+                        block.checklistCompleted,
+                  )
+                : block,
+          )
+          .toList();
+      final searchable = blocks.isNotEmpty
+          ? blocks
+                .map((block) => block.searchableText)
+                .where((text) => text.trim().isNotEmpty)
+                .join('\n')
+          : checklist
+                .map((item) => '${item.isCompleted ? '☑' : '☐'} ${item.text}')
+                .join('\n');
+      final updated = note.copyWith(
+        checklist: checklist,
+        contentBlocks: blocks,
+        textContent: searchable,
+        summarySnippet: searchable,
+      );
+      _notes[noteIndex] = updated;
+      changedNotes.removeWhere((value) => value.noteId == updated.noteId);
+      changedNotes.add(updated);
+    }
+
+    if (changedNotes.isEmpty) return;
+    notifyListeners();
+    for (final note in changedNotes) {
+      await _persistNote(note);
+      _scheduleNoteIndexing(note);
+      unawaited(LockScreenActivityService.instance.updateIfActive(note));
+    }
+  }
+
   Future<void> _persistNote(NoteModel note) {
     final write = _writeTail.then((_) => NoteStorageService().upsertNote(note));
     _writeTail = write.catchError((Object _) {});
