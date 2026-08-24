@@ -91,6 +91,24 @@ not stored in the application bundle. The app downloads the immutable revision
 [`Vashisht7/noteechoes-qwen25-core-v4-mlx-4bit`](https://huggingface.co/Vashisht7/noteechoes-qwen25-core-v4-mlx-4bit)
 and verifies the expected files before enabling local inference.
 
+## Latest iPhone IPA
+
+The authoritative signed iPhone package is attached to the GitHub Release,
+not the legacy `NoteEchoes.ipa` file at the repository root:
+
+- Release: [NoteEchoes v2.9.7](https://github.com/vashisht7/NoteEchoes/releases/tag/v2.9.7)
+- Direct IPA: [NoteEchoes-v2.9.7-build11.ipa](https://github.com/vashisht7/NoteEchoes/releases/download/v2.9.7/NoteEchoes-v2.9.7-build11.ipa)
+- Size: 31,214,474 bytes
+- SHA-256: `610b47dbfc2bf17d4012fb4ff65ead402f6fe3d455fb45e533af0a40560960cd`
+
+This is a Personal Team development IPA provisioned for registered devices,
+not a public App Store IPA. Its main profile expires on
+`2026-08-29T04:19:56Z`. Before that date, download it on another Mac and use
+Apple Configurator, or unzip it and install `Payload/Runner.app` through
+Xcode/CoreDevice. After expiration, clone the source, rebuild with a new
+profile, and install over the existing `com.vashisht.notechoes` application.
+Do not uninstall first if local notes must be retained.
+
 The unsigned iPhone release build measured approximately 77 MB on August 14,
 2026. Final App Store download and installed sizes can differ because of signing,
 compression, and device thinning.

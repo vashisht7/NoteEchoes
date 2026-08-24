@@ -512,6 +512,58 @@ Current physical-device build:
 /Users/vashishtdevasani/Downloads/NoteEchoes-2.9.7-Live-Checklist-Fix-2026-08-24/Runner.app
 ```
 
+Authoritative GitHub IPA release:
+
+```text
+https://github.com/vashisht7/NoteEchoes/releases/tag/v2.9.7
+```
+
+Direct download:
+
+```text
+https://github.com/vashisht7/NoteEchoes/releases/download/v2.9.7/NoteEchoes-v2.9.7-build11.ipa
+```
+
+The verified IPA is 31,214,474 bytes with SHA-256:
+
+```text
+610b47dbfc2bf17d4012fb4ff65ead402f6fe3d455fb45e533af0a40560960cd
+```
+
+The repository root also contains an older `NoteEchoes.ipa`. It predates the
+current release and is not the authoritative install package. Release assets
+are versioned, checksummed, and do not inflate every Git source clone.
+
+### Downloading on another Mac
+
+Browser method:
+
+1. Open the v2.9.7 GitHub Release.
+2. Expand **Assets** if necessary.
+3. Download `NoteEchoes-v2.9.7-build11.ipa`.
+
+GitHub CLI method:
+
+```bash
+gh release download v2.9.7 \
+  --repo vashisht7/NoteEchoes \
+  --pattern 'NoteEchoes-v2.9.7-build11.ipa'
+```
+
+To install the packaged app with Apple's command-line device tooling:
+
+```bash
+unzip NoteEchoes-v2.9.7-build11.ipa -d NoteEchoes-v2.9.7
+xcrun devicectl device install app \
+  --device YOUR_DEVICE_UDID \
+  NoteEchoes-v2.9.7/Payload/Runner.app
+```
+
+This succeeds only on a device authorized by the embedded provisioning
+profile and only before that profile expires. To refresh an expired build,
+clone the repository and produce a newly signed build; downloading the same
+expired IPA again cannot renew its signature.
+
 Current Git commit at the time of this book's preparation:
 
 ```text
@@ -568,4 +620,3 @@ The architecture is strongest when each layer keeps its responsibility:
 - Swift talks to Apple frameworks.
 - The UI shows real saved state.
 - Private user data stays local unless the user explicitly chooses a future sync/export mechanism.
-
