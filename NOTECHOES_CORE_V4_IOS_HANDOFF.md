@@ -80,6 +80,8 @@ Publish the verified NoteEchoes Core v4 MLX 4-bit model, update the Flutter/iOS 
 - Added one app-wide high-contrast floating SnackBar theme. Bottom confirmations—including `Added to Lock Screen`—now use an inset 20-point rounded dark capsule with explicit light text, elevation, and readable action colors.
 - Fixed Topics collapsing into a single task-oriented semantic cluster. Stable smart collections now coexist with learned semantic connections: Reminders, Checklists, Plans & Events, Projects, Ideas, Meetings, Documents, and Notes. The default Topics experience is an Apple-style collection dashboard; tapping a collection card or graph node opens a draggable rounded sheet containing all connected notes.
 - Bumped to `2.9.6 (10)`, passed 44 focused product tests, compiled and strictly signature-verified the Runner and Live Activity extension, and installed it in place on the paired iPhone without removing the existing data container. The Mac could not auto-launch it only because the phone was locked after installation. Preserved release: `/Users/vashishtdevasani/Downloads/NoteEchoes-2.9.6-Topics-UI-2026-08-23/Runner.app`.
+- Diagnosed the remaining delayed Lock Screen checkbox feedback using Apple's App Intents execution rules. The `LiveActivityIntent` had been declared only in the widget UI source, so its durable App Group action ran but its immediate `Activity.update` did not have the containing app's active ActivityKit instance. Moved `ToggleLockScreenChecklistIntent` into `NoteEchoesActivityAttributes.swift`, which is compiled into both Runner and the widget extension. Apple runs it in Runner's process; it now updates the active content state with maximum relevance before queuing the durable SQLite synchronization.
+- Bumped to `2.9.7 (11)`, confirmed the intent metadata exists in the main Runner executable, compiled and strictly signature-verified the complete release, and installed it in place while retaining data-container UUID `7B579E2E-5573-452B-BED8-7EADDCF99B56`. Preserved release: `/Users/vashishtdevasani/Downloads/NoteEchoes-2.9.7-Live-Checklist-Fix-2026-08-24/Runner.app`.
 
 ## Repository, model, and signing portability
 
@@ -100,7 +102,7 @@ Publish the verified NoteEchoes Core v4 MLX 4-bit model, update the Flutter/iOS 
 ## Remaining work
 
 - Run human-authored voice acceptance tests in English, Telugu, Hindi, and Romanized speech. The automated release suites and physical download/load path are complete, but real microphone/ASR conditions still need product acceptance testing.
-- Unlock and open the already-installed 2.9.6 build. Pin a new checklist, verify its green completed row while locked, reopen NoteEchoes to confirm its home-card progress, and clear the Live Activity using the normal iOS gesture. This final interaction requires a human Lock Screen tap.
+- Open the installed 2.9.7 build once, clear any Live Activity created by an older app version, and add the checklist to the Lock Screen again. Tap a row and verify the green completed state appears without opening NoteEchoes; then open the app to confirm durable synchronization. Existing activities can retain an older archived widget representation, so this acceptance test must use a newly created activity.
 
 ## Blockers and user actions
 

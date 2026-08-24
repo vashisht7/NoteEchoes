@@ -170,6 +170,13 @@ state to the SQLite note, content blocks, home-card progress badge, search
 index, and current Live Activity. This makes the Lock Screen and home screen
 converge without placing the notes database inside the extension.
 
+The `ToggleLockScreenChecklistIntent` declaration lives in the shared
+`NoteEchoesActivityAttributes.swift` source and belongs to both the Runner and
+WidgetKit targets. This target membership is required: Apple executes a
+`LiveActivityIntent` in the containing app process, allowing its
+`perform()` method to call `Activity.update` immediately while the app remains
+visually closed. Do not move the intent back into an extension-only file.
+
 `NoteService.toggleCheckItem` continues to update the active surface when a
 row is changed inside the app. Editing the note updates it; deleting the note
 removes it. The application does not draw its own remove/X button in the Live
