@@ -26,6 +26,8 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>NoteEchoes uses your microphone to capture real-time voice notes and transcribe your thoughts.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>

@@ -33,20 +33,31 @@ class KeepTextNoteCard extends StatelessWidget {
         onTap: onTap,
         onLongPress: onLongPress,
         child: Container(
-          margin: EdgeInsets.zero,
+          margin: const EdgeInsets.symmetric(vertical: 2),
           decoration: BoxDecoration(
-            color: AppColors.elevation1,
-            borderRadius: BorderRadius.circular(14),
+            color: AppColors.elevation2,
+            borderRadius: BorderRadius.circular(18),
             border: Border.all(
               color: note.isPinned
                   ? accent.withValues(alpha: 0.7)
                   : AppColors.glassBorder,
               width: note.isPinned ? 1.4 : 1,
             ),
-            boxShadow: const [],
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.28),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+              BoxShadow(
+                color: accent.withValues(alpha: note.isPinned ? 0.10 : 0.025),
+                blurRadius: 14,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           child: Padding(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(15),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,

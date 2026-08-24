@@ -18,6 +18,7 @@ class SceneDelegate: FlutterSceneDelegate, AVSpeechSynthesizerDelegate {
     private var pdfVisionChannel: FlutterMethodChannel?
     private var speechOutputChannel: FlutterMethodChannel?
     private var noteBackupChannel: FlutterMethodChannel?
+    private var lockScreenActivityChannel: FlutterMethodChannel?
     private var isChannelRetryScheduled = false
     private let speechSynthesizer = AVSpeechSynthesizer()
     private var speechSegmentIndices: [ObjectIdentifier: Int] = [:]
@@ -162,6 +163,23 @@ class SceneDelegate: FlutterSceneDelegate, AVSpeechSynthesizerDelegate {
             Self.handleCalendar(call, result: result)
         }
 
+        let lockScreenActivityChannel = FlutterMethodChannel(
+            name: "noteechoes/lock_screen_activity",
+            binaryMessenger: flutterViewController.binaryMessenger
+        )
+        self.lockScreenActivityChannel = lockScreenActivityChannel
+        lockScreenActivityChannel.setMethodCallHandler { call, result in
+            if #available(iOS 16.2, *) {
+                LockScreenActivityCoordinator.handle(call, result: result)
+            } else {
+                result(FlutterError(
+                    code: "LIVE_ACTIVITY_UNAVAILABLE",
+                    message: "Lock Screen notes require iOS 16.2 or later.",
+                    details: nil
+                ))
+            }
+        }
+
         channel.setMethodCallHandler { [weak self] call, result in
             guard let self else {
                 result(FlutterMethodNotImplemented)
@@ -269,13 +287,13 @@ class SceneDelegate: FlutterSceneDelegate, AVSpeechSynthesizerDelegate {
         case "requestReminderPermissions":
             if #available(iOS 17.0, *) {
                 eventStore.requestFullAccessToReminders { granted, _ in
-                    requestNotificationPermission {
+                    ReminderNotificationCoordinator.requestPermission {
                         DispatchQueue.main.async { result(granted) }
                     }
                 }
             } else {
                 eventStore.requestAccess(to: .reminder) { granted, _ in
-                    requestNotificationPermission {
+                    ReminderNotificationCoordinator.requestPermission {
                         DispatchQueue.main.async { result(granted) }
                     }
                 }
@@ -352,10 +370,10 @@ class SceneDelegate: FlutterSceneDelegate, AVSpeechSynthesizerDelegate {
             do {
                 try eventStore.save(reminder, commit: true)
                 if let dueDate = reminder.dueDateComponents?.date {
-                    scheduleReminderNotification(
+                    ReminderNotificationCoordinator.schedule(
                         title: title,
                         dueDate: dueDate,
-                        identifier: reminder.calendarItemIdentifier
+                        reminderIdentifier: reminder.calendarItemIdentifier
                     )
                 }
                 result(reminder.calendarItemIdentifier)
@@ -400,44 +418,6 @@ class SceneDelegate: FlutterSceneDelegate, AVSpeechSynthesizerDelegate {
         default:
             result(FlutterMethodNotImplemented)
         }
-    }
-
-    private static func requestNotificationPermission(
-        completion: @escaping () -> Void
-    ) {
-        UNUserNotificationCenter.current().requestAuthorization(
-            options: [.alert, .sound, .badge]
-        ) { _, _ in completion() }
-    }
-
-    private static func scheduleReminderNotification(
-        title: String,
-        dueDate: Date,
-        identifier: String
-    ) {
-        guard dueDate > Date() else { return }
-        let content = UNMutableNotificationContent()
-        content.title = "Reminder"
-        content.body = title
-        content.sound = .default
-        content.threadIdentifier = "noteechoes-reminders"
-        if #available(iOS 15.0, *) {
-            content.interruptionLevel = .timeSensitive
-        }
-        let components = Calendar.current.dateComponents(
-            [.year, .month, .day, .hour, .minute, .second],
-            from: dueDate
-        )
-        let trigger = UNCalendarNotificationTrigger(
-            dateMatching: components,
-            repeats: false
-        )
-        let request = UNNotificationRequest(
-            identifier: "noteechoes-reminder-\(identifier)",
-            content: content,
-            trigger: trigger
-        )
-        UNUserNotificationCenter.current().add(request)
     }
 
     private func handleSpeechOutput(

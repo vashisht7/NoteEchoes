@@ -2,6 +2,7 @@ import Flutter
 import UIKit
 import AppIntents
 import PDFKit
+import UserNotifications
 
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
@@ -15,9 +16,31 @@ import PDFKit
             NotechoesShortcuts.updateAppShortcutParameters()
         }
 
-        return super.application(
+        let launched = super.application(
             application,
             didFinishLaunchingWithOptions: launchOptions
+        )
+        let notificationCenter = UNUserNotificationCenter.current()
+        ReminderNotificationCoordinator.configure(notificationCenter)
+        notificationCenter.delegate = self
+        return launched
+    }
+
+    override func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping () -> Void
+    ) {
+        if ReminderNotificationCoordinator.handle(
+            response,
+            completion: completionHandler
+        ) {
+            return
+        }
+        super.userNotificationCenter(
+            center,
+            didReceive: response,
+            withCompletionHandler: completionHandler
         )
     }
 

@@ -11,6 +11,7 @@ import '../services/action_button_note_ingestion_service.dart';
 import '../services/note_service.dart';
 import '../services/note_storage_service.dart';
 import '../services/voice_capture_validator.dart';
+import '../services/lock_screen_activity_service.dart';
 import '../ai/infrastructure/model_availability_service.dart';
 import '../ai/infrastructure/semantic_knowledge_service.dart';
 import '../theme/app_colors.dart';
@@ -269,8 +270,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     AuthSignInSheet.show(context);
   }
 
-  void _showNoteContextMenu(NoteModel note) {
+  Future<void> _showNoteContextMenu(NoteModel note) async {
     HapticFeedback.heavyImpact();
+    final isOnLockScreen = await LockScreenActivityService.instance.isActive(
+      note.noteId,
+    );
+    if (!mounted) return;
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -364,6 +369,56 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     },
                   ),
 
+                  _buildContextMenuItem(
+                    icon: isOnLockScreen
+                        ? Icons.phonelink_erase_rounded
+                        : Icons.screenshot_monitor_rounded,
+                    label: isOnLockScreen
+                        ? 'Remove from Lock Screen'
+                        : 'Add to Lock Screen',
+                    color: isOnLockScreen
+                        ? const Color(0xFFFF9F0A)
+                        : Colors.white,
+                    onTap: () async {
+                      Navigator.pop(context);
+                      try {
+                        if (isOnLockScreen) {
+                          await LockScreenActivityService.instance.remove(
+                            note.noteId,
+                          );
+                        } else {
+                          await LockScreenActivityService.instance.show(note);
+                        }
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(this.context).showSnackBar(
+                          SnackBar(
+                            behavior: SnackBarBehavior.floating,
+                            backgroundColor: AppColors.elevation2,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            content: Text(
+                              isOnLockScreen
+                                  ? 'Removed from Lock Screen'
+                                  : 'Added to Lock Screen',
+                            ),
+                          ),
+                        );
+                      } on PlatformException catch (error) {
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(this.context).showSnackBar(
+                          SnackBar(
+                            behavior: SnackBarBehavior.floating,
+                            content: Text(
+                              error.message ??
+                                  'Could not update the Lock Screen.',
+                            ),
+                          ),
+                        );
+                      }
+                    },
+                  ),
+
                   // 3. Copy Text Content
                   _buildContextMenuItem(
                     icon: Icons.copy_rounded,
@@ -452,9 +507,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(13),
         child: Container(
+          margin: const EdgeInsets.symmetric(vertical: 2),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.035),
+            borderRadius: BorderRadius.circular(13),
+          ),
           child: Row(
             children: [
               Icon(icon, size: 20, color: color),
@@ -924,11 +984,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       slivers: [
         const SliverToBoxAdapter(child: SizedBox(height: 8)),
         SliverPadding(
-          padding: const EdgeInsets.symmetric(horizontal: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
           sliver: SliverMasonryGrid.count(
             crossAxisCount: 2,
-            mainAxisSpacing: 6,
-            crossAxisSpacing: 6,
+            mainAxisSpacing: 10,
+            crossAxisSpacing: 10,
             itemBuilder: (context, index) {
               final note = notes[index];
               if (note.contentType == NoteContentType.richMedia &&

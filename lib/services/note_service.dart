@@ -7,6 +7,7 @@ import 'spoken_checklist_parser.dart';
 import 'voice_note_title_service.dart';
 import 'voice_capture_validator.dart';
 import 'spoken_reminder_parser.dart';
+import 'lock_screen_activity_service.dart';
 import 'note_storage_service.dart';
 import '../ai/domain/note_analysis.dart';
 import '../ai/infrastructure/knowledge_service.dart';
@@ -342,6 +343,7 @@ class NoteService extends ChangeNotifier {
       notifyListeners();
       await _persistNote(note);
       _scheduleNoteIndexing(note);
+      unawaited(LockScreenActivityService.instance.updateIfActive(note));
     }
   }
 
@@ -381,6 +383,7 @@ class NoteService extends ChangeNotifier {
       debugPrint('Could not remove note $noteId from search: $error');
     }
     await SemanticKnowledgeService.instance.removeNote(noteId);
+    unawaited(LockScreenActivityService.instance.remove(noteId));
   }
 
   Future<void> togglePin(String noteId) async {
@@ -446,6 +449,7 @@ class NoteService extends ChangeNotifier {
         notifyListeners();
         await _persistNote(updated);
         _scheduleNoteIndexing(updated);
+        unawaited(LockScreenActivityService.instance.updateIfActive(updated));
       }
     }
   }

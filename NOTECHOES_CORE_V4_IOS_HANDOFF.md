@@ -69,6 +69,10 @@ Publish the verified NoteEchoes Core v4 MLX 4-bit model, update the Flutter/iOS 
 - Replaced the checklist overflow menu with one compact remove-circle control so deleting an item no longer opens a full-width menu tile.
 - Added `VoiceCaptureValidator` to in-app recording, Action Button ingestion, pending queues, and the central NoteService boundary. Silence, filler-only speech, punctuation, and no-speech placeholders no longer create empty voice notes.
 - The reminder/silence/checklist/model focused suite passes 39/39 tests. Built and signature-verified NoteEchoes `2.9.3 (7)` as a 106.5 MB release and installed it in place without uninstalling. Preserved release: `/Users/vashishtdevasani/Downloads/NoteEchoes-2.9.3-Reminder-Release-2026-08-23/Runner.app`.
+- Added interactive notification actions through `ReminderNotificationCoordinator`: long press exposes `Done` and `Remind in 10 Minutes`; Done completes the Apple Reminder and clears the alert, while snooze moves its alarm and reschedules the NoteEchoes notification.
+- Added the signed `NoteEchoesLiveActivity` WidgetKit extension and Dart/native bridge. Long-pressing any home note now offers `Add to Lock Screen`; checklists show pending rows and completion progress, edits synchronize, deleting removes the activity, and the Lock Screen close button ends it.
+- Elevated home notes into rounded 18-point tiles with increased spacing, soft depth shadows, and a cleaner rounded long-press action sheet. Removed a visually redundant action-menu treatment.
+- Bumped to `2.9.4 (8)`. The final app and embedded extension both compile and pass strict code-sign verification. iOS initially rejected an intermediate extension with an empty inherited build number; explicit extension version metadata fixed it, and the corrected package installed and launched successfully in place without clearing user data. Final signed build: `/Users/vashishtdevasani/Downloads/NoteEchoes-2.9.4-Lock-Screen-Final-2026-08-23/Runner.app`.
 
 ## Verified performance
 

@@ -28,9 +28,22 @@
 		BBC47EA9C13714B26A97BDC7 /* PendingVoiceNoteStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE0C7A4A2642545CF8EA7BCC /* PendingVoiceNoteStore.swift */; };
 		C4D5E6F7A8B9C0D100223344 /* TranscribeAudioNoteIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4D5E6F7A8B9C0D100223345 /* TranscribeAudioNoteIntent.swift */; };
 		C7816CA49A33485691C09D98 /* Pods_Runner.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E7D2F2C4A44FFB542BCB8DF4 /* Pods_Runner.framework */; };
+		D10000000000000000000001 /* ReminderNotificationCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D11000000000000000000001 /* ReminderNotificationCoordinator.swift */; };
+		D10000000000000000000002 /* LockScreenActivityCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D11000000000000000000002 /* LockScreenActivityCoordinator.swift */; };
+		D10000000000000000000003 /* NoteEchoesActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = D11000000000000000000003 /* NoteEchoesActivityAttributes.swift */; };
+		D10000000000000000000004 /* NoteEchoesLiveActivityWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = D11000000000000000000004 /* NoteEchoesLiveActivityWidget.swift */; };
+		D10000000000000000000005 /* NoteEchoesActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = D11000000000000000000003 /* NoteEchoesActivityAttributes.swift */; };
+		D10000000000000000000006 /* NoteEchoesLiveActivity.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = D11000000000000000000005 /* NoteEchoesLiveActivity.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		D14000000000000000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 97C146E61CF9000F007C117D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D13000000000000000000001;
+			remoteInfo = NoteEchoesLiveActivity;
+		};
 		331C8085294A63A400263BE5 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 97C146E61CF9000F007C117D /* Project object */;
@@ -41,6 +54,17 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
+		D12000000000000000000004 /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				D10000000000000000000006 /* NoteEchoesLiveActivity.appex in Embed App Extensions */,
+			);
+			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		9705A1C41CF9048500538489 /* Embed Frameworks */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -87,9 +111,23 @@
 		E959606E381E328A9F33FC53 /* Pods_RunnerTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_RunnerTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		FCC98FE1E3680450CB46AFD6 /* SaveDictatedNoteIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SaveDictatedNoteIntent.swift; sourceTree = "<group>"; };
 		FE0C7A4A2642545CF8EA7BCC /* PendingVoiceNoteStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingVoiceNoteStore.swift; sourceTree = "<group>"; };
+		D11000000000000000000001 /* ReminderNotificationCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderNotificationCoordinator.swift; sourceTree = "<group>"; };
+		D11000000000000000000002 /* LockScreenActivityCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LockScreenActivityCoordinator.swift; sourceTree = "<group>"; };
+		D11000000000000000000003 /* NoteEchoesActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteEchoesActivityAttributes.swift; sourceTree = "<group>"; };
+		D11000000000000000000004 /* NoteEchoesLiveActivityWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteEchoesLiveActivityWidget.swift; sourceTree = "<group>"; };
+		D11000000000000000000005 /* NoteEchoesLiveActivity.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = NoteEchoesLiveActivity.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		D11000000000000000000006 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		D11000000000000000000007 /* NoteEchoesLiveActivity.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NoteEchoesLiveActivity.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		D12000000000000000000002 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		3C765ADF8DA33C2AC790518E /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -152,6 +190,7 @@
 			children = (
 				9740EEB11CF90186004384FC /* Flutter */,
 				97C146F01CF9000F007C117D /* Runner */,
+				D16000000000000000000001 /* NoteEchoesLiveActivity */,
 				97C146EF1CF9000F007C117D /* Products */,
 				331C8082294A63A400263BE5 /* RunnerTests */,
 				4611094D77586FCC01384B4B /* Pods */,
@@ -163,6 +202,7 @@
 			isa = PBXGroup;
 			children = (
 				97C146EE1CF9000F007C117D /* Runner.app */,
+				D11000000000000000000005 /* NoteEchoesLiveActivity.appex */,
 				331C8081294A63A400263BE5 /* RunnerTests.xctest */,
 			);
 			name = Products;
@@ -171,6 +211,9 @@
 		97C146F01CF9000F007C117D /* Runner */ = {
 			isa = PBXGroup;
 			children = (
+				D11000000000000000000001 /* ReminderNotificationCoordinator.swift */,
+				D11000000000000000000002 /* LockScreenActivityCoordinator.swift */,
+				D11000000000000000000003 /* NoteEchoesActivityAttributes.swift */,
 				FCC98FE1E3680450CB46AFD6 /* SaveDictatedNoteIntent.swift */,
 				A1B2C3D4E5F6078900112234 /* NotechoesShortcuts.swift */,
 				C4D5E6F7A8B9C0D100223345 /* TranscribeAudioNoteIntent.swift */,
@@ -190,6 +233,16 @@
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
 			);
 			path = Runner;
+			sourceTree = "<group>";
+		};
+		D16000000000000000000001 /* NoteEchoesLiveActivity */ = {
+			isa = PBXGroup;
+			children = (
+				D11000000000000000000004 /* NoteEchoesLiveActivityWidget.swift */,
+				D11000000000000000000006 /* Info.plist */,
+				D11000000000000000000007 /* NoteEchoesLiveActivity.entitlements */,
+			);
+			path = NoteEchoesLiveActivity;
 			sourceTree = "<group>";
 		};
 		99CA1B714CCFA5994CD0AE7C /* Frameworks */ = {
@@ -233,12 +286,14 @@
 				97C146EB1CF9000F007C117D /* Frameworks */,
 				97C146EC1CF9000F007C117D /* Resources */,
 				9705A1C41CF9048500538489 /* Embed Frameworks */,
+				D12000000000000000000004 /* Embed App Extensions */,
 				3B06AD1E1E4923F5004D2608 /* Thin Binary */,
 				8A8885680598304FE16CDC43 /* [CP] Copy Pods Resources */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				D14100000000000000000001 /* PBXTargetDependency */,
 			);
 			name = Runner;
 			packageProductDependencies = (
@@ -251,6 +306,23 @@
 			productReference = 97C146EE1CF9000F007C117D /* Runner.app */;
 			productType = "com.apple.product-type.application";
 		};
+		D13000000000000000000001 /* NoteEchoesLiveActivity */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D15100000000000000000001 /* Build configuration list for PBXNativeTarget "NoteEchoesLiveActivity" */;
+			buildPhases = (
+				D12000000000000000000001 /* Sources */,
+				D12000000000000000000002 /* Frameworks */,
+				D12000000000000000000003 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = NoteEchoesLiveActivity;
+			productName = NoteEchoesLiveActivity;
+			productReference = D11000000000000000000005 /* NoteEchoesLiveActivity.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -261,6 +333,9 @@
 				LastUpgradeCheck = 1510;
 				ORGANIZATIONNAME = "";
 				TargetAttributes = {
+					D13000000000000000000001 = {
+						CreatedOnToolsVersion = 26.0;
+					};
 					331C8080294A63A400263BE5 = {
 						CreatedOnToolsVersion = 14.0;
 						TestTargetID = 97C146ED1CF9000F007C117D;
@@ -290,12 +365,20 @@
 			projectRoot = "";
 			targets = (
 				97C146ED1CF9000F007C117D /* Runner */,
+				D13000000000000000000001 /* NoteEchoesLiveActivity */,
 				331C8080294A63A400263BE5 /* RunnerTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		D12000000000000000000003 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		331C807F294A63A400263BE5 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -412,6 +495,15 @@
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		D12000000000000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D10000000000000000000004 /* NoteEchoesLiveActivityWidget.swift in Sources */,
+				D10000000000000000000005 /* NoteEchoesActivityAttributes.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		331C807D294A63A400263BE5 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -424,6 +516,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D10000000000000000000001 /* ReminderNotificationCoordinator.swift in Sources */,
+				D10000000000000000000002 /* LockScreenActivityCoordinator.swift in Sources */,
+				D10000000000000000000003 /* NoteEchoesActivityAttributes.swift in Sources */,
 				74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */,
 				1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */,
 				7884E8682EC3CC0700C636F2 /* SceneDelegate.swift in Sources */,
@@ -440,6 +535,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		D14100000000000000000001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D13000000000000000000001 /* NoteEchoesLiveActivity */;
+			targetProxy = D14000000000000000000001 /* PBXContainerItemProxy */;
+		};
 		331C8086294A63A400263BE5 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 97C146ED1CF9000F007C117D /* Runner */;
@@ -526,7 +626,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;
-				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				CURRENT_PROJECT_VERSION = 8;
 				DEVELOPMENT_TEAM = 8UKWK3U3Y2;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
@@ -750,9 +850,97 @@
 			};
 			name = Release;
 		};
+		D15000000000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = NoteEchoesLiveActivity/NoteEchoesLiveActivity.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				DEVELOPMENT_TEAM = 8UKWK3U3Y2;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = NoteEchoesLiveActivity/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 2.9.4;
+				PRODUCT_BUNDLE_IDENTIFIER = com.vashisht.notechoes.NoteEchoesLiveActivity;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		D15000000000000000000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = NoteEchoesLiveActivity/NoteEchoesLiveActivity.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 8;
+				DEVELOPMENT_TEAM = 8UKWK3U3Y2;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = NoteEchoesLiveActivity/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 2.9.4;
+				PRODUCT_BUNDLE_IDENTIFIER = com.vashisht.notechoes.NoteEchoesLiveActivity;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		D15000000000000000000003 /* Profile */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = NoteEchoesLiveActivity/NoteEchoesLiveActivity.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 8;
+				DEVELOPMENT_TEAM = 8UKWK3U3Y2;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = NoteEchoesLiveActivity/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 2.9.4;
+				PRODUCT_BUNDLE_IDENTIFIER = com.vashisht.notechoes.NoteEchoesLiveActivity;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Profile;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		D15100000000000000000001 /* Build configuration list for PBXNativeTarget "NoteEchoesLiveActivity" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D15000000000000000000001 /* Debug */,
+				D15000000000000000000002 /* Release */,
+				D15000000000000000000003 /* Profile */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		331C8087294A63A400263BE5 /* Build configuration list for PBXNativeTarget "RunnerTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

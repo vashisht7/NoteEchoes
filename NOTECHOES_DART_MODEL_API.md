@@ -147,6 +147,31 @@ A future reminder uses a standard Lock Screen notification, not Live Activity.
 Live Activities are for continuously updating ongoing events and are not a
 reliable replacement for a scheduled alarm.
 
+Reminder notifications use the native `NOTEECHOES_REMINDER` category. Long
+pressing the notification exposes `Done` and `Remind in 10 Minutes`. Done marks
+the corresponding `EKReminder` complete and clears the delivered notification;
+snooze updates the reminder alarm and schedules a replacement notification.
+
+## User-pinned Lock Screen notes
+
+The home-card long-press menu has a separate `Add to Lock Screen` action. This
+uses ActivityKit, because a Live Activity is the Apple-supported rounded,
+updating Lock Screen surface:
+
+```dart
+await LockScreenActivityService.instance.show(note);
+```
+
+For checklists it displays up to three pending rows and completion progress.
+`NoteService.toggleCheckItem` updates the active surface immediately. Editing
+the note updates it; deleting the note removes it. Long press the home tile
+again for `Remove from Lock Screen`, or use the close control in the Live
+Activity.
+
+iOS controls Live Activity lifetime and can end one after its system maximum.
+NoteEchoes keeps it active until the user removes it within that Apple-managed
+window, but the application cannot promise permanent or indefinite display.
+
 ## Natural calendar call
 
 ```dart
