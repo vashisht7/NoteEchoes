@@ -76,6 +76,19 @@ Publish the verified NoteEchoes Core v4 MLX 4-bit model, update the Flutter/iOS 
 - Reworked the Live Activity into a genuinely interactive Lock Screen surface. Checklist rows are now App Intent buttons with checked/unchecked state, immediate progress updates, and a durable App Group action queue. On app activation, NoteService applies the exact state to SQLite, content blocks, indexing, the home-card progress badge, and the active Live Activity.
 - Replaced the small nonresponsive X treatment with a full-size `Remove` capsule backed by a non-launching Live Activity intent. Plain-text pins now send the full note and use adaptive typography with up to 8–12 visible lines, subject to Apple's Live Activity height.
 - Bumped to `2.9.5 (9)`. The Runner and WidgetKit extension compiled in Release configuration, the extension's signed entitlements contain `group.com.vashisht.notechoes`, and strict deep signature verification passed. The release was installed in place and launched on the connected iPhone without uninstalling or clearing its data container. Preserved build: `/Users/vashishtdevasani/Downloads/NoteEchoes-2.9.5-Interactive-Lock-Screen-2026-08-23/Runner.app`.
+- Removed the Live Activity's custom Remove/X control after physical-device testing showed iOS was not consistently dismissing it. Users now clear the system surface using the normal iOS dismissal gesture. Checklist completion is deliberately much more visible: the selected row gains a green rounded surface, a white/green filled checkmark, strikethrough text, and updated progress.
+- Added one app-wide high-contrast floating SnackBar theme. Bottom confirmations—including `Added to Lock Screen`—now use an inset 20-point rounded dark capsule with explicit light text, elevation, and readable action colors.
+- Fixed Topics collapsing into a single task-oriented semantic cluster. Stable smart collections now coexist with learned semantic connections: Reminders, Checklists, Plans & Events, Projects, Ideas, Meetings, Documents, and Notes. The default Topics experience is an Apple-style collection dashboard; tapping a collection card or graph node opens a draggable rounded sheet containing all connected notes.
+- Bumped to `2.9.6 (10)`, passed 44 focused product tests, compiled and strictly signature-verified the Runner and Live Activity extension, and installed it in place on the paired iPhone without removing the existing data container. The Mac could not auto-launch it only because the phone was locked after installation. Preserved release: `/Users/vashishtdevasani/Downloads/NoteEchoes-2.9.6-Topics-UI-2026-08-23/Runner.app`.
+
+## Repository, model, and signing portability
+
+- Application source: `https://github.com/vashisht7/NoteEchoes` (`main`). A new Codex task or Mac can clone this repository and follow `NOTECHOES_DART_MODEL_API.md` plus this handoff.
+- Production model: `https://huggingface.co/Vashisht7/noteechoes-qwen25-core-v4-mlx-4bit`, pinned in the application to immutable revision `ab5704d40dc4096e7460fb10443e99fc891b7196`. The model is not committed to Git; the app downloads and verifies it separately.
+- Current signing identity: Apple Development / Personal Team `8UKWK3U3Y2`, bundle ID `com.vashisht.notechoes`. The exact main-app profile embedded in 2.9.6 expires `2026-08-29T04:19:56Z`; the extension profile expires `2026-08-31T03:40:34Z`. The app is limited by the earlier main-app date.
+- Apple states that Personal Team profiles expire seven days after issuance and require rebuilding and reinstalling. Re-sign on a Mac logged into the same Apple Account/team and install over the existing `com.vashisht.notechoes` app. Do not uninstall first.
+- Same-phone in-place upgrades retain NoteEchoes data because its SQLite database is in Application Support and its recovery copy is in Documents/App Group storage. A different Mac can perform that update if it has the same signing team. A different developer team or bundle ID creates a separate app/container and will not automatically inherit notes.
+- For durable consumer distribution and updates without weekly re-signing, enroll in the Apple Developer Program and ship through TestFlight/App Store while preserving the bundle ID and App Group. Before moving a personal dataset to another phone or another bundle identity, add a user-facing encrypted export/import or cloud-sync flow; Git and Hugging Face contain code/model artifacts, never the user's private notes.
 
 ## Verified performance
 
@@ -87,7 +100,7 @@ Publish the verified NoteEchoes Core v4 MLX 4-bit model, update the Flutter/iOS 
 ## Remaining work
 
 - Run human-authored voice acceptance tests in English, Telugu, Hindi, and Romanized speech. The automated release suites and physical download/load path are complete, but real microphone/ASR conditions still need product acceptance testing.
-- On the phone, pin a new checklist and a long plain-text note. Verify checkbox feedback while locked, reopen NoteEchoes to confirm its home-card progress, and confirm the `Remove` capsule dismisses the activity. The implementation, signed build, and automated state paths are complete; this final interaction requires a human Lock Screen tap.
+- Unlock and open the already-installed 2.9.6 build. Pin a new checklist, verify its green completed row while locked, reopen NoteEchoes to confirm its home-card progress, and clear the Live Activity using the normal iOS gesture. This final interaction requires a human Lock Screen tap.
 
 ## Blockers and user actions
 

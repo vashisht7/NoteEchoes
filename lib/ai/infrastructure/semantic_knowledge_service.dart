@@ -196,50 +196,16 @@ class SemanticKnowledgeService extends ChangeNotifier {
       );
     }
 
-    // Dynamic Intent & Knowledge Clusters fallback: group notes by inferred meaning and tags
-    if (result.isEmpty && notes.isNotEmpty) {
-      final categoryMap = <String, List<NoteModel>>{};
-      for (final note in notes) {
-        final specificTags = note.tags.where((t) => t != 'voice-memo' && t != 'notes').toList();
-        if (specificTags.isNotEmpty) {
-          for (final tag in specificTags) {
-            final key = tag[0].toUpperCase() + tag.substring(1);
-            categoryMap.putIfAbsent(key, () => []).add(note);
-          }
-        } else {
-          // Inferred from title/content
-          final lower = (note.title + ' ' + note.textContent).toLowerCase();
-          if (lower.contains('task') || lower.contains('todo') || lower.contains('finish')) {
-            categoryMap.putIfAbsent('Tasks & Action Items', () => []).add(note);
-          } else if (lower.contains('meet') || lower.contains('call') || lower.contains('sync')) {
-            categoryMap.putIfAbsent('Meetings & Calls', () => []).add(note);
-          } else if (lower.contains('idea') || lower.contains('brainstorm')) {
-            categoryMap.putIfAbsent('Ideas & Concepts', () => []).add(note);
-          } else if (lower.contains('buy') || lower.contains('shop') || lower.contains('grocer')) {
-            categoryMap.putIfAbsent('Shopping & Groceries', () => []).add(note);
-          } else if (lower.contains('plan') || lower.contains('travel') || lower.contains('trip')) {
-            categoryMap.putIfAbsent('Travel & Plans', () => []).add(note);
-          } else {
-            categoryMap.putIfAbsent('Quick Voice Thoughts', () => []).add(note);
-          }
-        }
-      }
-
-      for (final entry in categoryMap.entries) {
-        result.add(
-          NoteTopic(
-            id: 'intent_${entry.key.toLowerCase().replaceAll(' ', '_')}',
-            label: entry.key,
-            summary: '${entry.value.length} notes connected by topic and context.',
-            status: SemanticSuggestionStatus.confirmed,
-            notes: entry.value,
-            confidence: 0.88,
-          ),
-        );
-      }
-    }
+    // Stable product collections sit beside semantic clusters. Semantic
+    // similarity alone can legitimately connect many short action notes into
+    // one large "task" cluster; these collections keep reminders, events,
+    // checklists, ideas, projects, documents and ordinary notes discoverable.
+    result.addAll(_productCollections(notes));
 
     result.sort((a, b) {
+      final leftCollection = a.id.startsWith('collection_');
+      final rightCollection = b.id.startsWith('collection_');
+      if (leftCollection != rightCollection) return leftCollection ? -1 : 1;
       if (a.status == SemanticSuggestionStatus.confirmed &&
           b.status != SemanticSuggestionStatus.confirmed) {
         return -1;
@@ -247,6 +213,97 @@ class SemanticKnowledgeService extends ChangeNotifier {
       return b.notes.length.compareTo(a.notes.length);
     });
     return result;
+  }
+
+  List<NoteTopic> _productCollections(List<NoteModel> notes) {
+    final groups = <String, List<NoteModel>>{};
+
+    void add(String label, NoteModel note) {
+      final values = groups.putIfAbsent(label, () => []);
+      if (values.every((value) => value.noteId != note.noteId)) {
+        values.add(note);
+      }
+    }
+
+    for (final note in notes) {
+      final tags = note.tags.map((tag) => tag.toLowerCase()).toSet();
+      final searchable = '${note.title} ${note.textContent}'.toLowerCase();
+      var classified = false;
+
+      if (tags.any((tag) => tag.contains('reminder') || tag == 'reminders') ||
+          searchable.contains('remind me')) {
+        add('Reminders', note);
+        classified = true;
+      }
+      if (note.checklist.isNotEmpty ||
+          tags.any((tag) => tag == 'tasks' || tag.contains('checklist'))) {
+        add('Checklists', note);
+        classified = true;
+      }
+      if (tags.any(
+        (tag) => tag == 'events' || tag == 'calendar' || tag == 'appointments',
+      )) {
+        add('Plans & Events', note);
+        classified = true;
+      }
+      if (tags.any(
+        (tag) => tag.contains('idea') || tag.contains('brainstorm'),
+      )) {
+        add('Ideas', note);
+        classified = true;
+      }
+      if (tags.any(
+        (tag) => tag.contains('project') || tag.contains('update'),
+      )) {
+        add('Projects', note);
+        classified = true;
+      }
+      if (tags.any((tag) => tag.contains('meeting') || tag.contains('call')) ||
+          searchable.contains('meeting')) {
+        add('Meetings', note);
+        classified = true;
+      }
+      if (note.mediaAssets.isNotEmpty ||
+          tags.any((tag) => tag.contains('document') || tag.contains('pdf'))) {
+        add('Documents', note);
+        classified = true;
+      }
+      if (!classified) add('Notes', note);
+    }
+
+    const descriptions = {
+      'Reminders': 'Time-sensitive things you asked NoteEchoes to remember.',
+      'Checklists': 'Interactive lists and actions with live progress.',
+      'Plans & Events': 'Scheduled plans, appointments, and calendar context.',
+      'Ideas': 'Thoughts, possibilities, and concepts worth returning to.',
+      'Projects': 'Project decisions, updates, and next steps.',
+      'Meetings': 'Meeting notes, calls, decisions, and follow-ups.',
+      'Documents': 'Imported files and notes with attached media.',
+      'Notes': 'Thoughts and information outside an action collection.',
+    };
+    const order = [
+      'Reminders',
+      'Checklists',
+      'Plans & Events',
+      'Projects',
+      'Ideas',
+      'Meetings',
+      'Documents',
+      'Notes',
+    ];
+    return order
+        .where((label) => groups[label]?.isNotEmpty == true)
+        .map(
+          (label) => NoteTopic(
+            id: 'collection_${label.toLowerCase().replaceAll(RegExp(r'[^a-z]+'), '_')}',
+            label: label,
+            summary: descriptions[label]!,
+            status: SemanticSuggestionStatus.confirmed,
+            notes: List.unmodifiable(groups[label]!),
+            confidence: 1,
+          ),
+        )
+        .toList();
   }
 
   Future<void> setTopicStatus(

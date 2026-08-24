@@ -5,7 +5,6 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../ai/domain/semantic_models.dart';
 import '../ai/infrastructure/semantic_knowledge_service.dart';
-import '../models/note_model.dart';
 import '../services/note_service.dart';
 import '../theme/app_colors.dart';
 import 'note_detail_screen.dart';
@@ -23,7 +22,7 @@ class _TopicsScreenState extends State<TopicsScreen>
     with SingleTickerProviderStateMixin {
   final _semantic = SemanticKnowledgeService.instance;
   final _notes = NoteService();
-  TopicsViewMode _viewMode = TopicsViewMode.knowledgeGraph;
+  TopicsViewMode _viewMode = TopicsViewMode.topicCards;
   NoteTopic? _selectedTopic;
   late final AnimationController _pulseCtrl;
 
@@ -63,7 +62,7 @@ class _TopicsScreenState extends State<TopicsScreen>
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          'Neural Knowledge Graph',
+          'Topics',
           style: GoogleFonts.outfit(
             fontWeight: FontWeight.w700,
             fontSize: 18,
@@ -176,8 +175,12 @@ class _TopicsScreenState extends State<TopicsScreen>
   Widget _buildKnowledgeGraphView(List<NoteTopic> topics) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final center = Offset(constraints.maxWidth / 2, (constraints.maxHeight - 160) / 2);
-        final radius = math.min(constraints.maxWidth, constraints.maxHeight - 160) * 0.38;
+        final center = Offset(
+          constraints.maxWidth / 2,
+          (constraints.maxHeight - 160) / 2,
+        );
+        final radius =
+            math.min(constraints.maxWidth, constraints.maxHeight - 160) * 0.38;
 
         return Stack(
           children: [
@@ -221,7 +224,8 @@ class _TopicsScreenState extends State<TopicsScreen>
                       ...topics.asMap().entries.map((entry) {
                         final idx = entry.key;
                         final topic = entry.value;
-                        final angle = (2 * math.pi / topics.length) * idx - (math.pi / 2);
+                        final angle =
+                            (2 * math.pi / topics.length) * idx - (math.pi / 2);
                         final nodeX = center.dx + radius * math.cos(angle) - 40;
                         final nodeY = center.dy + radius * math.sin(angle) - 40;
 
@@ -326,6 +330,7 @@ class _TopicsScreenState extends State<TopicsScreen>
         setState(() {
           _selectedTopic = topic;
         });
+        _showTopicDetail(topic);
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 240),
@@ -385,16 +390,32 @@ class _TopicsScreenState extends State<TopicsScreen>
 
   IconData _topicIcon(String label) {
     final l = label.toLowerCase();
-    if (l.contains('task') || l.contains('todo')) return Icons.check_circle_outline_rounded;
+    if (l.contains('task') || l.contains('todo')) {
+      return Icons.check_circle_outline_rounded;
+    }
     if (l.contains('meet') || l.contains('call')) return Icons.groups_rounded;
-    if (l.contains('grocer') || l.contains('shop')) return Icons.shopping_basket_rounded;
-    if (l.contains('math') || l.contains('formula')) return Icons.functions_rounded;
-    if (l.contains('idea') || l.contains('brain')) return Icons.lightbulb_outline_rounded;
+    if (l.contains('grocer') || l.contains('shop')) {
+      return Icons.shopping_basket_rounded;
+    }
+    if (l.contains('math') || l.contains('formula')) {
+      return Icons.functions_rounded;
+    }
+    if (l.contains('idea') || l.contains('brain')) {
+      return Icons.lightbulb_outline_rounded;
+    }
     if (l.contains('design') || l.contains('ui')) return Icons.palette_outlined;
-    if (l.contains('finance') || l.contains('money')) return Icons.attach_money_rounded;
-    if (l.contains('travel') || l.contains('trip')) return Icons.flight_takeoff_rounded;
-    if (l.contains('health') || l.contains('fitness')) return Icons.favorite_border_rounded;
-    if (l.contains('doc') || l.contains('pdf')) return Icons.description_outlined;
+    if (l.contains('finance') || l.contains('money')) {
+      return Icons.attach_money_rounded;
+    }
+    if (l.contains('travel') || l.contains('trip')) {
+      return Icons.flight_takeoff_rounded;
+    }
+    if (l.contains('health') || l.contains('fitness')) {
+      return Icons.favorite_border_rounded;
+    }
+    if (l.contains('doc') || l.contains('pdf')) {
+      return Icons.description_outlined;
+    }
     return Icons.bubble_chart_rounded;
   }
 
@@ -485,7 +506,10 @@ class _TopicsScreenState extends State<TopicsScreen>
                     ),
                   ),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFF2C2C2E),
                       borderRadius: BorderRadius.circular(8),
@@ -494,12 +518,18 @@ class _TopicsScreenState extends State<TopicsScreen>
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.notes_rounded, size: 14, color: Colors.white54),
+                        const Icon(
+                          Icons.notes_rounded,
+                          size: 14,
+                          color: Colors.white54,
+                        ),
                         const SizedBox(width: 6),
                         ConstrainedBox(
                           constraints: const BoxConstraints(maxWidth: 140),
                           child: Text(
-                            note.title.isNotEmpty ? note.title : 'Untitled Note',
+                            note.title.isNotEmpty
+                                ? note.title
+                                : 'Untitled Note',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: GoogleFonts.inter(
@@ -525,17 +555,79 @@ class _TopicsScreenState extends State<TopicsScreen>
   // Alternative Section Card List View
   // ───────────────────────────────────────────────────────────────────────────
   Widget _buildTopicCardsView(List<NoteTopic> topics) {
+    final collections = topics
+        .where((topic) => topic.id.startsWith('collection_'))
+        .length;
+    final connectedNotes = topics
+        .expand((topic) => topic.notes)
+        .map((note) => note.noteId)
+        .toSet()
+        .length;
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 36),
       children: [
+        Container(
+          padding: const EdgeInsets.all(20),
+          margin: const EdgeInsets.only(bottom: 20),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+                AppColors.elevation2,
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: AppColors.glassBorderBright),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(Icons.bubble_chart_rounded, size: 27),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Your knowledge, organized',
+                      style: GoogleFonts.outfit(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '$collections smart collections • $connectedNotes notes',
+                      style: GoogleFonts.inter(
+                        color: Colors.white70,
+                        fontSize: 12.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(4, 0, 4, 18),
+          padding: const EdgeInsets.fromLTRB(4, 0, 4, 12),
           child: Text(
-            'Private, on-device clusters grouped by semantic meaning and intent.',
+            'COLLECTIONS & CONNECTIONS',
             style: GoogleFonts.inter(
               color: AppColors.secondaryText,
-              fontSize: 13,
-              height: 1.45,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.8,
             ),
           ),
         ),
@@ -546,155 +638,375 @@ class _TopicsScreenState extends State<TopicsScreen>
 
   Widget _topicCard(NoteTopic topic) {
     final confirmed = topic.status == SemanticSuggestionStatus.confirmed;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1C1C1E),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFF2C2C2E)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                _topicIcon(topic.label),
-                color: Theme.of(context).colorScheme.primary,
-                size: 19,
+    final color = _topicColor(topic.label);
+    return GestureDetector(
+      onTap: () => _showTopicDetail(topic),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(17),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [color.withValues(alpha: 0.18), AppColors.elevation1],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.28),
+              blurRadius: 16,
+              offset: const Offset(0, 7),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(_topicIcon(topic.label), color: color, size: 21),
+                const SizedBox(width: 9),
+                Expanded(
+                  child: Text(
+                    topic.label,
+                    style: GoogleFonts.outfit(
+                      color: Colors.white,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                Text(
+                  '${topic.notes.length} notes',
+                  style: GoogleFonts.inter(
+                    color: AppColors.secondaryText,
+                    fontSize: 12,
+                  ),
+                ),
+                if (!topic.id.startsWith('collection_'))
+                  IconButton(
+                    visualDensity: VisualDensity.compact,
+                    tooltip: 'Rename topic',
+                    onPressed: () => _renameTopic(topic),
+                    icon: const Icon(
+                      Icons.edit_rounded,
+                      size: 16,
+                      color: Colors.white54,
+                    ),
+                  ),
+              ],
+            ),
+            if (topic.summary.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text(
+                topic.summary,
+                style: GoogleFonts.inter(
+                  color: AppColors.secondaryText,
+                  fontSize: 12.5,
+                ),
               ),
-              const SizedBox(width: 9),
-              Expanded(
+            ],
+            const SizedBox(height: 12),
+            ...topic.notes
+                .take(4)
+                .map(
+                  (note) => InkWell(
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: () => Navigator.of(context).push(
+                      CupertinoPageRoute(
+                        builder: (_) => NoteDetailScreen(existingNote: note),
+                      ),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.notes_rounded,
+                            color: Colors.white54,
+                            size: 16,
+                          ),
+                          const SizedBox(width: 9),
+                          Expanded(
+                            child: Text(
+                              note.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.inter(
+                                color: Colors.white,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                          const Icon(
+                            Icons.chevron_right_rounded,
+                            color: Colors.white30,
+                            size: 18,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+            if (topic.notes.length > 4)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
                 child: Text(
-                  topic.label,
-                  style: GoogleFonts.outfit(
-                    color: Colors.white,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w700,
+                  '+ ${topic.notes.length - 4} more',
+                  style: GoogleFonts.inter(
+                    color: AppColors.secondaryText,
+                    fontSize: 12,
                   ),
                 ),
               ),
-              Text(
-                '${topic.notes.length} notes',
-                style: GoogleFonts.inter(
-                  color: AppColors.secondaryText,
-                  fontSize: 12,
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Text(
+                  'View connected notes',
+                  style: GoogleFonts.inter(
+                    color: color,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const Spacer(),
+                Icon(Icons.arrow_forward_rounded, color: color, size: 17),
+              ],
+            ),
+            if (!confirmed) ...[
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => _semantic.setTopicStatus(
+                        topic.id,
+                        SemanticSuggestionStatus.dismissed,
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Colors.white12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text('Dismiss'),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: () => _semantic.setTopicStatus(
+                        topic.id,
+                        SemanticSuggestionStatus.confirmed,
+                      ),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      icon: const Icon(Icons.check_rounded, size: 16),
+                      label: const Text('Keep Topic'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Color _topicColor(String label) {
+    final value = label.toLowerCase();
+    if (value.contains('reminder')) return AppColors.accentOrange;
+    if (value.contains('check') || value.contains('task')) {
+      return AppColors.accentGreen;
+    }
+    if (value.contains('event') || value.contains('plan')) {
+      return AppColors.accentBlue;
+    }
+    if (value.contains('idea')) return const Color(0xFFFFD60A);
+    if (value.contains('project')) return AppColors.accentPurple;
+    if (value.contains('meeting')) return const Color(0xFF64D2FF);
+    if (value.contains('document')) return const Color(0xFFFF453A);
+    return Theme.of(context).colorScheme.primary;
+  }
+
+  void _showTopicDetail(NoteTopic topic) {
+    final color = _topicColor(topic.label);
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => DraggableScrollableSheet(
+        initialChildSize: 0.78,
+        minChildSize: 0.48,
+        maxChildSize: 0.94,
+        expand: false,
+        builder: (context, controller) => Container(
+          decoration: const BoxDecoration(
+            color: AppColors.elevation1,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+          ),
+          child: ListView(
+            controller: controller,
+            padding: const EdgeInsets.fromLTRB(18, 10, 18, 30),
+            children: [
+              Center(
+                child: Container(
+                  width: 38,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: Colors.white24,
+                    borderRadius: BorderRadius.circular(3),
+                  ),
                 ),
               ),
-              IconButton(
-                visualDensity: VisualDensity.compact,
-                tooltip: 'Rename topic',
-                onPressed: () => _renameTopic(topic),
-                icon: const Icon(
-                  Icons.edit_rounded,
-                  size: 16,
-                  color: Colors.white54,
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.18),
+                      borderRadius: BorderRadius.circular(17),
+                    ),
+                    child: Icon(
+                      _topicIcon(topic.label),
+                      color: color,
+                      size: 26,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          topic.label,
+                          style: GoogleFonts.outfit(
+                            color: Colors.white,
+                            fontSize: 24,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        Text(
+                          '${topic.notes.length} connected notes',
+                          style: GoogleFonts.inter(
+                            color: AppColors.secondaryText,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              if (topic.summary.isNotEmpty) ...[
+                const SizedBox(height: 14),
+                Text(
+                  topic.summary,
+                  style: GoogleFonts.inter(
+                    color: Colors.white70,
+                    fontSize: 13.5,
+                    height: 1.45,
+                  ),
+                ),
+              ],
+              const SizedBox(height: 22),
+              Text(
+                'CONNECTED NOTES',
+                style: GoogleFonts.inter(
+                  color: AppColors.secondaryText,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.8,
+                ),
+              ),
+              const SizedBox(height: 10),
+              ...topic.notes.map(
+                (note) => Padding(
+                  padding: const EdgeInsets.only(bottom: 9),
+                  child: Material(
+                    color: AppColors.elevation2,
+                    borderRadius: BorderRadius.circular(17),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(17),
+                      onTap: () {
+                        Navigator.pop(sheetContext);
+                        Navigator.of(this.context).push(
+                          CupertinoPageRoute(
+                            builder: (_) =>
+                                NoteDetailScreen(existingNote: note),
+                          ),
+                        );
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.all(14),
+                        child: Row(
+                          children: [
+                            Icon(
+                              note.tags.any(
+                                    (tag) =>
+                                        tag.toLowerCase().contains('reminder'),
+                                  )
+                                  ? Icons.notifications_active_rounded
+                                  : note.checklist.isNotEmpty
+                                  ? Icons.checklist_rounded
+                                  : Icons.note_rounded,
+                              color: color,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    note.title.isEmpty
+                                        ? 'Untitled Note'
+                                        : note.title,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.inter(
+                                      color: Colors.white,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  if (note.summarySnippet.isNotEmpty)
+                                    Text(
+                                      note.summarySnippet,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: GoogleFonts.inter(
+                                        color: AppColors.secondaryText,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                            const Icon(
+                              Icons.chevron_right_rounded,
+                              color: Colors.white30,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ],
           ),
-          if (topic.summary.isNotEmpty) ...[
-            const SizedBox(height: 6),
-            Text(
-              topic.summary,
-              style: GoogleFonts.inter(
-                color: AppColors.secondaryText,
-                fontSize: 12.5,
-              ),
-            ),
-          ],
-          const SizedBox(height: 12),
-          ...topic.notes.take(4).map(
-            (note) => InkWell(
-              borderRadius: BorderRadius.circular(8),
-              onTap: () => Navigator.of(context).push(
-                CupertinoPageRoute(
-                  builder: (_) => NoteDetailScreen(existingNote: note),
-                ),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 6),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.notes_rounded,
-                      color: Colors.white54,
-                      size: 16,
-                    ),
-                    const SizedBox(width: 9),
-                    Expanded(
-                      child: Text(
-                        note.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.inter(
-                          color: Colors.white,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ),
-                    const Icon(
-                      Icons.chevron_right_rounded,
-                      color: Colors.white30,
-                      size: 18,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          if (topic.notes.length > 4)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                '+ ${topic.notes.length - 4} more',
-                style: GoogleFonts.inter(
-                  color: AppColors.secondaryText,
-                  fontSize: 12,
-                ),
-              ),
-            ),
-          if (!confirmed) ...[
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => _semantic.setTopicStatus(
-                      topic.id,
-                      SemanticSuggestionStatus.dismissed,
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Colors.white12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: const Text('Dismiss'),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: FilledButton.icon(
-                    onPressed: () => _semantic.setTopicStatus(
-                      topic.id,
-                      SemanticSuggestionStatus.confirmed,
-                    ),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: Theme.of(context).colorScheme.primary,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    icon: const Icon(Icons.check_rounded, size: 16),
-                    label: const Text('Keep Topic'),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ],
+        ),
       ),
     );
   }
@@ -791,7 +1103,9 @@ class _KnowledgeGraphPainter extends CustomPainter {
       canvas.drawLine(center, nodePos, linePaint);
 
       // Connect neighboring nodes to form a constellation web
-      final nextAngle = (2 * math.pi / topics.length) * ((i + 1) % topics.length) - (math.pi / 2);
+      final nextAngle =
+          (2 * math.pi / topics.length) * ((i + 1) % topics.length) -
+          (math.pi / 2);
       final nextPos = Offset(
         center.dx + radius * math.cos(nextAngle),
         center.dy + radius * math.sin(nextAngle),

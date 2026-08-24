@@ -17,17 +17,6 @@ struct NoteEchoesLiveActivityWidget: Widget {
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
                     Spacer()
-                    Button(intent: RemoveLockScreenNoteIntent(noteId: context.attributes.noteId)) {
-                        Label("Remove", systemImage: "xmark")
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                            .padding(.horizontal, 9)
-                            .padding(.vertical, 6)
-                            .background(.quaternary, in: Capsule())
-                            .contentShape(Capsule())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Remove from Lock Screen")
                 }
 
                 Text(context.attributes.title)
@@ -44,16 +33,28 @@ struct NoteEchoesLiveActivityWidget: Widget {
                             )) {
                                 HStack(spacing: 8) {
                                     Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
-                                        .font(.system(size: 15, weight: .medium))
-                                        .foregroundStyle(item.isCompleted ? .green : .secondary)
+                                        .font(.system(size: 17, weight: .semibold))
+                                        .symbolRenderingMode(.palette)
+                                        .foregroundStyle(
+                                            item.isCompleted ? .white : .secondary,
+                                            item.isCompleted ? .green : .clear
+                                        )
                                     Text(item.text)
                                         .font(.caption)
                                         .strikethrough(item.isCompleted)
-                                        .foregroundStyle(item.isCompleted ? .secondary : .primary)
+                                        .foregroundStyle(item.isCompleted ? .white : .primary)
                                         .lineLimit(1)
                                     Spacer(minLength: 0)
                                 }
                                 .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 5)
+                                .background(
+                                    item.isCompleted
+                                        ? Color.green.opacity(0.32)
+                                        : Color.primary.opacity(0.055),
+                                    in: RoundedRectangle(cornerRadius: 9)
+                                )
                                 .contentShape(Rectangle())
                             }
                             .buttonStyle(.plain)
@@ -178,24 +179,6 @@ struct ToggleLockScreenChecklistIntent: LiveActivityIntent {
             "createdAt": Date().timeIntervalSince1970,
         ])
         defaults.set(actions, forKey: checklistActionsKey)
-    }
-}
-
-struct RemoveLockScreenNoteIntent: LiveActivityIntent {
-    static var title: LocalizedStringResource = "Remove from Lock Screen"
-    static var openAppWhenRun: Bool = false
-
-    @Parameter(title: "Note ID") var noteId: String
-
-    init() { noteId = "" }
-    init(noteId: String) { self.noteId = noteId }
-
-    func perform() async throws -> some IntentResult {
-        for activity in Activity<NoteEchoesActivityAttributes>.activities
-            where activity.attributes.noteId == noteId {
-            await activity.end(nil, dismissalPolicy: .immediate)
-        }
-        return .result()
     }
 }
 

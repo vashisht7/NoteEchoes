@@ -98,6 +98,20 @@ class AppTheme {
           side: const BorderSide(color: AppColors.glassBorder),
         ),
       ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: AppColors.elevation3,
+        elevation: 12,
+        insetPadding: const EdgeInsets.fromLTRB(16, 0, 16, 18),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        contentTextStyle: GoogleFonts.inter(
+          color: AppColors.primaryText,
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+        ),
+        actionTextColor: accent,
+        disabledActionTextColor: const Color(0xFF8E8E93),
+      ),
       inputDecorationTheme: InputDecorationTheme(
         filled: false,
         fillColor: Colors.transparent,
