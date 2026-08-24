@@ -10,6 +10,7 @@ import '../models/note_node.dart';
 import '../services/action_button_note_ingestion_service.dart';
 import '../services/note_service.dart';
 import '../services/note_storage_service.dart';
+import '../services/voice_capture_validator.dart';
 import '../ai/infrastructure/model_availability_service.dart';
 import '../ai/infrastructure/semantic_knowledge_service.dart';
 import '../theme/app_colors.dart';
@@ -79,7 +80,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed || state == AppLifecycleState.inactive) {
+    if (state == AppLifecycleState.resumed ||
+        state == AppLifecycleState.inactive) {
       _fetchPendingVoiceNotes();
       unawaited(_refreshModelsAndIndex());
     }
@@ -105,7 +107,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       } else if (call.method == 'onSaveVoiceNote') {
         final args = call.arguments as Map?;
         final text = (args?['text'] as String?) ?? '';
-        if (text.trim().isNotEmpty) {
+        if (VoiceCaptureValidator.hasMeaningfulSpeech(text)) {
           final note = await _noteService.createFromVoiceTranscription(text);
           if (mounted) {
             setState(() {});
@@ -126,7 +128,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        "Saved note #${note.tags.join(', #')}",
+                        note.tags.contains('reminder-scheduled')
+                            ? 'Reminder set • Lock Screen alert scheduled'
+                            : "Saved note #${note.tags.join(', #')}",
                         style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -160,7 +164,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       if (pending != null && pending.isNotEmpty) {
         for (final item in pending) {
           final text = item.toString();
-          if (text.trim().isNotEmpty) {
+          if (VoiceCaptureValidator.hasMeaningfulSpeech(text)) {
             await _noteService.createFromVoiceTranscription(text);
           }
         }
@@ -170,7 +174,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       final fileNotes = await NoteStorageService()
           .readAndClearPendingFileNotes();
       for (final text in fileNotes) {
-        if (text.trim().isNotEmpty) {
+        if (VoiceCaptureValidator.hasMeaningfulSpeech(text)) {
           await _noteService.createFromVoiceTranscription(text);
         }
       }
@@ -191,8 +195,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     setState(() => _isSearchExpanded = false);
     _noteService.setSearchQuery('');
   }
-
-
 
   void _openNoteEditor([NoteModel? note]) {
     Navigator.of(context).push(

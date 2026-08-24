@@ -178,6 +178,18 @@ class CoreActionV4Adapter {
     final spoken = [dateText, timeText].whereType<String>().join(' ');
     if (spoken.isEmpty) return null;
     final lower = spoken.toLowerCase();
+    final relative = RegExp(
+      r'\bin\s+(\d{1,3})\s+(minute|minutes|hour|hours)\b',
+      caseSensitive: false,
+    ).firstMatch(lower);
+    if (relative != null) {
+      final amount = int.tryParse(relative.group(1)!) ?? 0;
+      if (amount > 0) {
+        return relative.group(2)!.startsWith('hour')
+            ? base.add(Duration(hours: amount))
+            : base.add(Duration(minutes: amount));
+      }
+    }
     var day = DateTime(base.year, base.month, base.day);
     if (RegExp(
       r'\b(?:tomorrow|repu)\b|రేపు|कल',
@@ -260,6 +272,9 @@ class CoreActionV4Adapter {
     if (meridiem == 'am' && hour == 12) hour = 0;
     return DateTime(day.year, day.month, day.day, hour, minute);
   }
+
+  static DateTime? parseSpokenDateTime(String value, DateTime base) =>
+      _parseDate(value, null, base);
 
   static String _safeTitle(String value) {
     final compact = value.trim().replaceAll(RegExp(r'\s+'), ' ');

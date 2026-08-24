@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 import 'note_service.dart';
+import 'voice_capture_validator.dart';
 
 /// Drains the `PendingVoiceNoteStore` queue that is populated by the
 /// `TranscribeAudioNoteIntent` Shortcuts action and writes each pending
@@ -68,7 +69,7 @@ final class ActionButtonNoteIngestionService with WidgetsBindingObserver {
             DateTime.now();
 
         // Always acknowledge even if text is empty, to avoid infinite loops
-        if (text.isEmpty) {
+        if (!VoiceCaptureValidator.hasMeaningfulSpeech(text)) {
           await _acknowledge(id);
           continue;
         }

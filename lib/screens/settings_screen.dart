@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../ai/presentation/ai_model_settings_page.dart';
 import '../theme/app_colors.dart';
@@ -81,7 +82,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                   child: Text(
                     'Select how voice dictation and Whisper should transcribe your speech.',
-                    style: GoogleFonts.inter(fontSize: 12.5, color: Colors.white54),
+                    style: GoogleFonts.inter(
+                      fontSize: 12.5,
+                      color: Colors.white54,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -105,7 +109,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 _LanguageOptionTile(
                   title: 'Telugu & English Mixed',
-                  subtitle: 'Telugu-English conversational speech with technical terms',
+                  subtitle:
+                      'Telugu-English conversational speech with technical terms',
                   selected: _preferences.speechLanguageCode == 'te-en-mixed',
                   onTap: () {
                     _preferences.setSpeechLanguage('te-en-mixed');
@@ -114,7 +119,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 _LanguageOptionTile(
                   title: 'Hindi (हिन्दी)',
-                  subtitle: 'Hindi speech recognition in Devanagari script (hi)',
+                  subtitle:
+                      'Hindi speech recognition in Devanagari script (hi)',
                   selected: _preferences.speechLanguageCode == 'hi',
                   onTap: () {
                     _preferences.setSpeechLanguage('hi');
@@ -123,7 +129,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 _LanguageOptionTile(
                   title: 'Auto-detect Language',
-                  subtitle: 'Automatically identifies spoken language per recording',
+                  subtitle:
+                      'Automatically identifies spoken language per recording',
                   selected: _preferences.speechLanguageCode == 'auto',
                   onTap: () {
                     _preferences.setSpeechLanguage('auto');
@@ -149,7 +156,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         elevation: 0,
         title: Text(
           'Settings',
-          style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white),
+          style: GoogleFonts.inter(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
         ),
       ),
       body: ListView(
@@ -188,12 +199,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         onTap: () => _preferences.setAccent(option.id),
                         borderRadius: BorderRadius.circular(10),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
                           decoration: BoxDecoration(
                             color: const Color(0xFF2C2C2E),
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(
-                              color: selected ? option.color : Colors.transparent,
+                              color: selected
+                                  ? option.color
+                                  : Colors.transparent,
                               width: 1.5,
                             ),
                           ),
@@ -213,8 +229,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 option.label.replaceAll('NoteEchoes ', ''),
                                 style: GoogleFonts.inter(
                                   fontSize: 13,
-                                  fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
-                                  color: selected ? Colors.white : Colors.white70,
+                                  fontWeight: selected
+                                      ? FontWeight.w600
+                                      : FontWeight.normal,
+                                  color: selected
+                                      ? Colors.white
+                                      : Colors.white70,
                                 ),
                               ),
                             ],
@@ -233,29 +253,47 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Column(
               children: [
                 ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 4,
+                  ),
                   leading: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Icon(Icons.language_rounded, color: accent, size: 20),
+                    child: Icon(
+                      Icons.language_rounded,
+                      color: accent,
+                      size: 20,
+                    ),
                   ),
                   title: Text(
                     'Recognition Language',
-                    style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w500, color: Colors.white),
+                    style: GoogleFonts.inter(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white,
+                    ),
                   ),
                   subtitle: Text(
                     _languageDisplayTitle(_preferences.speechLanguageCode),
                     style: GoogleFonts.inter(fontSize: 12.5, color: accent),
                   ),
-                  trailing: const Icon(Icons.chevron_right_rounded, color: Colors.white38, size: 20),
+                  trailing: const Icon(
+                    Icons.chevron_right_rounded,
+                    color: Colors.white38,
+                    size: 20,
+                  ),
                   onTap: () => _openLanguagePicker(context),
                 ),
                 const Divider(height: 1, indent: 56, color: Color(0xFF2C2C2E)),
                 ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 4,
+                  ),
                   leading: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
@@ -266,13 +304,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   title: Text(
                     'Local AI Models & Downloads',
-                    style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w500, color: Colors.white),
+                    style: GoogleFonts.inter(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white,
+                    ),
                   ),
                   subtitle: Text(
                     'Whisper Multilingual Core ML & local intelligence',
-                    style: GoogleFonts.inter(fontSize: 12.5, color: Colors.white54),
+                    style: GoogleFonts.inter(
+                      fontSize: 12.5,
+                      color: Colors.white54,
+                    ),
                   ),
-                  trailing: const Icon(Icons.chevron_right_rounded, color: Colors.white38, size: 20),
+                  trailing: const Icon(
+                    Icons.chevron_right_rounded,
+                    color: Colors.white38,
+                    size: 20,
+                  ),
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (_) => const AiModelSettingsPage(),
@@ -283,21 +332,72 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
           const SizedBox(height: 24),
+          const _SectionLabel('Reminders'),
+          _SettingsCard(
+            child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 4,
+              ),
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFF9F0A).withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.notifications_none_rounded,
+                  color: Color(0xFFFF9F0A),
+                  size: 20,
+                ),
+              ),
+              title: Text(
+                'Lock Screen Reminders',
+                style: GoogleFonts.inter(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.white,
+                ),
+              ),
+              subtitle: Text(
+                'Apple Reminders and time-sensitive NoteEchoes alerts',
+                style: GoogleFonts.inter(fontSize: 12.5, color: Colors.white54),
+              ),
+              trailing: const Icon(
+                Icons.chevron_right_rounded,
+                color: Colors.white38,
+                size: 20,
+              ),
+              onTap: openAppSettings,
+            ),
+          ),
+          const SizedBox(height: 24),
           const _SectionLabel('Privacy & Storage'),
           _SettingsCard(
             child: ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 4,
+              ),
               leading: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(Icons.lock_outline_rounded, color: Colors.white70, size: 20),
+                child: const Icon(
+                  Icons.lock_outline_rounded,
+                  color: Colors.white70,
+                  size: 20,
+                ),
               ),
               title: Text(
                 '100% On-Device Storage',
-                style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w500, color: Colors.white),
+                style: GoogleFonts.inter(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.white,
+                ),
               ),
               subtitle: Text(
                 'Notes and voice recordings stay on your iPhone. AI models run offline.',
@@ -309,18 +409,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const _SectionLabel('Accessibility'),
           _SettingsCard(
             child: ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 4,
+              ),
               leading: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(Icons.accessibility_new_rounded, color: Colors.white70, size: 20),
+                child: const Icon(
+                  Icons.accessibility_new_rounded,
+                  color: Colors.white70,
+                  size: 20,
+                ),
               ),
               title: Text(
                 'System Accessibility',
-                style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w500, color: Colors.white),
+                style: GoogleFonts.inter(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.white,
+                ),
               ),
               subtitle: Text(
                 'Dynamic Type, VoiceOver semantic labels, and Reduce Motion supported.',
@@ -333,13 +444,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Column(
               children: [
                 Text(
-                  'NoteEchoes v3.0.0',
-                  style: GoogleFonts.inter(color: Colors.white54, fontSize: 13, fontWeight: FontWeight.w600),
+                  'NoteEchoes v2.9.3',
+                  style: GoogleFonts.inter(
+                    color: Colors.white54,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   'Private • Local • Neural Engine Accelerated',
-                  style: GoogleFonts.inter(color: Colors.white24, fontSize: 11.5),
+                  style: GoogleFonts.inter(
+                    color: Colors.white24,
+                    fontSize: 11.5,
+                  ),
                 ),
               ],
             ),
@@ -374,7 +492,9 @@ class _LanguageOptionTile extends StatelessWidget {
         margin: const EdgeInsets.symmetric(vertical: 4),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: selected ? Colors.white.withValues(alpha: 0.06) : Colors.transparent,
+          color: selected
+              ? Colors.white.withValues(alpha: 0.06)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
             color: selected ? accent : Colors.transparent,
@@ -409,7 +529,11 @@ class _LanguageOptionTile extends StatelessWidget {
             if (selected)
               Icon(Icons.check_circle_rounded, color: accent, size: 20)
             else
-              const Icon(Icons.radio_button_unchecked_rounded, color: Colors.white24, size: 20),
+              const Icon(
+                Icons.radio_button_unchecked_rounded,
+                color: Colors.white24,
+                size: 20,
+              ),
           ],
         ),
       ),

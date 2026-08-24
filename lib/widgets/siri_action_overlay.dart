@@ -12,6 +12,7 @@ import '../ai/domain/ai_models.dart';
 import '../ai/infrastructure/offline_speech_bridge.dart';
 import '../services/ai_categorization_engine.dart';
 import '../services/note_service.dart';
+import '../services/voice_capture_validator.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_preferences.dart';
 
@@ -83,7 +84,9 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
       _isSpeechAvailable = await _speech.initialize(
         onStatus: (status) {
           debugPrint("Live Speech Status: $status");
-          if (_isRecording && (status == 'done' || status == 'notListening') && mounted) {
+          if (_isRecording &&
+              (status == 'done' || status == 'notListening') &&
+              mounted) {
             _restartLiveDictation();
           }
         },
@@ -119,7 +122,8 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
             setState(() {
               _currentSessionText = result.recognizedWords;
               if (result.finalResult && _currentSessionText.trim().isNotEmpty) {
-                _accumulatedText = "$_accumulatedText $_currentSessionText".trim();
+                _accumulatedText = "$_accumulatedText $_currentSessionText"
+                    .trim();
                 _currentSessionText = "";
               }
             });
@@ -242,10 +246,8 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
       try {
         final langCode = AppPreferences.instance.speechLanguageCode;
         final audioLang = AudioLanguageExt.fromBcp47(langCode);
-        final provenance = await OfflineSpeechBridge.instance.transcribeAudioFile(
-          audioPath: recordedPath,
-          language: audioLang,
-        );
+        final provenance = await OfflineSpeechBridge.instance
+            .transcribeAudioFile(audioPath: recordedPath, language: audioLang);
         if (provenance.text.trim().isNotEmpty) {
           cleanText = provenance.text.trim();
         }
@@ -258,7 +260,7 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
       }
     }
 
-    if (cleanText.isEmpty) {
+    if (!VoiceCaptureValidator.hasMeaningfulSpeech(cleanText)) {
       if (mounted) Navigator.of(context).pop();
       return;
     }
@@ -347,8 +349,8 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
                     color: _isRecording
                         ? accent
                         : _isAnalyzing
-                            ? const Color(0xFFFF9F0A)
-                            : AppColors.accentGreen,
+                        ? const Color(0xFFFF9F0A)
+                        : AppColors.accentGreen,
                     boxShadow: [
                       BoxShadow(
                         color: accent.withValues(alpha: 0.4),
@@ -362,8 +364,8 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
                   _isRecording
                       ? 'Dictating • ${_formatTime(_recordingSeconds)}'
                       : _isAnalyzing
-                          ? 'Saving to Home Notes…'
-                          : 'Note Saved',
+                      ? 'Saving to Home Notes…'
+                      : 'Note Saved',
                   style: GoogleFonts.inter(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
@@ -373,7 +375,10 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
                 const Spacer(),
                 // Language badge
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.06),
                     borderRadius: BorderRadius.circular(6),
@@ -417,11 +422,16 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
                           runSpacing: 6,
                           children: _completedAnalysis!.categories.map((t) {
                             return Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
                               decoration: BoxDecoration(
                                 color: accent.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(6),
-                                border: Border.all(color: accent.withValues(alpha: 0.3)),
+                                border: Border.all(
+                                  color: accent.withValues(alpha: 0.3),
+                                ),
                               ),
                               child: Text(
                                 '#$t',
@@ -443,8 +453,12 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
                       style: GoogleFonts.inter(
                         fontSize: 16,
                         height: 1.45,
-                        color: _spokenText.isNotEmpty ? Colors.white : Colors.white38,
-                        fontWeight: _spokenText.isNotEmpty ? FontWeight.w500 : FontWeight.w400,
+                        color: _spokenText.isNotEmpty
+                            ? Colors.white
+                            : Colors.white38,
+                        fontWeight: _spokenText.isNotEmpty
+                            ? FontWeight.w500
+                            : FontWeight.w400,
                       ),
                     ),
             ),

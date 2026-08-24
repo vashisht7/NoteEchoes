@@ -22,8 +22,7 @@ class KeepTextNoteCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final accent = Theme.of(context).colorScheme.primary;
     final isVoiceMemo =
-        note.tags.contains('voice-memo') ||
-        note.tags.contains('voice');
+        note.tags.contains('voice-memo') || note.tags.contains('voice');
 
     return Semantics(
       button: true,
@@ -135,6 +134,23 @@ class KeepTextNoteCard extends StatelessWidget {
                     height: 1.25,
                   ),
                 ),
+                if (note.tags.contains('reminder-scheduled')) ...[
+                  const SizedBox(height: 7),
+                  Row(
+                    children: [
+                      Icon(Icons.alarm_rounded, size: 13, color: accent),
+                      const SizedBox(width: 5),
+                      Text(
+                        'Reminder scheduled',
+                        style: GoogleFonts.inter(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w600,
+                          color: accent,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
                 const SizedBox(height: 6),
 
                 // Checklist preview if present

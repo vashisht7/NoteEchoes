@@ -5,6 +5,8 @@ import '../models/note_model.dart';
 import 'ai_categorization_engine.dart';
 import 'spoken_checklist_parser.dart';
 import 'voice_note_title_service.dart';
+import 'voice_capture_validator.dart';
+import 'spoken_reminder_parser.dart';
 import 'note_storage_service.dart';
 import '../ai/domain/note_analysis.dart';
 import '../ai/infrastructure/knowledge_service.dart';
@@ -180,6 +182,9 @@ class NoteService extends ChangeNotifier {
     String? noteId,
     DateTime? createdAt,
   }) async {
+    if (!VoiceCaptureValidator.hasMeaningfulSpeech(spokenText)) {
+      throw const FormatException('No meaningful speech was captured.');
+    }
     final analysis = AiCategorizationEngine().analyzeNote(spokenText);
     final tagsSet = <String>{'voice-memo'};
     tagsSet.addAll(analysis.categories);
@@ -248,6 +253,30 @@ class NoteService extends ChangeNotifier {
       spokenText: spokenText,
     );
 
+    final deterministicReminder = SpokenReminderParser.parse(spokenText);
+    if (deterministicReminder != null) {
+      if (reminders.isEmpty) {
+        reminders = [deterministicReminder];
+      } else if (reminders.every((reminder) => reminder.triggerDate == null)) {
+        reminders = reminders
+            .map(
+              (reminder) => Reminder(
+                id: reminder.id,
+                title: reminder.title,
+                triggerDate: deterministicReminder.triggerDate,
+                confidence: reminder.confidence,
+                evidenceText: reminder.evidenceText,
+              ),
+            )
+            .toList();
+      }
+    }
+
+    final scheduledReminders = await _scheduleExplicitAppleReminders(reminders);
+    if (scheduledReminders > 0) {
+      tagsSet.addAll({'reminders', 'reminder-scheduled'});
+    }
+
     final note = NoteModel(
       noteId: noteId?.trim().isNotEmpty == true
           ? noteId!.trim()
@@ -274,11 +303,10 @@ class NoteService extends ChangeNotifier {
     );
 
     await addNote(note);
-    await _scheduleExplicitAppleReminders(reminders);
     return note;
   }
 
-  Future<void> _scheduleExplicitAppleReminders(List<Reminder> reminders) async {
+  Future<int> _scheduleExplicitAppleReminders(List<Reminder> reminders) async {
     final executable = reminders
         .where(
           (reminder) =>
@@ -286,20 +314,24 @@ class NoteService extends ChangeNotifier {
               reminder.triggerDate!.isAfter(DateTime.now()),
         )
         .toList();
-    if (executable.isEmpty) return;
+    if (executable.isEmpty) return 0;
 
     final bridge = AppleCalendarBridge();
     final allowed = await bridge.requestReminderPermissions();
     if (!allowed) {
       debugPrint('Apple Reminders permission was not granted.');
-      return;
+      return 0;
     }
+    var scheduled = 0;
     for (final reminder in executable) {
       final (result, _) = await bridge.createReminder(reminder);
-      if (result != CalendarWriteResult.success) {
+      if (result == CalendarWriteResult.success) {
+        scheduled++;
+      } else {
         debugPrint('Could not create Apple Reminder: ${reminder.title}');
       }
     }
+    return scheduled;
   }
 
   Future<void> updateNote(NoteModel note) async {

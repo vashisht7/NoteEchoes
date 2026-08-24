@@ -64,6 +64,11 @@ Publish the verified NoteEchoes Core v4 MLX 4-bit model, update the Flutter/iOS 
 - Connected explicit future-dated reminder captures to Apple Reminders. The native bridge now passes the correct millisecond alarm field and requests Reminders-only permission; vague or past reminders remain unscheduled.
 - Added checklist-state and concise-title regression tests. The focused release suite now passes 34/34 tests.
 - Bumped the application to `2.9.2 (6)`, produced a signed 106.4 MB iOS Release, verified its signature, and installed it in place over bundle `com.vashisht.notechoes` on the connected iPhone without uninstalling or clearing its data container. The preserved standalone build is `/Users/vashishtdevasani/Downloads/NoteEchoes-2.9.2-Core-v4-Release-2026-08-23/Runner.app`.
+- Fixed the observed reminder-as-note failure with `SpokenReminderParser`, a deterministic fallback for explicit future times including “tomorrow at 9 AM” and short “in 2 minutes” tests. Successful captures now create an Apple Reminder plus a time-sensitive NoteEchoes Lock Screen notification and show a `Reminder scheduled` badge in the note card.
+- Added notification authorization to the native reminder bridge and an Apple-style Settings row that opens the app's system settings for Lock Screen reminder control.
+- Replaced the checklist overflow menu with one compact remove-circle control so deleting an item no longer opens a full-width menu tile.
+- Added `VoiceCaptureValidator` to in-app recording, Action Button ingestion, pending queues, and the central NoteService boundary. Silence, filler-only speech, punctuation, and no-speech placeholders no longer create empty voice notes.
+- The reminder/silence/checklist/model focused suite passes 39/39 tests. Built and signature-verified NoteEchoes `2.9.3 (7)` as a 106.5 MB release and installed it in place without uninstalling. Preserved release: `/Users/vashishtdevasani/Downloads/NoteEchoes-2.9.3-Reminder-Release-2026-08-23/Runner.app`.
 
 ## Verified performance
 

@@ -132,6 +132,21 @@ requests Reminders access and creates an `EKReminder` with an alarm. Apple then
 shows the reminder on the Lock Screen according to the user's Reminders
 notification settings. Vague or past times are not scheduled.
 
+The release also uses `SpokenReminderParser` as a deterministic safety net. A
+clear timed command is therefore scheduled even if the compact model returns a
+plain note. NoteEchoes creates both the Apple Reminder and a time-sensitive
+local notification. The note card receives the `reminder-scheduled` tag and
+visibly shows “Reminder scheduled.” Examples supported by the safety net:
+
+```text
+Remind me tomorrow at 9 AM to call Ravi.
+Remind me in 2 minutes to check the app.
+```
+
+A future reminder uses a standard Lock Screen notification, not Live Activity.
+Live Activities are for continuously updating ongoing events and are not a
+reliable replacement for a scheduled alarm.
+
 ## Natural calendar call
 
 ```dart
@@ -226,3 +241,10 @@ The model is asked for a meaningful 2–6 word title. The app then applies
 `VoiceNoteTitleService.concise`, which removes conversational prefixes and
 enforces six words and 48 characters. This prevents the entire transcription
 from appearing as a heading even when the compact model echoes the input.
+
+## Empty-capture guarantee
+
+Every voice ingestion route calls `VoiceCaptureValidator` before creating a
+note. Silence, punctuation, filler-only results, and transcription placeholders
+such as “No speech detected” or “Voice memo” are acknowledged and discarded;
+they never enter note storage.

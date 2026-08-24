@@ -2,6 +2,7 @@ import Flutter
 import UIKit
 import AVFoundation
 import EventKit
+import UserNotifications
 
 class SceneDelegate: FlutterSceneDelegate, AVSpeechSynthesizerDelegate {
     private let actionChannelName =
@@ -268,11 +269,15 @@ class SceneDelegate: FlutterSceneDelegate, AVSpeechSynthesizerDelegate {
         case "requestReminderPermissions":
             if #available(iOS 17.0, *) {
                 eventStore.requestFullAccessToReminders { granted, _ in
-                    DispatchQueue.main.async { result(granted) }
+                    requestNotificationPermission {
+                        DispatchQueue.main.async { result(granted) }
+                    }
                 }
             } else {
                 eventStore.requestAccess(to: .reminder) { granted, _ in
-                    DispatchQueue.main.async { result(granted) }
+                    requestNotificationPermission {
+                        DispatchQueue.main.async { result(granted) }
+                    }
                 }
             }
 
@@ -346,6 +351,13 @@ class SceneDelegate: FlutterSceneDelegate, AVSpeechSynthesizerDelegate {
             reminder.calendar = eventStore.defaultCalendarForNewReminders()
             do {
                 try eventStore.save(reminder, commit: true)
+                if let dueDate = reminder.dueDateComponents?.date {
+                    scheduleReminderNotification(
+                        title: title,
+                        dueDate: dueDate,
+                        identifier: reminder.calendarItemIdentifier
+                    )
+                }
                 result(reminder.calendarItemIdentifier)
             } catch {
                 result(FlutterError(code: "REMINDER_SAVE_FAILED", message: error.localizedDescription, details: nil))
@@ -388,6 +400,44 @@ class SceneDelegate: FlutterSceneDelegate, AVSpeechSynthesizerDelegate {
         default:
             result(FlutterMethodNotImplemented)
         }
+    }
+
+    private static func requestNotificationPermission(
+        completion: @escaping () -> Void
+    ) {
+        UNUserNotificationCenter.current().requestAuthorization(
+            options: [.alert, .sound, .badge]
+        ) { _, _ in completion() }
+    }
+
+    private static func scheduleReminderNotification(
+        title: String,
+        dueDate: Date,
+        identifier: String
+    ) {
+        guard dueDate > Date() else { return }
+        let content = UNMutableNotificationContent()
+        content.title = "Reminder"
+        content.body = title
+        content.sound = .default
+        content.threadIdentifier = "noteechoes-reminders"
+        if #available(iOS 15.0, *) {
+            content.interruptionLevel = .timeSensitive
+        }
+        let components = Calendar.current.dateComponents(
+            [.year, .month, .day, .hour, .minute, .second],
+            from: dueDate
+        )
+        let trigger = UNCalendarNotificationTrigger(
+            dateMatching: components,
+            repeats: false
+        )
+        let request = UNNotificationRequest(
+            identifier: "noteechoes-reminder-\(identifier)",
+            content: content,
+            trigger: trigger
+        )
+        UNUserNotificationCenter.current().add(request)
     }
 
     private func handleSpeechOutput(

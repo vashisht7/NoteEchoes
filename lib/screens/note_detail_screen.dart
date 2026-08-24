@@ -558,40 +558,19 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
               ),
             ),
           ),
-          PopupMenuButton<String>(
-            tooltip: 'Checklist item options',
-            color: const Color(0xFF202024),
+          IconButton(
+            tooltip: 'Remove item',
+            visualDensity: VisualDensity.compact,
+            splashRadius: 18,
             icon: const Icon(
-              Icons.more_horiz_rounded,
+              Icons.remove_circle_outline_rounded,
               size: 19,
-              color: Colors.white38,
+              color: Colors.white24,
             ),
-            onSelected: (value) {
-              if (value != 'remove') return;
-              setState(() {
-                _blocks.remove(block);
-                _checklist.removeWhere((entry) => entry.id == item.id);
-              });
-            },
-            itemBuilder: (_) => const [
-              PopupMenuItem(
-                value: 'remove',
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.delete_outline_rounded,
-                      size: 19,
-                      color: Color(0xFFFF6B6B),
-                    ),
-                    SizedBox(width: 10),
-                    Text(
-                      'Remove item',
-                      style: TextStyle(color: Color(0xFFFF8A8A)),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+            onPressed: () => setState(() {
+              _blocks.remove(block);
+              _checklist.removeWhere((entry) => entry.id == item.id);
+            }),
           ),
         ],
       ),
