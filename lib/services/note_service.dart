@@ -7,6 +7,7 @@ import 'spoken_checklist_parser.dart';
 import 'voice_note_title_service.dart';
 import 'voice_capture_validator.dart';
 import 'spoken_reminder_parser.dart';
+import 'note_tag_taxonomy.dart';
 import 'lock_screen_activity_service.dart';
 import 'note_storage_service.dart';
 import '../ai/domain/note_analysis.dart';
@@ -54,7 +55,11 @@ class NoteService extends ChangeNotifier {
     final existingIds = _notes.map((n) => n.noteId).toSet();
     for (final note in loaded) {
       if (!existingIds.contains(note.noteId)) {
-        _notes.add(note);
+        final normalized = _normalizeTags(note);
+        _notes.add(normalized);
+        if (!listEquals(note.tags, normalized.tags)) {
+          unawaited(_persistNote(normalized));
+        }
       }
     }
     _isInitialized = true;
@@ -74,7 +79,11 @@ class NoteService extends ChangeNotifier {
     var changed = false;
     for (final note in loaded) {
       if (existingIds.add(note.noteId)) {
-        _notes.add(note);
+        final normalized = _normalizeTags(note);
+        _notes.add(normalized);
+        if (!listEquals(note.tags, normalized.tags)) {
+          unawaited(_persistNote(normalized));
+        }
         changed = true;
       }
     }
@@ -252,12 +261,13 @@ class NoteService extends ChangeNotifier {
   }
 
   void setSelectedTag(String tag) {
-    _selectedTag = tag;
+    _selectedTag = tag == 'All' ? tag : NoteTagTaxonomy.canonical(tag);
     notifyListeners();
   }
 
   Future<void> addNote(NoteModel note) async {
     await initStorage();
+    note = _normalizeTags(note);
     _notes.removeWhere((n) => n.noteId == note.noteId);
     _notes.insert(0, note);
     notifyListeners();
@@ -490,6 +500,7 @@ class NoteService extends ChangeNotifier {
 
   Future<void> updateNote(NoteModel note) async {
     await initStorage();
+    note = _normalizeTags(note);
     final index = _notes.indexWhere((n) => n.noteId == note.noteId);
     if (index != -1) {
       _notes[index] = note;
@@ -498,6 +509,11 @@ class NoteService extends ChangeNotifier {
       _scheduleNoteIndexing(note);
       unawaited(LockScreenActivityService.instance.updateIfActive(note));
     }
+  }
+
+  NoteModel _normalizeTags(NoteModel note) {
+    final tags = NoteTagTaxonomy.normalize(note.tags);
+    return listEquals(tags, note.tags) ? note : note.copyWith(tags: tags);
   }
 
   void _scheduleNoteIndexing(NoteModel note) {

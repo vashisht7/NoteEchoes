@@ -371,80 +371,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onTap: openAppSettings,
             ),
           ),
-          const SizedBox(height: 24),
-          const _SectionLabel('Privacy & Storage'),
-          _SettingsCard(
-            child: ListTile(
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 4,
-              ),
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(
-                  Icons.lock_outline_rounded,
-                  color: Colors.white70,
-                  size: 20,
-                ),
-              ),
-              title: Text(
-                '100% On-Device Storage',
-                style: GoogleFonts.inter(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.white,
-                ),
-              ),
-              subtitle: Text(
-                'Notes and voice recordings stay on your iPhone. AI models run offline.',
-                style: GoogleFonts.inter(fontSize: 12.5, color: Colors.white54),
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
-          const _SectionLabel('Accessibility'),
-          _SettingsCard(
-            child: ListTile(
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 4,
-              ),
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(
-                  Icons.accessibility_new_rounded,
-                  color: Colors.white70,
-                  size: 20,
-                ),
-              ),
-              title: Text(
-                'System Accessibility',
-                style: GoogleFonts.inter(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.white,
-                ),
-              ),
-              subtitle: Text(
-                'Dynamic Type, VoiceOver semantic labels, and Reduce Motion supported.',
-                style: GoogleFonts.inter(fontSize: 12.5, color: Colors.white54),
-              ),
-            ),
-          ),
           const SizedBox(height: 36),
           Center(
             child: Column(
               children: [
                 Text(
-                  'NoteEchoes v2.9.7',
+                  'NoteEchoes v2.10.0',
                   style: GoogleFonts.inter(
                     color: Colors.white54,
                     fontSize: 13,

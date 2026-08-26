@@ -19,6 +19,7 @@ import '../theme/app_preferences.dart';
 import 'note_service.dart';
 import 'speech_output_service.dart';
 import 'checklist_status_service.dart';
+import 'personal_memory_answer_service.dart';
 import 'voice_capture_validator.dart';
 
 enum VoiceAssistantState {
@@ -272,25 +273,23 @@ class VoiceAssistantService extends ChangeNotifier {
 
     // Perform Grounded Retrieval
     try {
+      final memoryAnswer = PersonalMemoryAnswerService.answer(
+        userSpokenText,
+        NoteService().allNotes,
+      );
+      if (memoryAnswer != null) {
+        _contextualNotes = memoryAnswer.sourceNotes;
+        _setGeneratedResponse(memoryAnswer.title, memoryAnswer.text);
+        return await transitionToSpeakingState();
+      }
+
       final checklistAnswer = ChecklistStatusService.answer(
         userSpokenText,
         NoteService().allNotes,
       );
       if (checklistAnswer != null) {
-        _fullGeneratedResponse = checklistAnswer.text;
-        _summaryTitle = checklistAnswer.note.title;
-        _aiLyricLines = [
-          SpokenLyricLine(
-            text: checklistAnswer.text,
-            startTime: Duration.zero,
-            duration: Duration(
-              milliseconds: (checklistAnswer.text.length * 48).clamp(
-                1800,
-                6500,
-              ),
-            ),
-          ),
-        ];
+        _contextualNotes = [checklistAnswer.note];
+        _setGeneratedResponse(checklistAnswer.note.title, checklistAnswer.text);
         return await transitionToSpeakingState();
       }
 
@@ -344,43 +343,13 @@ class VoiceAssistantService extends ChangeNotifier {
         );
       }
 
-      _fullGeneratedResponse = answer.displayText;
-      _summaryTitle = _isBroadSummaryRequest(userSpokenText)
+      final title = _isBroadSummaryRequest(userSpokenText)
           ? 'Conversation summary'
           : candidates.isNotEmpty
           ? candidates.first.title
           : 'Notes Summary';
 
-      // Setup lyric lines for Karaoke
-      final parts = answer.displayText
-          .split(RegExp(r'(?<=[.!?])\s+|\n+'))
-          .map((p) => p.trim())
-          .where((p) => p.isNotEmpty)
-          .toList();
-
-      var elapsed = Duration.zero;
-      _aiLyricLines = parts.map((text) {
-        final duration = Duration(
-          milliseconds: (text.length * 48).clamp(1400, 5200),
-        );
-        final line = SpokenLyricLine(
-          text: text,
-          startTime: elapsed,
-          duration: duration,
-        );
-        elapsed += duration;
-        return line;
-      }).toList();
-
-      if (_aiLyricLines.isEmpty) {
-        _aiLyricLines = [
-          SpokenLyricLine(
-            text: answer.displayText,
-            startTime: Duration.zero,
-            duration: const Duration(milliseconds: 3000),
-          ),
-        ];
-      }
+      _setGeneratedResponse(title, answer.displayText);
     } catch (e) {
       debugPrint("[VoiceAssistant] Grounded answer error: $e");
       _setupResponseLyrics();
@@ -389,6 +358,40 @@ class VoiceAssistantService extends ChangeNotifier {
     }
 
     await transitionToSpeakingState();
+  }
+
+  void _setGeneratedResponse(String title, String text) {
+    _fullGeneratedResponse = text;
+    _summaryTitle = title;
+    final parts = text
+        .split(RegExp(r'(?<=[.!?])\s+|\n+'))
+        .map((p) => p.trim())
+        .where((p) => p.isNotEmpty)
+        .toList();
+
+    var elapsed = Duration.zero;
+    _aiLyricLines = parts.map((text) {
+      final duration = Duration(
+        milliseconds: (text.length * 48).clamp(1400, 5200),
+      );
+      final line = SpokenLyricLine(
+        text: text,
+        startTime: elapsed,
+        duration: duration,
+      );
+      elapsed += duration;
+      return line;
+    }).toList();
+
+    if (_aiLyricLines.isEmpty) {
+      _aiLyricLines = [
+        SpokenLyricLine(
+          text: text,
+          startTime: Duration.zero,
+          duration: const Duration(milliseconds: 3000),
+        ),
+      ];
+    }
   }
 
   bool _isBroadSummaryRequest(String query) {
@@ -500,14 +503,14 @@ class VoiceAssistantService extends ChangeNotifier {
       _setupResponseLyrics();
     }
 
-    // Give iOS a moment to release the recording route before activating the
-    // speaker. This prevents the first utterance from being silently queued.
+    // Publish the finished report first. The screen opens the 3/4-height
+    // report sheet from this notification; speech starts only after that frame
+    // is visible, matching the user's expectation and avoiding route races.
+    notifyListeners();
     if (!Platform.environment.containsKey('FLUTTER_TEST')) {
-      await Future<void>.delayed(const Duration(milliseconds: 180));
+      await Future<void>.delayed(const Duration(milliseconds: 800));
     }
     await _speakRemainingResponse();
-
-    notifyListeners();
   }
 
   Future<Map<String, dynamic>> audioOutputStatus() async {

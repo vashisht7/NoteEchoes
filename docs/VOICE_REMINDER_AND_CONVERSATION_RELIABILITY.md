@@ -26,10 +26,10 @@
 
 ### Spoken response reliability
 
-- iOS is given time to release the recording route before activating spoken playback.
+- The completed report is rendered before spoken playback begins.
 - Flutter waits for a real native start acknowledgement rather than assuming success after 200 milliseconds.
 - Native speech callbacks drive the highlighting. A watchdog reports a failed speaker start and keeps Replay available.
-- The native playback category remains `.playback` with `.spokenAudio`, so spoken output is not suppressed by the iPhone silent switch.
+- The native route uses `.playAndRecord` with `.voicePrompt`, default speaker output, and AirPods-compatible Bluetooth options.
 
 ### Non-speech filtering
 

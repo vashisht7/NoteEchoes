@@ -460,7 +460,14 @@ class SceneDelegate: FlutterSceneDelegate, AVSpeechSynthesizerDelegate {
                     false,
                     options: [.notifyOthersOnDeactivation]
                 )
-                try session.setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])
+                // Voice-prompt mode reliably hands recording audio back to
+                // speech output, supports AirPods, and defaults to the iPhone
+                // speaker when no Bluetooth route is active.
+                try session.setCategory(
+                    .playAndRecord,
+                    mode: .voicePrompt,
+                    options: [.defaultToSpeaker, .allowBluetoothHFP, .allowBluetoothA2DP, .duckOthers]
+                )
                 try session.setActive(true, options: [])
                 let language = arguments["language"] as? String ?? "en-US"
                 let requestedVoiceId = arguments["voiceIdentifier"] as? String
