@@ -51,11 +51,6 @@ class KnowledgeService {
     String question,
     String documentId,
   ) async {
-    if (!llm.isLoaded) await llm.load();
-    return AskDocumentUseCase(
-      llm,
-      retrieval,
-      database,
-    ).ask(question, documentId);
+    return AskDocumentUseCase(retrieval, database).ask(question, documentId);
   }
 }

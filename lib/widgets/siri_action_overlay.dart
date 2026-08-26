@@ -275,6 +275,7 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
       }
     }
 
+    cleanText = VoiceCaptureValidator.sanitizeTranscript(cleanText);
     if (!VoiceCaptureValidator.hasMeaningfulSpeech(cleanText)) {
       if (mounted) Navigator.of(context).pop();
       return;

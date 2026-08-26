@@ -23,4 +23,36 @@ void main() {
       isTrue,
     );
   });
+
+  test('rejects gasps and other non-speech transcription events', () {
+    for (final value in [
+      'gasp',
+      '[GASP]',
+      '(breathing)',
+      '*coughing*',
+      '[background noise]',
+      'sighing',
+    ]) {
+      expect(
+        VoiceCaptureValidator.hasMeaningfulSpeech(value),
+        isFalse,
+        reason: value,
+      );
+    }
+  });
+
+  test('removes a non-speech marker but preserves surrounding words', () {
+    expect(
+      VoiceCaptureValidator.sanitizeTranscript(
+        '[GASP] Remind me to call Ravi (breathing)',
+      ),
+      'Remind me to call Ravi',
+    );
+    expect(
+      VoiceCaptureValidator.hasMeaningfulSpeech(
+        '[GASP] Remind me to call Ravi (breathing)',
+      ),
+      isTrue,
+    );
+  });
 }

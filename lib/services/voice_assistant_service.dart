@@ -19,6 +19,7 @@ import '../theme/app_preferences.dart';
 import 'note_service.dart';
 import 'speech_output_service.dart';
 import 'checklist_status_service.dart';
+import 'voice_capture_validator.dart';
 
 enum VoiceAssistantState {
   listening, // Real mic recording + live amplitude ripple
@@ -236,7 +237,9 @@ class VoiceAssistantService extends ChangeNotifier {
             final provenance = await OfflineSpeechBridge.instance
                 .transcribeAudioFile(audioPath: path, language: audioLang);
             if (provenance.text.trim().isNotEmpty) {
-              userSpokenText = provenance.text.trim();
+              userSpokenText = VoiceCaptureValidator.sanitizeTranscript(
+                provenance.text,
+              );
             }
           }
         }
@@ -247,7 +250,8 @@ class VoiceAssistantService extends ChangeNotifier {
 
     _cleanupTempAudio();
 
-    if (userSpokenText.isEmpty) {
+    userSpokenText = VoiceCaptureValidator.sanitizeTranscript(userSpokenText);
+    if (!VoiceCaptureValidator.hasMeaningfulSpeech(userSpokenText)) {
       userSpokenText = "Discuss and summarize my notes";
     }
 
@@ -288,11 +292,21 @@ class VoiceAssistantService extends ChangeNotifier {
       final queryLang = LanguageDetectionService.detect(
         userSpokenText,
       ).primaryLanguage;
-      final candidates = await HybridRetrievalService.retrieveCandidates(
+      var candidates = await HybridRetrievalService.retrieveCandidates(
         query: userSpokenText,
         database: AiDatabase(),
         topK: 6,
       );
+
+      // Broad summary requests are intentionally grounded in the user's most
+      // recent notes. They should not depend on FTS matching words such as
+      // "summarize", and newly restored notes may not be indexed yet.
+      if (_isBroadSummaryRequest(userSpokenText) || candidates.isEmpty) {
+        candidates = _fallbackCandidates(
+          query: userSpokenText,
+          includeRecentNotes: _isBroadSummaryRequest(userSpokenText),
+        );
+      }
 
       final answer = await HybridRetrievalService.answerQuery(
         query: userSpokenText,
@@ -343,6 +357,64 @@ class VoiceAssistantService extends ChangeNotifier {
     }
 
     await transitionToSpeakingState();
+  }
+
+  bool _isBroadSummaryRequest(String query) {
+    final lower = query.toLowerCase();
+    return RegExp(
+      r'\b(?:summari[sz]e|summary|overview|recap|discuss|review)\b|'
+      r'(?:సారాంశం|సంగ్రహించు|నోట్స్\s+చెప్పు)|'
+      r'(?:सारांश|संक्षेप|नोट्स\s+बताओ)',
+      caseSensitive: false,
+    ).hasMatch(lower);
+  }
+
+  List<HybridCandidate> _fallbackCandidates({
+    required String query,
+    required bool includeRecentNotes,
+  }) {
+    final notes = NoteService().allNotes;
+    final queryTerms = query
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^\p{L}\p{N}\s]+', unicode: true), ' ')
+        .split(RegExp(r'\s+'))
+        .where((term) => term.length > 2)
+        .toSet();
+    final ranked =
+        notes
+            .map((note) {
+              final searchable =
+                  '${note.title} ${note.summarySnippet} '
+                          '${note.textContent} ${note.tags.join(' ')}'
+                      .toLowerCase();
+              final score = includeRecentNotes
+                  ? 1.0
+                  : queryTerms.where(searchable.contains).length.toDouble();
+              return (note: note, score: score);
+            })
+            .where((entry) => entry.score > 0)
+            .toList()
+          ..sort((a, b) {
+            final byScore = b.score.compareTo(a.score);
+            return byScore != 0
+                ? byScore
+                : b.note.createdAt.compareTo(a.note.createdAt);
+          });
+
+    return ranked.take(6).map((entry) {
+      final note = entry.note;
+      final passage = note.textContent.trim().isNotEmpty
+          ? note.textContent.trim()
+          : note.summarySnippet.trim();
+      return HybridCandidate(
+        noteId: note.noteId,
+        title: note.title,
+        passageText: passage,
+        rrfScore: entry.score,
+        isPinned: note.isPinned,
+        updatedAt: note.createdAt.millisecondsSinceEpoch,
+      );
+    }).toList();
   }
 
   Future<void> transitionToSpeakingState() async {
@@ -426,6 +498,31 @@ class VoiceAssistantService extends ChangeNotifier {
     _isPlayingAudio = true;
     _startKaraokePlayback();
     _speakRemainingResponse();
+    notifyListeners();
+  }
+
+  @visibleForTesting
+  void beginThinkingForTesting() {
+    _state = VoiceAssistantState.thinking;
+    notifyListeners();
+  }
+
+  @visibleForTesting
+  void completeReportForTesting({
+    String title = 'Test report',
+    String response = 'A grounded test report.',
+  }) {
+    _summaryTitle = title;
+    _fullGeneratedResponse = response;
+    _aiLyricLines = [
+      SpokenLyricLine(
+        text: response,
+        startTime: Duration.zero,
+        duration: const Duration(seconds: 2),
+      ),
+    ];
+    _state = VoiceAssistantState.speaking;
+    _isPlayingAudio = false;
     notifyListeners();
   }
 

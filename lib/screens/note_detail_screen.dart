@@ -13,7 +13,6 @@ import '../ai/infrastructure/knowledge_service.dart';
 import '../ai/infrastructure/model_availability_service.dart';
 import '../ai/infrastructure/semantic_knowledge_service.dart';
 import '../ai/domain/semantic_models.dart';
-import '../ai/presentation/model_feature_gate.dart';
 import '../ai/presentation/document_chat_page.dart';
 import '../models/note_model.dart';
 import '../services/attachment_path_service.dart';
@@ -742,13 +741,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
   Future<void> _openDocumentChat(MediaAsset asset) async {
     final documentId = asset.documentId;
     if (documentId == null) return;
-    final allowed = await requireQwenModel(
-      context,
-      featureName: 'grounded document chat',
-      basicAlternative:
-          'You can still read the PDF and search ordinary note text without downloading it.',
-    );
-    if (!allowed || !mounted) return;
+    if (!mounted) return;
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => DocumentChatPage(

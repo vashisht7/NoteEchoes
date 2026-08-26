@@ -36,6 +36,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
   // Candidate NoteNodes for Thinking State
   List<NoteNode> _candidateNodes = [];
   bool _didCheckAudio = false;
+  bool _reportSheetVisible = false;
 
   // Thoughts revolving loop dynamically generated from real user notes
   List<String> get _thoughtSuggestions {
@@ -113,6 +114,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
 
   void _onServiceUpdate() {
     if (mounted) {
+      final previousState = _state;
       final serviceState = _voiceService.state;
       final mappedState = serviceState == VoiceAssistantState.listening
           ? VoiceState.listening
@@ -129,10 +131,45 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
           _didCheckAudio = true;
           WidgetsBinding.instance.addPostFrameCallback((_) => _checkAudio());
         }
+        if (previousState == VoiceState.thinking &&
+            _state == VoiceState.speaking) {
+          WidgetsBinding.instance.addPostFrameCallback(
+            (_) => _showReportSheet(),
+          );
+        }
       } else {
         setState(() {});
       }
     }
+  }
+
+  Future<void> _showReportSheet() async {
+    if (!mounted || _reportSheetVisible) return;
+    _reportSheetVisible = true;
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withValues(alpha: 0.54),
+      builder: (sheetContext) => DraggableScrollableSheet(
+        key: const ValueKey('voice_report_sheet'),
+        expand: false,
+        initialChildSize: 0.75,
+        minChildSize: 0.50,
+        maxChildSize: 0.98,
+        snap: true,
+        snapSizes: const [0.75, 0.98],
+        builder: (context, scrollController) => ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          child: VoiceDetailedReportScreen(
+            embedded: true,
+            scrollController: scrollController,
+          ),
+        ),
+      ),
+    );
+    _reportSheetVisible = false;
   }
 
   Future<void> _checkAudio({bool alwaysShow = false}) async {

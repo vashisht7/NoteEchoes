@@ -67,7 +67,10 @@ class FtsRetrievalProvider implements RetrievalProvider {
     final sanitizedQuery = terms.map((term) => '"$term"').join(' OR ');
 
     // 3. Search database
-    final results = await database.ftsSearch(sanitizedQuery, maxResults * 2);
+    final results = await database.ftsSearch(
+      sanitizedQuery,
+      filterSourceId == null ? maxResults * 2 : 200,
+    );
 
     // 4. Map results
     var mappedResults = results
@@ -84,15 +87,29 @@ class FtsRetrievalProvider implements RetrievalProvider {
         .toList();
 
     if (filterSourceId != null) {
-      final chunkIds = (await database.getChunksForDocument(
-        filterSourceId,
-      )).map((chunk) => chunk.id).toSet();
+      final chunks = await database.getChunksForDocument(filterSourceId);
+      final chunksById = {for (final chunk in chunks) chunk.id: chunk};
+      final chunkIds = chunksById.keys.toSet();
       mappedResults = mappedResults
           .where(
             (p) =>
                 p.sourceId == filterSourceId || chunkIds.contains(p.sourceId),
           )
           .toList();
+      mappedResults = mappedResults.map((passage) {
+        final chunk = chunksById[passage.sourceId];
+        if (chunk == null) return passage;
+        return RetrievedPassage(
+          sourceId: passage.sourceId,
+          sourceType: passage.sourceType,
+          text: passage.text,
+          englishRetrievalText: passage.englishRetrievalText,
+          score: passage.score,
+          pageStart: chunk.pageStart,
+          pageEnd: chunk.pageEnd,
+          sourceTitle: passage.sourceTitle,
+        );
+      }).toList();
     }
 
     // 5. Deduplicate by sourceId, prefer higher score

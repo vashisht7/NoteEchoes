@@ -272,6 +272,7 @@ class NoteService extends ChangeNotifier {
     String? noteId,
     DateTime? createdAt,
   }) async {
+    spokenText = VoiceCaptureValidator.sanitizeTranscript(spokenText);
     if (!VoiceCaptureValidator.hasMeaningfulSpeech(spokenText)) {
       throw const FormatException('No meaningful speech was captured.');
     }

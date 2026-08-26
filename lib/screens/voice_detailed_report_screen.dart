@@ -6,7 +6,14 @@ import '../services/voice_assistant_service.dart';
 import '../theme/app_colors.dart';
 
 class VoiceDetailedReportScreen extends StatefulWidget {
-  const VoiceDetailedReportScreen({super.key});
+  const VoiceDetailedReportScreen({
+    super.key,
+    this.embedded = false,
+    this.scrollController,
+  });
+
+  final bool embedded;
+  final ScrollController? scrollController;
 
   @override
   State<VoiceDetailedReportScreen> createState() =>
@@ -15,13 +22,16 @@ class VoiceDetailedReportScreen extends StatefulWidget {
 
 class _VoiceDetailedReportScreenState extends State<VoiceDetailedReportScreen> {
   final VoiceAssistantService _voiceService = VoiceAssistantService();
-  final ScrollController _scrollController = ScrollController();
+  late final ScrollController _scrollController;
+  late final bool _ownsScrollController;
   bool _copied = false;
   int _lastActiveIndex = -1;
 
   @override
   void initState() {
     super.initState();
+    _ownsScrollController = widget.scrollController == null;
+    _scrollController = widget.scrollController ?? ScrollController();
     _voiceService.addListener(_handleSpeechUpdate);
     _lastActiveIndex = _voiceService.activeLyricIndex;
   }
@@ -66,7 +76,7 @@ class _VoiceDetailedReportScreenState extends State<VoiceDetailedReportScreen> {
   @override
   void dispose() {
     _voiceService.removeListener(_handleSpeechUpdate);
-    _scrollController.dispose();
+    if (_ownsScrollController) _scrollController.dispose();
     super.dispose();
   }
 
@@ -80,10 +90,33 @@ class _VoiceDetailedReportScreenState extends State<VoiceDetailedReportScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.deepMatteBlack,
         surfaceTintColor: Colors.transparent,
+        automaticallyImplyLeading: !widget.embedded,
+        leading: widget.embedded
+            ? IconButton(
+                tooltip: 'Close report',
+                onPressed: () => Navigator.of(context).pop(),
+                icon: const Icon(Icons.keyboard_arrow_down_rounded),
+              )
+            : null,
         title: Text(
-          'Detailed Report',
+          widget.embedded ? 'Report ready' : 'Detailed Report',
           style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
         ),
+        actions: widget.embedded
+            ? [
+                IconButton(
+                  tooltip: 'Open full screen',
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const VoiceDetailedReportScreen(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.open_in_full_rounded),
+                ),
+              ]
+            : null,
       ),
       body: SafeArea(
         top: false,

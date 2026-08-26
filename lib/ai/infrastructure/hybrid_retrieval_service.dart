@@ -13,7 +13,6 @@ import 'e5_embedding_service.dart';
 import 'model_availability_service.dart';
 import '../../services/speech_output_service.dart';
 import 'structured_generation_service.dart';
-import 'think_sanitizer.dart';
 
 class GroundedAnswerResult {
   final String query;
@@ -258,6 +257,21 @@ class HybridRetrievalService {
       );
     }
 
+    // The deployed Qwen model is deliberately specialized for the English
+    // action schema. Asking it to behave as an unrestricted chat summarizer
+    // produces action JSON instead of a readable report. Conversation mode
+    // therefore uses a deterministic, cited extractive report. This keeps the
+    // output useful, private, and strictly grounded in saved note text.
+    if (_isSummaryRequest(query)) {
+      return _extractiveReport(
+        query: query,
+        candidates: candidates,
+        citations: citations,
+        noteIds: noteIds,
+        queryLanguage: queryLanguage,
+      );
+    }
+
     // Generate grounded synthesis with Qwen MLX if ready
     if (ModelAvailabilityService.instance.qwen.isReady) {
       try {
@@ -300,10 +314,9 @@ Grounded Answer:''';
               schemaVersion: 1,
             );
 
-        var answerText = response.sanitizedOutput;
-        if (answerText.trim().isEmpty) {
-          answerText = ThinkSanitizer.clean(response.rawOutput);
-        }
+        final answerText = response.isSuccess
+            ? response.value?.trim() ?? ''
+            : '';
 
         if (answerText.isNotEmpty) {
           final speechText = SpeechOutputService.cleanSpeechText(answerText);
@@ -322,25 +335,71 @@ Grounded Answer:''';
       }
     }
 
-    // Deterministic fallback answer summary
-    final fallbackSummary =
-        'Based on your saved notes: ${candidates.map((c) => c.title).join(", ")}.';
+    return _extractiveReport(
+      query: query,
+      candidates: candidates,
+      citations: citations,
+      noteIds: noteIds,
+      queryLanguage: queryLanguage,
+    );
+  }
+
+  static bool _isSummaryRequest(String query) => RegExp(
+    r'\b(?:summari[sz]e|summary|overview|recap|discuss|review)\b|'
+    r'(?:సారాంశం|సంగ్రహించు|నోట్స్\s+చెప్పు)|'
+    r'(?:सारांश|संक्षेप|नोट्स\s+बताओ)',
+    caseSensitive: false,
+  ).hasMatch(query);
+
+  static GroundedAnswerResult _extractiveReport({
+    required String query,
+    required List<HybridCandidate> candidates,
+    required List<SourceCitation> citations,
+    required List<String> noteIds,
+    required String queryLanguage,
+  }) {
+    final heading = switch (queryLanguage) {
+      'te' => 'మీ నోట్స్ ఆధారంగా:',
+      'hi' => 'आपके नोट्स के आधार पर:',
+      _ => 'Based on your saved notes:',
+    };
+    final lines = <String>[heading];
+    for (var index = 0; index < candidates.length; index++) {
+      final candidate = candidates[index];
+      final excerpt = _conciseExcerpt(candidate.passageText);
+      lines.add(
+        excerpt.isEmpty
+            ? '${index + 1}. ${candidate.title} [${index + 1}]'
+            : '${index + 1}. ${candidate.title}: $excerpt [${index + 1}]',
+      );
+    }
+    final report = lines.join('\n\n');
     return GroundedAnswerResult(
       query: query,
-      displayText: fallbackSummary,
-      speechText: fallbackSummary,
+      displayText: report,
+      speechText: SpeechOutputService.cleanSpeechText(report),
       responseLanguage: queryLanguage,
       citations: citations,
       sourceNoteIds: noteIds,
       provenance: AiProvenance(
-        modelId: 'deterministic_grounded_fallback',
+        modelId: 'deterministic_grounded_extractive_report',
         modelVersion: '1.0',
         promptVersion: '1.0',
         schemaVersion: 1,
-        confidence: 0.80,
-        rawOutput: fallbackSummary,
+        confidence: 1.0,
+        rawOutput: report,
       ),
     );
+  }
+
+  static String _conciseExcerpt(String value) {
+    final compact = value.replaceAll(RegExp(r'\s+'), ' ').trim();
+    if (compact.isEmpty) return '';
+    const maximum = 260;
+    if (compact.length <= maximum) return compact;
+    final sentenceEnd = compact.lastIndexOf(RegExp(r'[.!?।]'), maximum);
+    final cut = sentenceEnd >= 80 ? sentenceEnd + 1 : maximum;
+    return '${compact.substring(0, cut).trimRight()}…';
   }
 }
 
