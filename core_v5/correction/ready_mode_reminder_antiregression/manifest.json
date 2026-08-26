@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "release_ready": true,
+  "audit_passed": true,
+  "dataset_kind": "mode_and_reminder_antiregression_with_original_replay",
+  "seed": 2026082602,
+  "source_adapter_sha256": "fa00273d4399461b3d8c9e2642c0e8716cf76dc7a4f9bfcb9244c2f96b35dc8b",
+  "files": {
+    "train": {
+      "name": "train.jsonl",
+      "rows": 1600,
+      "sha256": "5ee2711d58ba62c80d8722e52354873ce9dff05a7739e284e5a507ec89a451f0"
+    },
+    "validation": {
+      "name": "validation.jsonl",
+      "rows": 256,
+      "sha256": "aa4c5b8b0e5568d0245dea3746214a11c1e2ea2cfe748e9a78cc0a3480cac981"
+    }
+  },
+  "audit": {
+    "name": "audit_report.json",
+    "sha256": "d1390c1d7a411ce0f6c8eab185ed71cfd3818d1f609f0c88f530d6113c91fd81"
+  },
+  "training_policy": {
+    "continue_existing_adapter": true,
+    "restart_from_zero": false,
+    "epochs": 1,
+    "learning_rate": 2e-06
+  }
+}

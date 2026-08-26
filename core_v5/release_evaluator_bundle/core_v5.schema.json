@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://notechoes.app/schema/core-v5.schema.json",
+  "title": "NoteEchoes Core v5 Action Envelope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "language", "mode", "normalized_text", "intent",
+    "title", "items", "entities", "draft", "proposed_tool", "confidence",
+    "requires_confirmation", "clarification_question"
+  ],
+  "properties": {
+    "schema_version": {"const": 5},
+    "language": {
+      "enum": ["en", "hi", "te", "hi-roman", "te-roman", "mixed", "unknown"]
+    },
+    "mode": {"enum": ["capture", "query", "control"]},
+    "normalized_text": {"type": "string", "minLength": 1, "maxLength": 8000},
+    "intent": {
+      "enum": [
+        "note", "checklist", "task", "reminder", "calendar", "message",
+        "email", "prompt", "idea", "decision", "project_update",
+        "memory_query", "cancel", "clarify", "noop"
+      ]
+    },
+    "title": {"type": ["string", "null"], "minLength": 1, "maxLength": 96},
+    "items": {
+      "type": "array",
+      "maxItems": 50,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["text"],
+        "properties": {"text": {"type": "string", "minLength": 1, "maxLength": 1000}}
+      }
+    },
+    "entities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "recipient_query", "date_phrase", "time_phrase", "people", "place", "subject"
+      ],
+      "properties": {
+        "recipient_query": {"type": ["string", "null"], "minLength": 1, "maxLength": 320},
+        "date_phrase": {"type": ["string", "null"], "minLength": 1, "maxLength": 320},
+        "time_phrase": {"type": ["string", "null"], "minLength": 1, "maxLength": 320},
+        "people": {
+          "type": "array", "maxItems": 25,
+          "items": {"type": "string", "minLength": 1, "maxLength": 160},
+          "uniqueItems": true
+        },
+        "place": {"type": ["string", "null"], "minLength": 1, "maxLength": 320},
+        "subject": {"type": ["string", "null"], "minLength": 1, "maxLength": 320}
+      }
+    },
+    "draft": {"type": ["string", "null"], "minLength": 1, "maxLength": 8000},
+    "proposed_tool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "arguments"],
+      "properties": {
+        "name": {
+          "enum": [
+            null, "notes.create", "checklists.create", "tasks.create",
+            "reminders.propose", "calendar.propose_event", "messages.compose",
+            "email.compose", "prompts.save", "memory.search"
+          ]
+        },
+        "arguments": {"type": "object", "maxProperties": 20}
+      }
+    },
+    "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+    "requires_confirmation": {"type": "boolean"},
+    "clarification_question": {"type": ["string", "null"], "minLength": 1, "maxLength": 500}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"mode": {"const": "query"}}},
+      "then": {"properties": {"intent": {"const": "memory_query"}, "proposed_tool": {"properties": {"name": {"const": "memory.search"}}}}}
+    },
+    {
+      "if": {"properties": {"mode": {"const": "control"}}},
+      "then": {"properties": {"intent": {"enum": ["cancel", "clarify", "noop"]}}}
+    },
+    {
+      "if": {"properties": {"intent": {"enum": ["reminder", "calendar", "message", "email", "clarify"]}}},
+      "then": {"properties": {"requires_confirmation": {"const": true}}}
+    },
+    {
+      "if": {"properties": {"intent": {"enum": ["cancel", "noop", "clarify"]}}},
+      "then": {"properties": {"proposed_tool": {"properties": {"name": {"const": null}, "arguments": {"maxProperties": 0}}}}}
+    },
+    {
+      "if": {"properties": {"intent": {"const": "clarify"}}},
+      "then": {"properties": {"clarification_question": {"type": "string"}}}
+    }
+  ]
+}

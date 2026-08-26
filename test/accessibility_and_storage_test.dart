@@ -17,6 +17,7 @@ import 'dart:typed_data';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  tearDown(NoteStorageService().closeDatabaseForTesting);
 
   test(
     'legacy preference notes migrate into SQLite without data loss',

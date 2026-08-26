@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -9,10 +8,14 @@ import 'package:record/record.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import '../models/note_model.dart';
 import '../ai/domain/ai_models.dart';
+import '../ai/domain/voice_feedback.dart';
 import '../ai/infrastructure/offline_speech_bridge.dart';
+import '../ai/infrastructure/multilingual_interpretation_service.dart';
+import '../ai/infrastructure/voice_feedback_store.dart';
 import '../services/ai_categorization_engine.dart';
 import '../services/note_service.dart';
 import '../services/voice_capture_validator.dart';
+import '../services/voice_capture_control.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_preferences.dart';
 
@@ -53,10 +56,6 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
     with SingleTickerProviderStateMixin {
   final stt.SpeechToText _speech = stt.SpeechToText();
   final AudioRecorder _audioRecorder = AudioRecorder();
-  static const MethodChannel _offlineSpeechChannel = MethodChannel(
-    'noteechoes/offline_speech',
-  );
-
   bool _isSpeechAvailable = false;
   bool _isRecording = false;
   bool _isAnalyzing = false;
@@ -66,6 +65,9 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
   int _recordingSeconds = 0;
   Timer? _durationTimer;
   NoteAnalysisResult? _completedAnalysis;
+  NoteModel? _completedNote;
+  String _feedbackRawTranscript = '';
+  bool _feedbackBusy = false;
   String? _recordingPath;
 
   String get _spokenText {
@@ -201,6 +203,9 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
       _currentSessionText = "";
       _recordingSeconds = 0;
       _completedAnalysis = null;
+      _completedNote = null;
+      _feedbackRawTranscript = '';
+      _feedbackBusy = false;
     });
 
     _durationTimer?.cancel();
@@ -239,6 +244,16 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
       recordedPath = await _audioRecorder.stop() ?? _recordingPath;
     } catch (_) {}
 
+    if (userCancelled) {
+      if (recordedPath != null) {
+        try {
+          await File(recordedPath).delete();
+        } catch (_) {}
+      }
+      if (mounted) Navigator.of(context).pop();
+      return;
+    }
+
     var cleanText = _spokenText.trim();
 
     // Verify audio transcription with offline/multilingual Whisper if available
@@ -264,6 +279,10 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
       if (mounted) Navigator.of(context).pop();
       return;
     }
+    if (VoiceCaptureControl.isCancelCommand(cleanText)) {
+      if (mounted) Navigator.of(context).pop();
+      return;
+    }
 
     // Categorize and create note
     final analysis = AiCategorizationEngine().analyzeNote(cleanText);
@@ -273,15 +292,84 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
       setState(() {
         _isAnalyzing = false;
         _completedAnalysis = analysis;
+        _completedNote = note;
+        _feedbackRawTranscript = cleanText;
       });
       HapticFeedback.heavyImpact();
-      // Auto close and return created note
-      Future.delayed(const Duration(milliseconds: 600), () {
-        if (mounted) {
-          Navigator.of(context).pop(note);
-        }
-      });
     }
+  }
+
+  Future<void> _submitFeedback({String? correctedOutput}) async {
+    final note = _completedNote;
+    if (note == null || _feedbackBusy) return;
+    setState(() => _feedbackBusy = true);
+    var returnedNote = note;
+    final correction = correctedOutput?.trim();
+    if (correction != null && correction.isNotEmpty) {
+      returnedNote = note.copyWith(textContent: correction);
+      await NoteService().updateNote(returnedNote);
+    }
+    try {
+      final now = DateTime.now();
+      await VoiceFeedbackStore.instance.append(
+        VoiceFeedbackRecord(
+          feedbackId: 'voice-feedback-${now.microsecondsSinceEpoch}',
+          noteId: note.noteId,
+          rawTranscript: _feedbackRawTranscript,
+          modelOutput: note.textContent,
+          correctedOutput: correction,
+          language: AppPreferences.instance.speechLanguageCode,
+          modelVersion: MultilingualInterpretationService.modelVersion,
+          decision: correction == null
+              ? VoiceFeedbackDecision.accepted
+              : VoiceFeedbackDecision.corrected,
+          createdAt: now,
+        ),
+      );
+    } catch (error) {
+      debugPrint('Could not save local voice feedback: $error');
+    }
+    if (mounted) Navigator.of(context).pop(returnedNote);
+  }
+
+  Future<void> _correctAndSubmitFeedback() async {
+    final note = _completedNote;
+    if (note == null || _feedbackBusy) return;
+    final controller = TextEditingController(text: note.textContent);
+    final correction = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Fix the clean note'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          minLines: 3,
+          maxLines: 8,
+          decoration: const InputDecoration(
+            hintText: 'Keep only what you meant to save',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(controller.text),
+            child: const Text('Save correction'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (correction != null && correction.trim().isNotEmpty) {
+      await _submitFeedback(correctedOutput: correction);
+    }
+  }
+
+  void _skipFeedback() {
+    final note = _completedNote;
+    if (note != null) Navigator.of(context).pop(note);
   }
 
   @override
@@ -365,7 +453,7 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
                       ? 'Dictating • ${_formatTime(_recordingSeconds)}'
                       : _isAnalyzing
                       ? 'Saving to Home Notes…'
-                      : 'Note Saved',
+                      : 'Review clean note',
                   style: GoogleFonts.inter(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
@@ -417,6 +505,15 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
                           ),
                         ),
                         const SizedBox(height: 6),
+                        Text(
+                          _completedNote?.textContent ?? '',
+                          style: GoogleFonts.inter(
+                            fontSize: 15,
+                            height: 1.4,
+                            color: Colors.white70,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
                         Wrap(
                           spacing: 6,
                           runSpacing: 6,
@@ -444,6 +541,15 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
                             );
                           }).toList(),
                         ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Was this clean-up right?',
+                          style: GoogleFonts.inter(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white54,
+                          ),
+                        ),
                       ],
                     )
                   : Text(
@@ -466,60 +572,73 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
 
           const Divider(color: Color(0xFF2C2C2E), height: 1),
 
-          // Action Buttons: Cancel & Done (Save)
+          // Capture controls become an explicit local feedback review.
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
-            child: Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () {
-                      _stopRecordingAndSave(userCancelled: true);
-                    },
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.white70,
-                      side: const BorderSide(color: Color(0xFF3A3A3C)),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+            child: _completedNote == null
+                ? Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: _feedbackBusy
+                              ? null
+                              : () =>
+                                    _stopRecordingAndSave(userCancelled: true),
+                          child: const Text('Cancel'),
+                        ),
                       ),
-                    ),
-                    child: Text(
-                      'Done',
-                      style: GoogleFonts.inter(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: _feedbackBusy
+                              ? null
+                              : _stopRecordingAndSave,
+                          icon: const Icon(Icons.check_rounded, size: 18),
+                          label: const Text('Save Note'),
+                        ),
                       ),
-                    ),
+                    ],
+                  )
+                : Column(
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: _feedbackBusy
+                                  ? null
+                                  : _correctAndSubmitFeedback,
+                              icon: const Icon(Icons.edit_rounded, size: 17),
+                              label: const Text('Fix'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: FilledButton.icon(
+                              onPressed: _feedbackBusy ? null : _submitFeedback,
+                              icon: const Icon(
+                                Icons.thumb_up_alt_rounded,
+                                size: 17,
+                              ),
+                              label: const Text('Looks right'),
+                            ),
+                          ),
+                        ],
+                      ),
+                      TextButton(
+                        onPressed: _feedbackBusy ? null : _skipFeedback,
+                        child: const Text('Skip feedback'),
+                      ),
+                      Text(
+                        'Feedback stays on this device until you choose to export it.',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          color: Colors.white38,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: FilledButton.icon(
-                    onPressed: () {
-                      _stopRecordingAndSave();
-                    },
-                    style: FilledButton.styleFrom(
-                      backgroundColor: accent,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    icon: const Icon(Icons.check_rounded, size: 18),
-                    label: Text(
-                      'Save Note',
-                      style: GoogleFonts.inter(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
           ),
         ],
       ),

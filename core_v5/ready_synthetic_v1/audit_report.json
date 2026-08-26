@@ -1,0 +1,43 @@
+{
+  "release_mode": false,
+  "experimental_synthetic_release": true,
+  "review_policy": "synthetic_waiver_user_authorized_2026-08-24",
+  "passed": true,
+  "rows": 36000,
+  "counts": {
+    "intent:calendar": 2880,
+    "intent:cancel": 1524,
+    "intent:checklist": 5400,
+    "intent:clarify": 1368,
+    "intent:decision": 819,
+    "intent:email": 3600,
+    "intent:idea": 879,
+    "intent:memory_query": 2520,
+    "intent:message": 3600,
+    "intent:noop": 708,
+    "intent:note": 1782,
+    "intent:project_update": 840,
+    "intent:prompt": 2160,
+    "intent:reminder": 4320,
+    "intent:task": 3600,
+    "language:en": 14400,
+    "language:hi": 4860,
+    "language:hi-roman": 3240,
+    "language:mixed": 5400,
+    "language:te": 4860,
+    "language:te-roman": 3240,
+    "review:unreviewed": 36000,
+    "split:challenge": 1200,
+    "split:test": 2400,
+    "split:train": 30000,
+    "split:validation": 2400
+  },
+  "file_sha256": {
+    "core_v5/ready_synthetic_v1/annotations/train.annotated.jsonl": "d9ce430075c5d854d344bfb9ba5d29588049015fa1336c51d49b23616178e0b2",
+    "core_v5/ready_synthetic_v1/annotations/validation.annotated.jsonl": "cb868218f3530147fd1a8ee353967fa6e930af7ae0438fbdf461c63898838078",
+    "core_v5/ready_synthetic_v1/annotations/test.annotated.jsonl": "6a9f811d299cee51403f0798650729534c7a88556d23c922157fe717668dd6d5",
+    "core_v5/ready_synthetic_v1/annotations/challenge.annotated.jsonl": "aa3388c81b153c3c8b3340b7e7ca811699b5e28704897f5225ed7dc98e73b03c"
+  },
+  "errors": [],
+  "error_count": 0
+}

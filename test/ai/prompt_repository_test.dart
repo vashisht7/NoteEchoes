@@ -18,8 +18,8 @@ void main() {
 
         expect(messages.length, equals(2));
         expect(messages[0].role, equals(AiRole.system));
-        expect(messages[0].content, contains('v is 4'));
-        expect(messages[0].content, contains('Output JSON only'));
+        expect(messages[0].content, startsWith('[MODE: ACTION]'));
+        expect(messages[0].content, contains('Core v5 schema'));
         expect(messages[1].role, equals(AiRole.user));
         expect(
           messages[1].content,
@@ -35,6 +35,16 @@ void main() {
       expect(messages.length, equals(2));
       expect(messages[0].role, equals(AiRole.system));
       expect(messages[1].content, equals('vacation in Hawaii'));
+    });
+
+    test('Core v5 prompt keeps the raw transcript unprefixed', () {
+      final messages = prompts.coreV5ActionPrompt(
+        rawTranscript: '  कल Priya को message draft करो  ',
+      );
+      expect(messages.length, 2);
+      expect(messages.first.content, startsWith('[MODE: ACTION]'));
+      expect(messages.first.content, contains('A tool output is a proposal'));
+      expect(messages.last.content, 'कल Priya को message draft करो');
     });
 
     test('meetingSummaryPrompt structures meeting extraction request', () {

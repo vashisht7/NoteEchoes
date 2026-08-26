@@ -6,7 +6,10 @@ import WidgetKit
 struct NoteEchoesLiveActivityWidget: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: NoteEchoesActivityAttributes.self) { context in
-            VStack(alignment: .leading, spacing: 9) {
+            VStack(
+                alignment: .leading,
+                spacing: context.state.items.count >= 3 ? 6 : 9
+            ) {
                 HStack(spacing: 7) {
                     Image(systemName: context.state.total > 0 ? "checklist" : "note.text")
                         .foregroundStyle(.red)
@@ -17,11 +20,21 @@ struct NoteEchoesLiveActivityWidget: Widget {
                 }
 
                 Text(context.attributes.title)
-                    .font(.headline)
+                    .font(
+                        context.state.items.count >= 3
+                            ? .subheadline.weight(.semibold)
+                            : .headline
+                    )
                     .lineLimit(2)
+                    .minimumScaleFactor(0.78)
+                    .allowsTightening(true)
+                    .fixedSize(horizontal: false, vertical: true)
 
                 if !context.state.items.isEmpty {
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(
+                        alignment: .leading,
+                        spacing: context.state.items.count >= 3 ? 2 : 4
+                    ) {
                         ForEach(context.state.items.prefix(4)) { item in
                             Button(intent: ToggleLockScreenChecklistIntent(
                                 noteId: context.attributes.noteId,
@@ -37,15 +50,24 @@ struct NoteEchoesLiveActivityWidget: Widget {
                                             item.isCompleted ? .green : .clear
                                         )
                                     Text(item.text)
-                                        .font(.caption)
+                                        .font(
+                                            context.state.items.count >= 3
+                                                ? .caption2
+                                                : .caption
+                                        )
                                         .strikethrough(item.isCompleted)
                                         .foregroundStyle(item.isCompleted ? .white : .primary)
                                         .lineLimit(1)
+                                        .minimumScaleFactor(0.82)
+                                        .allowsTightening(true)
                                     Spacer(minLength: 0)
                                 }
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(.horizontal, 8)
-                                .padding(.vertical, 5)
+                                .padding(
+                                    .vertical,
+                                    context.state.items.count >= 3 ? 3 : 5
+                                )
                                 .background(
                                     item.isCompleted
                                         ? Color.green.opacity(0.32)
@@ -77,7 +99,7 @@ struct NoteEchoesLiveActivityWidget: Widget {
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
-            .padding(16)
+            .padding(context.state.items.count >= 3 ? 12 : 16)
             .activityBackgroundTint(Color(uiColor: .secondarySystemBackground))
             .activitySystemActionForegroundColor(.primary)
         } dynamicIsland: { context in
@@ -89,13 +111,17 @@ struct NoteEchoesLiveActivityWidget: Widget {
                 DynamicIslandExpandedRegion(.center) {
                     Text(context.attributes.title)
                         .font(.subheadline.weight(.semibold))
-                        .lineLimit(1)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.7)
+                        .allowsTightening(true)
                 }
                 DynamicIslandExpandedRegion(.bottom) {
                     Text(context.state.subtitle)
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                        .lineLimit(1)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.8)
+                        .allowsTightening(true)
                 }
             } compactLeading: {
                 Image(systemName: context.state.total > 0 ? "checklist" : "note.text")

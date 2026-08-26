@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import '../config/ai_feature_flags.dart';
+import '../config/action_model_identity.dart';
 import 'e5_embedding_service.dart';
 import 'offline_speech_bridge.dart';
 
@@ -55,10 +56,16 @@ class LocalModelStatus {
           : (state == 'failed' ? ModelHealth.needsRepair : ModelHealth.missing),
       sizeBytes: (value['sizeBytes'] as num?)?.toInt() ?? 0,
       localPath: value['path'] as String? ?? '',
-      reason: value['reason'] as String? ?? (value['error_message'] as String? ?? ''),
+      reason:
+          value['reason'] as String? ??
+          (value['error_message'] as String? ?? ''),
       reasonCode: value['error_code'] as String?,
       sdkVersion: value['sdkVersion'] as String?,
-      missingComponents: (value['missingComponents'] as List?)?.map((e) => e.toString()).toList() ?? const [],
+      missingComponents:
+          (value['missingComponents'] as List?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          const [],
     );
   }
 
@@ -89,7 +96,7 @@ class ModelAvailabilityService extends ChangeNotifier {
   static const _mlxChannel = MethodChannel('noteechoes/mlx_text_generation');
 
   LocalModelStatus qwen = const LocalModelStatus.checking(
-    'noteechoes-qwen25-core-v4-mlx-4bit',
+    NoteEchoesActionModelIdentity.modelId,
   );
   LocalModelStatus whisper = const LocalModelStatus.checking('whisper-base');
   LocalModelStatus embedding = const LocalModelStatus.checking(
@@ -110,7 +117,8 @@ class ModelAvailabilityService extends ChangeNotifier {
     notifyListeners();
     try {
       qwen = await _readStatus(_mlxChannel, 'status', qwen.id);
-      final whisperDetails = await OfflineSpeechBridge.instance.getWhisperStatus();
+      final whisperDetails = await OfflineSpeechBridge.instance
+          .getWhisperStatus();
       whisper = LocalModelStatus.fromWhisperDetails(whisperDetails);
       embedding = await E5EmbeddingService.instance.status();
       await _synchronizeFeatureFlags();

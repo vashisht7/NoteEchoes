@@ -2,16 +2,14 @@
 // Hybrid grounded retrieval combining FTS5 lexical, E5 semantic embeddings,
 // and 1-hop Knowledge Graph expansion with Reciprocal Rank Fusion (RRF).
 
-import 'dart:convert';
 import 'dart:math';
-import 'dart:typed_data';
 import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
+import '../config/action_model_identity.dart';
 import '../domain/ai_models.dart';
 import '../domain/source_citation.dart';
 import 'ai_database.dart';
 import 'e5_embedding_service.dart';
-import 'language_detection_service.dart';
 import 'model_availability_service.dart';
 import '../../services/speech_output_service.dart';
 import 'structured_generation_service.dart';
@@ -105,7 +103,10 @@ class HybridRetrievalService {
         final text = row['original_text'] as String? ?? '';
 
         if (id.isNotEmpty) {
-          final acc = candidates.putIfAbsent(id, () => _CandidateAccumulator(id: id, title: title, text: text));
+          final acc = candidates.putIfAbsent(
+            id,
+            () => _CandidateAccumulator(id: id, title: title, text: text),
+          );
           acc.ftsRank = i + 1;
         }
       }
@@ -117,7 +118,9 @@ class HybridRetrievalService {
     try {
       if (ModelAvailabilityService.instance.embedding.isReady) {
         final queryVector = await E5EmbeddingService.instance.embedQuery(query);
-        final allEmbeddings = await database.select(database.noteEmbeddingsTable).get();
+        final allEmbeddings = await database
+            .select(database.noteEmbeddingsTable)
+            .get();
 
         final scoredList = <MapEntry<String, double>>[];
         for (final row in allEmbeddings) {
@@ -132,7 +135,10 @@ class HybridRetrievalService {
         final topE5 = scoredList.take(15).toList();
         for (int i = 0; i < topE5.length; i++) {
           final id = topE5[i].key;
-          final acc = candidates.putIfAbsent(id, () => _CandidateAccumulator(id: id, title: 'Note', text: ''));
+          final acc = candidates.putIfAbsent(
+            id,
+            () => _CandidateAccumulator(id: id, title: 'Note', text: ''),
+          );
           acc.semanticRank = i + 1;
         }
       }
@@ -144,13 +150,24 @@ class HybridRetrievalService {
     try {
       final topIds = candidates.keys.take(5).toList();
       for (final rootId in topIds) {
-        final neighbors = await (database.select(database.noteRelationshipsTable)
-              ..where((t) => t.sourceNoteId.equals(rootId) & t.status.isNotIn(const ['dismissed'])))
-            .get();
+        final neighbors =
+            await (database.select(database.noteRelationshipsTable)..where(
+                  (t) =>
+                      t.sourceNoteId.equals(rootId) &
+                      t.status.isNotIn(const ['dismissed']),
+                ))
+                .get();
 
         for (final row in neighbors) {
           final neighborId = row.targetNoteId;
-          final acc = candidates.putIfAbsent(neighborId, () => _CandidateAccumulator(id: neighborId, title: 'Related Note', text: ''));
+          final acc = candidates.putIfAbsent(
+            neighborId,
+            () => _CandidateAccumulator(
+              id: neighborId,
+              title: 'Related Note',
+              text: '',
+            ),
+          );
           acc.isGraphExpanded = true;
         }
       }
@@ -172,14 +189,16 @@ class HybridRetrievalService {
         rrf += 0.005; // 1-hop relation boost
       }
 
-      results.add(HybridCandidate(
-        noteId: acc.id,
-        title: acc.title,
-        passageText: acc.text,
-        ftsRank: acc.ftsRank.toDouble(),
-        semanticRank: acc.semanticRank.toDouble(),
-        rrfScore: rrf,
-      ));
+      results.add(
+        HybridCandidate(
+          noteId: acc.id,
+          title: acc.title,
+          passageText: acc.text,
+          ftsRank: acc.ftsRank.toDouble(),
+          semanticRank: acc.semanticRank.toDouble(),
+          rrfScore: rrf,
+        ),
+      );
     }
 
     // Sort by descending RRF score
@@ -200,14 +219,18 @@ class HybridRetrievalService {
     for (int i = 0; i < candidates.length; i++) {
       final c = candidates[i];
       final idx = i + 1;
-      contextBuffer.writeln('[$idx] Note Title: "${c.title}"\nContent: ${c.passageText}\n');
-      citations.add(SourceCitation(
-        citationKey: '[$idx]',
-        sourceId: c.noteId,
-        sourceTitle: c.title,
-        quotedEvidence: c.passageText,
-        noteId: c.noteId,
-      ));
+      contextBuffer.writeln(
+        '[$idx] Note Title: "${c.title}"\nContent: ${c.passageText}\n',
+      );
+      citations.add(
+        SourceCitation(
+          citationKey: '[$idx]',
+          sourceId: c.noteId,
+          sourceTitle: c.title,
+          quotedEvidence: c.passageText,
+          noteId: c.noteId,
+        ),
+      );
       noteIds.add(c.noteId);
     }
 
@@ -215,8 +238,8 @@ class HybridRetrievalService {
       final noNotesText = queryLanguage == 'te'
           ? 'మీ నోట్స్ లో ఈ విషయానికి సంబంధించిన సమాచారం దొరకలేదు.'
           : (queryLanguage == 'hi'
-              ? 'आपके नोट्स में इस विषय से संबंधित जानकारी नहीं मिली।'
-              : 'I could not find any notes matching your question.');
+                ? 'आपके नोट्स में इस विषय से संबंधित जानकारी नहीं मिली।'
+                : 'I could not find any notes matching your question.');
       return GroundedAnswerResult(
         query: query,
         displayText: noNotesText,
@@ -241,11 +264,13 @@ class HybridRetrievalService {
         final langInstruction = switch (queryLanguage) {
           'te' => 'Respond in natural Telugu script.',
           'hi' => 'Respond in natural Hindi script.',
-          'mixed' => 'Respond in conversational Telugu and English code-mixed style.',
+          'mixed' =>
+            'Respond in conversational Telugu and English code-mixed style.',
           _ => 'Respond in clear English.',
         };
 
-        final systemPrompt = '''
+        final systemPrompt =
+            '''
 You are the NoteEchoes grounded conversational AI assistant.
 Answer the user's question STRICTLY based on the provided notes.
 $langInstruction
@@ -255,7 +280,8 @@ Rules:
 3. Keep the response concise, informative, and natural.
 ''';
 
-        final userPrompt = '''
+        final userPrompt =
+            '''
 User Question: "$query"
 
 Retrieved Notes Context:
@@ -263,15 +289,16 @@ $contextBuffer
 
 Grounded Answer:''';
 
-        final response = await StructuredGenerationService.generateStructured<String>(
-          prompt: userPrompt,
-          systemPrompt: systemPrompt,
-          fromJson: (json) => json['answer'] as String? ?? '',
-          modelId: 'noteechoes-qwen25-core-v4-mlx-4bit',
-          modelVersion: '3.0.0',
-          promptVersion: '1.0',
-          schemaVersion: 1,
-        );
+        final response =
+            await StructuredGenerationService.generateStructured<String>(
+              prompt: userPrompt,
+              systemPrompt: systemPrompt,
+              fromJson: (json) => json['answer'] as String? ?? '',
+              modelId: NoteEchoesActionModelIdentity.modelId,
+              modelVersion: NoteEchoesActionModelIdentity.releaseVersion,
+              promptVersion: '1.0',
+              schemaVersion: 1,
+            );
 
         var answerText = response.sanitizedOutput;
         if (answerText.trim().isEmpty) {
@@ -296,7 +323,8 @@ Grounded Answer:''';
     }
 
     // Deterministic fallback answer summary
-    final fallbackSummary = 'Based on your saved notes: ${candidates.map((c) => c.title).join(", ")}.';
+    final fallbackSummary =
+        'Based on your saved notes: ${candidates.map((c) => c.title).join(", ")}.';
     return GroundedAnswerResult(
       query: query,
       displayText: fallbackSummary,
@@ -324,5 +352,9 @@ class _CandidateAccumulator {
   int semanticRank = 0;
   bool isGraphExpanded = false;
 
-  _CandidateAccumulator({required this.id, required this.title, required this.text});
+  _CandidateAccumulator({
+    required this.id,
+    required this.title,
+    required this.text,
+  });
 }

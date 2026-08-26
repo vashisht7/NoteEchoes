@@ -6,6 +6,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../config/ai_runtime_config.dart';
+import '../config/action_model_identity.dart';
 import '../infrastructure/qwen_llama_provider.dart';
 import '../infrastructure/model_availability_service.dart';
 import '../infrastructure/e5_embedding_service.dart';
@@ -214,13 +215,12 @@ class _AiModelSettingsPageState extends State<AiModelSettingsPage>
             const _SectionHeader('On-Device NoteEchoes Intelligence'),
             const SizedBox(height: 8),
             _ModelCard(
-              name: 'NoteEchoes Core v4 MLX 4-bit',
+              name: NoteEchoesActionModelIdentity.displayName,
               description:
-                  'The exact verified NoteEchoes action model for notes, tasks, reminders, '
-                  'checklists, summaries, and grounded queries. English supports every action; '
-                  'Telugu and Hindi support core actions except email and prompt generation.',
-              size: '839 MiB download',
-              languages: ['English', 'Telugu', 'Hindi', 'Romanized & mixed'],
+                  'The verified English action engine for clean voice notes, tasks, reminders, '
+                  'checklists, messages, prompts, grounded memory routing, and safe confirmations.',
+              size: NoteEchoesActionModelIdentity.downloadSize,
+              languages: ['English'],
               isInstalled: _qwenInstalled,
               isDownloading: _qwenDownloading,
               downloadProgress: _qwenProgress,
@@ -393,8 +393,8 @@ class _AiModelSettingsPageState extends State<AiModelSettingsPage>
 
   void _startQwenDownload() {
     _showDownloadSheet(
-      modelName: 'NoteEchoes Core v4 MLX 4-bit',
-      modelSize: '839 MiB',
+      modelName: NoteEchoesActionModelIdentity.displayName,
+      modelSize: '649 MB',
       details:
           'Downloads the exact evaluated NoteEchoes model from Hugging Face, then verifies '
           'every runtime file before enabling it. Keep NoteEchoes open during this one-time '
@@ -421,7 +421,7 @@ class _AiModelSettingsPageState extends State<AiModelSettingsPage>
             _qwenStatusText = '';
           });
           _showToast(
-            'NoteEchoes Core v4 is verified and ready. Reindexed ${allNotes.length} notes.',
+            'NoteEchoes English Action model is verified and ready. Reindexed ${allNotes.length} notes.',
           );
         } catch (error) {
           if (!mounted) return;
@@ -449,14 +449,14 @@ class _AiModelSettingsPageState extends State<AiModelSettingsPage>
 
   Future<void> _deleteQwen() async {
     final confirmed = await _showDeleteDialog(
-      'NoteEchoes Core v4 MLX 4-bit',
+      NoteEchoesActionModelIdentity.displayName,
       'This removes the downloaded model files. Basic keyword search and Apple transcription will continue to work.',
     );
     if (confirmed == true) {
       await _models.removeQwen();
       if (!mounted) return;
       await _syncModelStatus();
-      _showToast('NoteEchoes Core v4 model files were removed.');
+      _showToast('NoteEchoes English Action model files were removed.');
     }
   }
 

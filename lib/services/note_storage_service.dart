@@ -316,6 +316,14 @@ class NoteStorageService {
   }
 
   @visibleForTesting
+  void closeDatabaseForTesting() {
+    _databaseInstance?.close();
+    _databaseInstance = null;
+    _opening = null;
+    _usingTestDatabase = false;
+  }
+
+  @visibleForTesting
   Future<void> migrateLegacyNotesForTesting() async {
     final database = await _database();
     final preferences = await SharedPreferences.getInstance();

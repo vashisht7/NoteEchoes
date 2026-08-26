@@ -3,9 +3,9 @@
 // Pass 1: Normalization (filler cleanup, self-correction, punctuation preservation)
 // Pass 2: Structured Intent & Entity extraction with provenance
 
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import '../domain/ai_models.dart';
+import '../config/action_model_identity.dart';
 import '../domain/note_interpretation.dart';
 import 'language_detection_service.dart';
 import 'model_availability_service.dart';
@@ -14,9 +14,10 @@ import 'agent_prompt_service.dart';
 import 'structured_generation_service.dart';
 
 class MultilingualInterpretationService {
-  static const String modelId = 'noteechoes-qwen25-core-v4-mlx-4bit';
-  static const String modelVersion = '4.0.0';
-  static const String promptVersion = '4.0';
+  static const String modelId = NoteEchoesActionModelIdentity.modelId;
+  static const String modelVersion =
+      NoteEchoesActionModelIdentity.releaseVersion;
+  static const String promptVersion = 'english-action-release-2026-08';
   static const int schemaVersion = 1;
 
   // Common fillers across English, Telugu, Hindi
@@ -39,17 +40,26 @@ class MultilingualInterpretationService {
     // e.g. "5 PM sorry I mean 6 PM" -> "6 PM"
     // e.g. "Rahul leda Ravi" -> "Ravi" (if self-corrected)
     final correctionPatterns = [
-      RegExp(r'\b[\w\s]+(?:\s+wait\s+no\s+|\s+sorry\s+I\s+mean\s+|\s+no\s+wait\s+|\s+actually\s+no\s+)([\w\s]+)', caseSensitive: false),
+      RegExp(
+        r'\b[\w\s]+(?:\s+wait\s+no\s+|\s+sorry\s+I\s+mean\s+|\s+no\s+wait\s+|\s+actually\s+no\s+)([\w\s]+)',
+        caseSensitive: false,
+      ),
     ];
     for (final pattern in correctionPatterns) {
-      text = text.replaceAllMapped(pattern, (match) => match.group(1) ?? match.group(0)!);
+      text = text.replaceAllMapped(
+        pattern,
+        (match) => match.group(1) ?? match.group(0)!,
+      );
     }
 
     // 3. Normalize multiple spaces
     text = text.replaceAll(RegExp(r'\s{2,}'), ' ').trim();
 
     // 4. Ensure trailing period if sentence-like
-    if (text.isNotEmpty && !text.endsWith('.') && !text.endsWith('?') && !text.endsWith('!')) {
+    if (text.isNotEmpty &&
+        !text.endsWith('.') &&
+        !text.endsWith('?') &&
+        !text.endsWith('!')) {
       text = '$text.';
     }
 
@@ -82,7 +92,8 @@ class MultilingualInterpretationService {
     // 3. Pass 2: Structured Extraction
     if (ModelAvailabilityService.instance.qwen.isReady) {
       try {
-        final systemPrompt = '''
+        final systemPrompt =
+            '''
 You are the NoteEchoes Multilingual Note Intelligence Engine.
 Analyze the user's voice note text and extract structured intent, entities, and actions.
 Input language: ${langResult.primaryLanguage} (mixed: ${langResult.mixedLanguages.join(', ')})
@@ -114,25 +125,34 @@ Output JSON ONLY with this schema:
 }
 ''';
 
-        final result = await StructuredGenerationService.generateStructured<Map<String, dynamic>>(
-          prompt: "Analyze this note transcript:\n\"$normalized\"",
-          systemPrompt: systemPrompt,
-          fromJson: (json) => json,
-          modelId: modelId,
-          modelVersion: modelVersion,
-          promptVersion: promptVersion,
-          schemaVersion: schemaVersion,
-        );
+        final result =
+            await StructuredGenerationService.generateStructured<
+              Map<String, dynamic>
+            >(
+              prompt: "Analyze this note transcript:\n\"$normalized\"",
+              systemPrompt: systemPrompt,
+              fromJson: (json) => json,
+              modelId: modelId,
+              modelVersion: modelVersion,
+              promptVersion: promptVersion,
+              schemaVersion: schemaVersion,
+            );
 
         if (result.isSuccess && result.value != null) {
           final json = result.value!;
-          final intentsList = (json['intents'] as List?)
-                  ?.map((i) => DetectedIntent.fromJson(i as Map<String, dynamic>))
+          final intentsList =
+              (json['intents'] as List?)
+                  ?.map(
+                    (i) => DetectedIntent.fromJson(i as Map<String, dynamic>),
+                  )
                   .toList() ??
               [];
 
-          final entitiesList = (json['entities'] as List?)
-                  ?.map((e) => ExtractedEntity.fromJson(e as Map<String, dynamic>))
+          final entitiesList =
+              (json['entities'] as List?)
+                  ?.map(
+                    (e) => ExtractedEntity.fromJson(e as Map<String, dynamic>),
+                  )
                   .toList() ??
               [];
 
@@ -148,7 +168,9 @@ Output JSON ONLY with this schema:
           // Resolve agent prompt if detected
           AgentPromptDraft? agentPrompt;
           if (json['agent_prompt'] != null && json['is_agent_prompt'] == true) {
-            agentPrompt = AgentPromptDraft.fromJson(json['agent_prompt'] as Map<String, dynamic>);
+            agentPrompt = AgentPromptDraft.fromJson(
+              json['agent_prompt'] as Map<String, dynamic>,
+            );
           } else {
             agentPrompt = AgentPromptService.detectFromText(normalized);
           }
@@ -160,7 +182,14 @@ Output JSON ONLY with this schema:
             normalizedText: normalized,
             primaryLanguage: langResult.primaryLanguage,
             mixedLanguages: langResult.mixedLanguages,
-            intents: intentsList.isNotEmpty ? intentsList : [const DetectedIntent(type: IntentType.plainNote, confidence: 1.0)],
+            intents: intentsList.isNotEmpty
+                ? intentsList
+                : [
+                    const DetectedIntent(
+                      type: IntentType.plainNote,
+                      confidence: 1.0,
+                    ),
+                  ],
             entities: entitiesList,
             projectCandidates: projectCandidates,
             agentPrompt: agentPrompt,
@@ -168,7 +197,9 @@ Output JSON ONLY with this schema:
           );
         }
       } catch (e) {
-        debugPrint("[MultilingualInterpretation] LLM generation error: $e. Falling back to deterministic parsing.");
+        debugPrint(
+          "[MultilingualInterpretation] LLM generation error: $e. Falling back to deterministic parsing.",
+        );
       }
     }
 
@@ -195,24 +226,51 @@ Output JSON ONLY with this schema:
     final entities = <ExtractedEntity>[];
 
     // Intent detection heuristics
-    if (lower.contains('remind me') || lower.contains('repu gurtucheyi') || lower.contains('yaad dilana') || lower.contains('reminder')) {
-      intents.add(const DetectedIntent(type: IntentType.reminder, confidence: 0.90));
+    if (lower.contains('remind me') ||
+        lower.contains('repu gurtucheyi') ||
+        lower.contains('yaad dilana') ||
+        lower.contains('reminder')) {
+      intents.add(
+        const DetectedIntent(type: IntentType.reminder, confidence: 0.90),
+      );
     }
-    if (lower.contains('todo') || lower.contains('task') || lower.contains('cheyali') || lower.contains('karna hai') || lower.contains('need to')) {
-      intents.add(const DetectedIntent(type: IntentType.task, confidence: 0.88));
+    if (lower.contains('todo') ||
+        lower.contains('task') ||
+        lower.contains('cheyali') ||
+        lower.contains('karna hai') ||
+        lower.contains('need to')) {
+      intents.add(
+        const DetectedIntent(type: IntentType.task, confidence: 0.88),
+      );
     }
-    if (lower.contains('meeting') || lower.contains('schedule') || lower.contains('calendar') || lower.contains('kal subah') || lower.contains('repu madhyahnam')) {
-      intents.add(const DetectedIntent(type: IntentType.calendarEvent, confidence: 0.85));
+    if (lower.contains('meeting') ||
+        lower.contains('schedule') ||
+        lower.contains('calendar') ||
+        lower.contains('kal subah') ||
+        lower.contains('repu madhyahnam')) {
+      intents.add(
+        const DetectedIntent(type: IntentType.calendarEvent, confidence: 0.85),
+      );
     }
-    if (lower.contains('email') || lower.contains('mail pampali') || lower.contains('bhejna')) {
-      intents.add(const DetectedIntent(type: IntentType.emailDraft, confidence: 0.88));
+    if (lower.contains('email') ||
+        lower.contains('mail pampali') ||
+        lower.contains('bhejna')) {
+      intents.add(
+        const DetectedIntent(type: IntentType.emailDraft, confidence: 0.88),
+      );
     }
-    if (lower.contains('idea:') || lower.contains('thought:') || lower.contains('what if')) {
-      intents.add(const DetectedIntent(type: IntentType.idea, confidence: 0.80));
+    if (lower.contains('idea:') ||
+        lower.contains('thought:') ||
+        lower.contains('what if')) {
+      intents.add(
+        const DetectedIntent(type: IntentType.idea, confidence: 0.80),
+      );
     }
 
     if (intents.isEmpty) {
-      intents.add(const DetectedIntent(type: IntentType.plainNote, confidence: 1.0));
+      intents.add(
+        const DetectedIntent(type: IntentType.plainNote, confidence: 1.0),
+      );
     }
 
     // Temporal detection
@@ -221,12 +279,14 @@ Output JSON ONLY with this schema:
       caseSensitive: false,
     );
     for (final match in temporalRegex.allMatches(normalizedText)) {
-      entities.add(ExtractedEntity(
-        type: EntityType.dateTime,
-        value: match.group(0)!,
-        rawPhrase: match.group(0),
-        confidence: 0.85,
-      ));
+      entities.add(
+        ExtractedEntity(
+          type: EntityType.dateTime,
+          value: match.group(0)!,
+          rawPhrase: match.group(0),
+          confidence: 0.85,
+        ),
+      );
     }
 
     // Project matching

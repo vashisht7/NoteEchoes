@@ -1,0 +1,23 @@
+{
+  "passed": true,
+  "errors": [],
+  "total_rows": 2112,
+  "unique_ids": 2112,
+  "unique_fingerprints": 2112,
+  "coverage": {
+    "train": {
+      "action": 877,
+      "focus:embedded_instruction_removal": 300,
+      "focus:replay": 1200,
+      "focus:ungrounded_reference_clarification": 300,
+      "normalize": 923
+    },
+    "validation": {
+      "action": 140,
+      "focus:embedded_instruction_removal": 36,
+      "focus:replay": 240,
+      "focus:ungrounded_reference_clarification": 36,
+      "normalize": 172
+    }
+  }
+}

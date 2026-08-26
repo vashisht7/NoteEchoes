@@ -5,11 +5,15 @@
 // Config
 export 'config/ai_feature_flags.dart';
 export 'config/ai_runtime_config.dart';
+export 'config/action_model_identity.dart';
 export 'config/model_manifest.dart';
 
 // Domain
 export 'domain/ai_models.dart';
+export 'domain/core_action_v5.dart';
+export 'domain/core_action_v5_adapter.dart';
 export 'domain/transcript.dart';
+export 'domain/voice_feedback.dart';
 export 'domain/note_analysis.dart';
 export 'domain/document_chunk.dart';
 export 'domain/source_citation.dart';
@@ -18,9 +22,11 @@ export 'domain/suggested_action.dart';
 // Provider interfaces
 export 'providers/text_generation_provider.dart';
 export 'providers/transcription_provider.dart';
+export 'infrastructure/voice_feedback_store.dart';
 export 'providers/retrieval_provider.dart';
 export 'providers/document_processor.dart';
 export 'providers/calendar_provider.dart';
+export 'providers/action_provider_registry.dart';
 
 // Infrastructure
 export 'infrastructure/ai_database.dart';

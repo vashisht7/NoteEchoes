@@ -1,0 +1,16 @@
+{
+  "status": "draft_not_frozen",
+  "rows": 300,
+  "groups": {
+    "english": 100,
+    "hindi": 100,
+    "telugu": 100
+  },
+  "sha256": "f03abaf824c897969fcda874f710bfae2a566e6079d2fac99a80e2d58db3612f",
+  "freeze_requirements": [
+    "review every full Core v5 label and grounding span",
+    "native Hindi reviewer approval for all Hindi cases",
+    "native Telugu reviewer approval for all Telugu cases",
+    "record reviewer IDs and timestamps, then regenerate the signed manifest"
+  ]
+}

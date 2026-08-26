@@ -16,21 +16,24 @@ import MLXLMCommon
 actor MLXTextGenerationService {
     static let shared = MLXTextGenerationService()
 
-    static let productModelName = "noteechoes-qwen25-core-v4-mlx-4bit"
-    static let primaryModelID = "Vashisht7/noteechoes-qwen25-core-v4-mlx-4bit"
-    // Replaced with the immutable Hugging Face commit after the release upload.
-    static let productModelRevision = "ab5704d40dc4096e7460fb10443e99fc891b7196"
+    static let productModelName = "noteechoes-english-voice-intent-action-qwen3-0.6b-mlx-8bit"
+    static let primaryModelID = "Vashisht7/noteechoes-english-voice-intent-action-qwen3-0.6b-mlx-8bit"
+    static let productModelRevision = "b829d1d480c0bc0226326e36f009ae825af60f18"
     static let requiredFreeSpaceBytes: Int64 = 2_000_000_000
-    static let expectedRuntimeBytes: Int64 = 880_107_321
-    static let verificationMarkerName = ".noteechoes-core-v4-verified.json"
+    static let expectedRuntimeBytes: Int64 = 649_376_484
+    static let verificationMarkerName = ".noteechoes-english-action-mlx8-verified.json"
     static let requiredFiles: [(name: String, size: Int64, sha256: String)] = [
-        ("chat_template.jinja", 2_507, "cd8e9439f0570856fd70470bf8889ebd8b5d1107207f67a5efb46e342330527f"),
-        ("config.json", 1_819, "e0dbba26b98e1a81c59b12fad6d05196cef59c3743d449586ca4eb37b264432d"),
-        ("generation_config.json", 238, "699d32a9c16607a5d2a2ffd615f868ae9f16d5756a630b2099ea44ca23bcf896"),
-        ("model.safetensors", 868_628_547, "4454aaa0b1cbddd255fb515c1172962672dab76778ba7469a9bf538ffca2c526"),
-        ("model.safetensors.index.json", 51_609, "19e664257b50911ac12ff231c42e952c210d48d1861f7fa304eb640dd10dccb8"),
-        ("tokenizer.json", 11_422_166, "6b4360dd6a184650ffc48056c2569bc603f896c5adfe94b10f1c79f809638aa5"),
-        ("tokenizer_config.json", 435, "51bd139ec7f7743f7e5704ef2c2f3026939458f0532a758682e98f269c139348")
+        ("added_tokens.json", 707, "c0284b582e14987fbd3d5a2cb2bd139084371ed9acbae488829a1c900833c680"),
+        ("chat_template.jinja", 4_168, "a55ee1b1660128b7098723e0abcd92caa0788061051c62d51cbe87d9cf1974d8"),
+        ("config.json", 1_737, "ab345d334484b3809b0f671cda5201d4f69102aa68b0f339e4cbe53fff02e6e9"),
+        ("generation_config.json", 214, "64d86df2173901c58389974bde21f7d2ab9eb7d79f35a337753329d39cf265c0"),
+        ("merges.txt", 1_671_853, "8831e4f1a044471340f7c0a83d7bd71306a5b867e95fd870f74d0c5308a904d5"),
+        ("model.safetensors", 633_442_531, "4f7acb40c1bcf6c4bf8a3b6f0350e595ef6ae8130469bcfc85cceec7eb4114ea"),
+        ("model.safetensors.index.json", 49_770, "9e9d09d5f0eb73a33663314f68b24dd91d33e245ca3af15daed8e69b5adff982"),
+        ("special_tokens_map.json", 613, "76862e765266b85aa9459767e33cbaf13970f327a0e88d1c65846c2ddd3a1ecd"),
+        ("tokenizer.json", 11_422_654, "aeb13307a71acd8fe81861d94ad54ab689df773318809eed3cbe794b4492dae4"),
+        ("tokenizer_config.json", 5_404, "443bfa629eb16387a12edbf92a76f6a6f10b2af3b53d87ba1550adfcf45f7fa0"),
+        ("vocab.json", 2_776_833, "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910")
     ]
 
     private var container: ModelContainer?
@@ -96,15 +99,15 @@ actor MLXTextGenerationService {
             }
             if modelDirectory == nil {
                 try Self.ensureDownloadCapacity()
-                onProgress?(0, "Preparing NoteEchoes Core v4 download…")
+                onProgress?(0, "Preparing the NoteEchoes English Action model download…")
                 modelDirectory = try await Self.productHub.snapshot(
                     from: Self.primaryModelID,
                     revision: Self.productModelRevision,
-                    matching: ["*.safetensors", "*.json", "*.jinja"]
+                    matching: Self.requiredFiles.map { $0.name }
                 ) { progress in
                     let fraction = progress.fractionCompleted
                     let percent = Int(fraction * 100)
-                    onProgress?(fraction, "Downloading NoteEchoes Core v4 (\(percent)%)…")
+                    onProgress?(fraction, "Downloading NoteEchoes English Action model (\(percent)%)…")
                 }
                 guard let modelDirectory else {
                     throw MLXTextGenerationError.modelUnavailable
@@ -120,7 +123,7 @@ actor MLXTextGenerationService {
             configuration: ModelConfiguration(directory: modelDirectory)
         )
         container = loaded
-        onProgress?(1, "NoteEchoes Core v4 is ready.")
+        onProgress?(1, "NoteEchoes English Action model is ready.")
     }
 
     func generate(
@@ -346,7 +349,7 @@ enum MLXTextGenerationError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .modelUnavailable:
-            "The NoteEchoes Core v4 model could not be loaded."
+            "The NoteEchoes English Action model could not be loaded."
         case .integrityFailure(let detail):
             "The downloaded NoteEchoes model failed verification. \(detail) Use Repair Model and try again."
         case .insufficientStorage(let required, let available):

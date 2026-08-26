@@ -11,7 +11,9 @@ import 'lock_screen_activity_service.dart';
 import 'note_storage_service.dart';
 import '../ai/domain/note_analysis.dart';
 import '../ai/infrastructure/knowledge_service.dart';
+import '../ai/infrastructure/language_detection_service.dart';
 import '../ai/infrastructure/model_availability_service.dart';
+import '../ai/infrastructure/multilingual_interpretation_service.dart';
 import '../ai/infrastructure/qwen_llama_provider.dart';
 import '../ai/infrastructure/semantic_knowledge_service.dart';
 import '../platform/ios/apple_calendar_bridge.dart';
@@ -273,6 +275,12 @@ class NoteService extends ChangeNotifier {
     if (!VoiceCaptureValidator.hasMeaningfulSpeech(spokenText)) {
       throw const FormatException('No meaningful speech was captured.');
     }
+    final normalizedText =
+        MultilingualInterpretationService.normalizeTranscript(spokenText);
+    final cleanNoteText =
+        VoiceCaptureValidator.hasMeaningfulSpeech(normalizedText)
+        ? normalizedText
+        : spokenText.trim();
     final analysis = AiCategorizationEngine().analyzeNote(spokenText);
     final tagsSet = <String>{'voice-memo'};
     tagsSet.addAll(analysis.categories);
@@ -291,7 +299,9 @@ class NoteService extends ChangeNotifier {
       debugPrint('Could not refresh local model status: $error');
     }
 
-    if (ModelAvailabilityService.instance.qwen.isReady) {
+    final detectedLanguage = LanguageDetectionService.detect(spokenText);
+    if (ModelAvailabilityService.instance.qwen.isReady &&
+        detectedLanguage.primaryLanguage == 'en') {
       try {
         final provider = QwenLlamaProvider.instance;
         if (!provider.isLoaded) await provider.load();
@@ -372,7 +382,7 @@ class NoteService extends ChangeNotifier {
       title: title,
       contentType: NoteContentType.textOnly,
       summarySnippet: summary,
-      textContent: spokenText.trim(),
+      textContent: cleanNoteText,
       createdAt: createdAt ?? DateTime.now(),
       tags: tagsSet.toList(),
       checklist: checklist,

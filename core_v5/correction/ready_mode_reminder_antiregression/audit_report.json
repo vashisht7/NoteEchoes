@@ -1,0 +1,26 @@
+{
+  "passed": true,
+  "errors": [],
+  "total_rows": 1856,
+  "unique_ids": 1856,
+  "unique_fingerprints": 1856,
+  "unique_user_prompts": 1856,
+  "frozen_eval_user_prompts": 1183,
+  "frozen_eval_fingerprints": 1200,
+  "coverage": {
+    "train": {
+      "grounded_reminder_not_clarify": 520,
+      "memory_query_mode": 220,
+      "replay": 420,
+      "task_capture_mode": 280,
+      "true_ambiguity_control": 160
+    },
+    "validation": {
+      "grounded_reminder_not_clarify": 84,
+      "memory_query_mode": 36,
+      "replay": 64,
+      "task_capture_mode": 44,
+      "true_ambiguity_control": 28
+    }
+  }
+}

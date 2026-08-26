@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://notechoes.app/schema/core-v5-annotation.schema.json",
+  "title": "NoteEchoes Core v5 Annotated Example",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "example_id", "semantic_family_id", "scenario_id", "split", "source",
+    "consent", "language", "script", "is_code_mixed", "raw_transcript",
+    "gold", "grounding_spans", "ambiguity", "asr_tags", "safety_tags",
+    "review", "history"
+  ],
+  "properties": {
+    "example_id": {"type": "string", "pattern": "^nev5-[a-f0-9]{16}$"},
+    "semantic_family_id": {"type": "string", "pattern": "^fam-[a-f0-9]{16}$"},
+    "scenario_id": {"type": "string", "minLength": 1, "maxLength": 160},
+    "speaker_id": {"type": ["string", "null"], "maxLength": 160},
+    "session_id": {"type": ["string", "null"], "maxLength": 160},
+    "split": {"enum": ["train", "validation", "test", "challenge", "quarantine"]},
+    "source": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "name", "source_id", "license", "synthetic"],
+      "properties": {
+        "type": {"enum": ["consented_recording", "human_authored", "core_v4", "v2_archive", "synthetic", "perturbation"]},
+        "name": {"type": "string", "minLength": 1},
+        "source_id": {"type": "string", "minLength": 1},
+        "license": {"type": ["string", "null"]},
+        "synthetic": {"type": "boolean"}
+      }
+    },
+    "consent": {
+      "type": "object", "additionalProperties": false,
+      "required": ["status", "record_id"],
+      "properties": {
+        "status": {"enum": ["not_applicable", "documented", "missing"]},
+        "record_id": {"type": ["string", "null"]}
+      }
+    },
+    "language": {"enum": ["en", "hi", "te", "hi-roman", "te-roman", "mixed", "unknown"]},
+    "script": {"enum": ["latin", "devanagari", "telugu", "mixed", "unknown"]},
+    "is_code_mixed": {"type": "boolean"},
+    "raw_transcript": {"type": "string", "minLength": 1, "maxLength": 8000},
+    "gold": {"$ref": "core_v5.schema.json"},
+    "grounding_spans": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["field", "text", "start", "end"],
+        "properties": {
+          "field": {"type": "string", "minLength": 1},
+          "text": {"type": "string", "minLength": 1},
+          "start": {"type": "integer", "minimum": 0},
+          "end": {"type": "integer", "minimum": 1}
+        }
+      }
+    },
+    "ambiguity": {"enum": ["none", "recipient", "destination", "date", "time", "destructive", "multiple"]},
+    "asr_tags": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "safety_tags": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "review": {
+      "type": "object", "additionalProperties": false,
+      "required": ["status", "reviewer_id", "reviewed_at", "native_language_verified"],
+      "properties": {
+        "status": {"enum": ["unreviewed", "needs_changes", "approved", "rejected"]},
+        "reviewer_id": {"type": ["string", "null"]},
+        "reviewed_at": {"type": ["string", "null"], "format": "date-time"},
+        "native_language_verified": {"type": "boolean"}
+      }
+    },
+    "history": {"type": "array", "items": {"type": "object"}}
+  }
+}

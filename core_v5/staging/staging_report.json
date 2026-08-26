@@ -1,0 +1,40 @@
+{
+  "status": "staging_only_not_training_ready",
+  "rows": 10240,
+  "exact_duplicates_removed": 6334,
+  "counts": {
+    "intent:calendar": 1175,
+    "intent:checklist": 10,
+    "intent:clarify": 559,
+    "intent:decision": 417,
+    "intent:email": 774,
+    "intent:idea": 707,
+    "intent:memory_query": 140,
+    "intent:message": 759,
+    "intent:note": 523,
+    "intent:project_update": 674,
+    "intent:prompt": 784,
+    "intent:reminder": 2214,
+    "intent:task": 1504,
+    "language:en": 1836,
+    "language:hi": 2632,
+    "language:hi-roman": 1156,
+    "language:mixed": 730,
+    "language:te": 2708,
+    "language:te-roman": 1178,
+    "review:unreviewed": 10240,
+    "source:core_v4": 7922,
+    "source:v2_archive": 2318,
+    "split:challenge": 168,
+    "split:test": 543,
+    "split:train": 8995,
+    "split:validation": 534
+  },
+  "sha256": "01a1f80732fcf36cafc26a00eb0d9c4dbb56d30dfc59f2b432006101d7358200",
+  "blocking_gates": [
+    "all labels require Core v5 review",
+    "validation/test/challenge require 100% named human approval",
+    "Hindi and Telugu require native-language verification",
+    "grounding spans require completion for paraphrased legacy labels"
+  ]
+}

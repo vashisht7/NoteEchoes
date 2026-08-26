@@ -11,6 +11,12 @@ class PromptRepository {
   PromptRepository._internal();
 
   static const String promptVersion = 'v4.0';
+  static const String coreV5PromptVersion = 'english-action-release-2026-08';
+
+  // This is intentionally byte-for-byte aligned with the promoted English
+  // action dataset. Extra instructions shift the compact model's routing.
+  static const String coreActionV5SystemPrompt = '''[MODE: ACTION]
+You are the private on-device NoteEchoes Core v5 interpreter. Return one JSON object and no prose. Use exactly the Core v5 schema. Normalize without translating. Extract only grounded items and entities. A tool output is a proposal, never execution. Never invent facts or claim an action succeeded.''';
 
   static const String coreActionV4SystemPrompt = '''
 You are the private on-device NoteEchoes core interpreter.
@@ -56,10 +62,15 @@ Rules:
         : noteContent.trim();
 
     return [
-      const AiMessage(role: AiRole.system, content: coreActionV4SystemPrompt),
+      const AiMessage(role: AiRole.system, content: coreActionV5SystemPrompt),
       AiMessage(role: AiRole.user, content: userContent),
     ];
   }
+
+  List<AiMessage> coreV5ActionPrompt({required String rawTranscript}) => [
+    const AiMessage(role: AiRole.system, content: coreActionV5SystemPrompt),
+    AiMessage(role: AiRole.user, content: rawTranscript.trim()),
+  ];
 
   List<AiMessage> queryExpansionPrompt({required String query}) {
     return [

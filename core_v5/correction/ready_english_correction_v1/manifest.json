@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "release_ready": true,
+  "audit_passed": true,
+  "dataset_kind": "english_failure_correction_with_frozen_replay",
+  "seed": 20260825,
+  "source_adapter_sha256": "47e8e982e2a81b7ea7904d6879bda3f5b581f2121d25b7e8c83f5feae479a8ca",
+  "files": {
+    "train": {
+      "name": "train.jsonl",
+      "rows": 6000,
+      "sha256": "6ae70cdf7f39136482a04b45cf8f8e1c97c3b07f0f2d8176bb16f49b0e442cfb"
+    },
+    "validation": {
+      "name": "validation.jsonl",
+      "rows": 600,
+      "sha256": "ab27fd819b6626118ba6a49919d03758de13af57ff64a94c82cd55dedca8ac9a"
+    },
+    "test": {
+      "name": "test.jsonl",
+      "rows": 600,
+      "sha256": "bedd4a56a7376860f1c311ee01ded1e23bd1fd07a023863f113d76340f479458"
+    },
+    "challenge": {
+      "name": "challenge.jsonl",
+      "rows": 600,
+      "sha256": "816f54c04edaafc33d044612a4fae20c9cb1ba06ebd4a95f3ac00adeb70eed51"
+    }
+  },
+  "audit": {
+    "name": "audit_report.json",
+    "sha256": "36dc875bfc6e076774ece76ad1fffd38eba8828e4fdba604f2938b521f5ebf07"
+  },
+  "training_policy": {
+    "continue_existing_adapter": true,
+    "restart_from_zero": false,
+    "epochs": 1,
+    "learning_rate": 5e-06
+  }
+}

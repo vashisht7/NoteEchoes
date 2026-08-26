@@ -14,7 +14,6 @@ import '../ai/domain/ai_models.dart';
 import '../ai/infrastructure/offline_speech_bridge.dart';
 import '../ai/infrastructure/hybrid_retrieval_service.dart';
 import '../ai/infrastructure/language_detection_service.dart';
-import '../ai/infrastructure/model_availability_service.dart';
 import '../ai/infrastructure/ai_database.dart';
 import '../theme/app_preferences.dart';
 import 'note_service.dart';
@@ -52,9 +51,6 @@ class VoiceAssistantService extends ChangeNotifier {
 
   final AudioRecorder _audioRecorder = AudioRecorder();
   static const _speechOutputChannel = MethodChannel('noteechoes/speech_output');
-  static const _offlineSpeechChannel = MethodChannel(
-    'noteechoes/offline_speech',
-  );
 
   VoiceAssistantState _state = VoiceAssistantState.listening;
   VoiceAssistantState get state => _state;
@@ -203,6 +199,11 @@ class VoiceAssistantService extends ChangeNotifier {
     _orbitalStepTimer?.cancel();
     _karaokeTimer?.cancel();
     _isPlayingAudio = false;
+
+    if (Platform.environment.containsKey('FLUTTER_TEST')) {
+      notifyListeners();
+      return;
+    }
 
     try {
       if (await _audioRecorder.isRecording()) {

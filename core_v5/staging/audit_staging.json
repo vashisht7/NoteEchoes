@@ -1,0 +1,157 @@
+{
+  "release_mode": false,
+  "passed": false,
+  "rows": 10240,
+  "counts": {
+    "intent:calendar": 1175,
+    "intent:checklist": 10,
+    "intent:clarify": 559,
+    "intent:decision": 417,
+    "intent:email": 774,
+    "intent:idea": 707,
+    "intent:memory_query": 140,
+    "intent:message": 759,
+    "intent:note": 523,
+    "intent:project_update": 674,
+    "intent:prompt": 784,
+    "intent:reminder": 2214,
+    "intent:task": 1504,
+    "language:en": 1836,
+    "language:hi": 2632,
+    "language:hi-roman": 1156,
+    "language:mixed": 730,
+    "language:te": 2708,
+    "language:te-roman": 1178,
+    "review:unreviewed": 10240,
+    "split:challenge": 168,
+    "split:test": 543,
+    "split:train": 8995,
+    "split:validation": 534
+  },
+  "file_sha256": {
+    "core_v5/staging/core_v5_staging.jsonl": "01a1f80732fcf36cafc26a00eb0d9c4dbb56d30dfc59f2b432006101d7358200"
+  },
+  "errors": [
+    {
+      "code": "near_duplicate_leakage",
+      "detail": {
+        "left": "nev5-035676c373133238",
+        "right": "nev5-62dbb00ffb2e8142",
+        "splits": [
+          "challenge",
+          "train"
+        ],
+        "hamming": 3
+      }
+    },
+    {
+      "code": "near_duplicate_leakage",
+      "detail": {
+        "left": "nev5-58182f31c6f08be5",
+        "right": "nev5-b71da9ffba7239b5",
+        "splits": [
+          "train",
+          "challenge"
+        ],
+        "hamming": 3
+      }
+    },
+    {
+      "code": "near_duplicate_leakage",
+      "detail": {
+        "left": "nev5-62dbb00ffb2e8142",
+        "right": "nev5-b71da9ffba7239b5",
+        "splits": [
+          "train",
+          "challenge"
+        ],
+        "hamming": 2
+      }
+    },
+    {
+      "code": "near_duplicate_leakage",
+      "detail": {
+        "left": "nev5-08a394179a21dbcc",
+        "right": "nev5-d1f39c85f061c508",
+        "splits": [
+          "train",
+          "test"
+        ],
+        "hamming": 3
+      }
+    },
+    {
+      "code": "near_duplicate_leakage",
+      "detail": {
+        "left": "nev5-1fe45b3887d6fe93",
+        "right": "nev5-80912ea7d60adbf1",
+        "splits": [
+          "challenge",
+          "train"
+        ],
+        "hamming": 3
+      }
+    },
+    {
+      "code": "near_duplicate_leakage",
+      "detail": {
+        "left": "nev5-5427bb2eca8f1d52",
+        "right": "nev5-62706a5e4082d142",
+        "splits": [
+          "train",
+          "challenge"
+        ],
+        "hamming": 2
+      }
+    },
+    {
+      "code": "near_duplicate_leakage",
+      "detail": {
+        "left": "nev5-27d94dcf001d83d0",
+        "right": "nev5-6f95cbae91988165",
+        "splits": [
+          "test",
+          "train"
+        ],
+        "hamming": 3
+      }
+    },
+    {
+      "code": "near_duplicate_leakage",
+      "detail": {
+        "left": "nev5-59ead97193b07ab8",
+        "right": "nev5-8f5868284679673e",
+        "splits": [
+          "validation",
+          "train"
+        ],
+        "hamming": 3
+      }
+    },
+    {
+      "code": "near_duplicate_leakage",
+      "detail": {
+        "left": "nev5-8fae88e4a0cae718",
+        "right": "nev5-aa509fb7ac5dde9b",
+        "splits": [
+          "train",
+          "challenge"
+        ],
+        "hamming": 2
+      }
+    },
+    {
+      "code": "near_duplicate_leakage",
+      "detail": {
+        "left": "nev5-591637891719afd2",
+        "right": "nev5-c39f318c2b23d6a0",
+        "splits": [
+          "train",
+          "challenge"
+        ],
+        "hamming": 3
+      }
+    }
+  ],
+  "error_count": 10
+}

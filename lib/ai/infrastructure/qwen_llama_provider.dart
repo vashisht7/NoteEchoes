@@ -4,11 +4,12 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import '../providers/text_generation_provider.dart';
+import '../config/action_model_identity.dart';
 import '../domain/ai_models.dart';
 // Use an alias to avoid name clash with the legacy engine's NoteAnalysisResult.
 import '../domain/note_analysis.dart' as domain;
-import '../domain/core_action_v4_adapter.dart';
-import '../domain/core_action_v4_guardrails.dart';
+import '../domain/core_action_v5.dart';
+import '../domain/core_action_v5_adapter.dart';
 import '../infrastructure/prompt_repository.dart';
 import '../../services/ai_categorization_engine.dart' as legacy;
 
@@ -37,10 +38,10 @@ class QwenLlamaProvider implements TextGenerationProvider {
   }
 
   @override
-  String get displayName => 'NoteEchoes Core v4 MLX 4-bit';
+  String get displayName => NoteEchoesActionModelIdentity.displayName;
 
   @override
-  String get modelVersion => 'noteechoes-qwen25-core-v4-mlx-4bit';
+  String get modelVersion => NoteEchoesActionModelIdentity.modelId;
 
   @override
   bool get isLoaded => _isLoaded;
@@ -160,7 +161,7 @@ class QwenLlamaProvider implements TextGenerationProvider {
       );
     }
 
-    // ── Full multilingual MLX path ────────────────────────────────────────
+    // ── Verified English Core v5 action path ──────────────────────────────
     final messages = PromptRepository.instance.noteAnalysisPrompt(
       noteContent: noteContent,
       noteId: noteId,
@@ -184,23 +185,20 @@ class QwenLlamaProvider implements TextGenerationProvider {
       final json =
           jsonDecode(response.substring(start, end + 1))
               as Map<String, dynamic>;
-      if (json['v'] == 4) {
-        final guarded = CoreActionV4Guardrails.normalize(
-          json,
-          noteContent: noteContent,
-        );
-        return CoreActionV4Adapter.toNoteAnalysis(
-          guarded,
-          noteContent: noteContent,
-          noteId: noteId,
-          modelVersion: modelVersion,
-          analysedAt: DateTime.now(),
-        );
+      final validated = const CoreV5Validator().parseAndValidate(
+        json,
+        rawTranscript: noteContent,
+      );
+      if (!validated.isValid) {
+        throw FormatException(validated.errors.join('; '));
       }
-      json['note_id'] = noteId;
-      json['model_version'] = modelVersion;
-      json['analysed_at'] = DateTime.now().toIso8601String();
-      return domain.NoteAnalysisResult.fromJson(json);
+      return CoreActionV5Adapter.toNoteAnalysis(
+        validated.value!,
+        noteContent: noteContent,
+        noteId: noteId,
+        modelVersion: modelVersion,
+        analysedAt: DateTime.now(),
+      );
     } catch (error) {
       throw GenerationException(
         GenerationErrorCode.invalidSchema,

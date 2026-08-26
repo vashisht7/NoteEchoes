@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "release_ready": true,
+  "audit_passed": true,
+  "dataset_kind": "release_gate_micro_correction_with_frozen_replay",
+  "seed": 20260826,
+  "source_adapter_sha256": "95a9cf9bcdc8ab47fd48b7fe7e9f63230d71d0b12fc45369380f5984ce4e6fd9",
+  "files": {
+    "train": {
+      "name": "train.jsonl",
+      "rows": 1800,
+      "sha256": "2f6612179811f9daf402aba70703f04b8f918d429d92d2eb0f5793b095c166d9"
+    },
+    "validation": {
+      "name": "validation.jsonl",
+      "rows": 312,
+      "sha256": "5f0bfd40ca75794a33f120b6ca3652779c2ee7b0fecf7c8188289198a6c4f81b"
+    }
+  },
+  "audit": {
+    "name": "audit_report.json",
+    "sha256": "1e19e4080f28d5e0ded5e5c2e976a8f7a6751a33343ec76e70c778f3704777f5"
+  },
+  "training_policy": {
+    "continue_existing_adapter": true,
+    "restart_from_zero": false,
+    "epochs": 1,
+    "learning_rate": 3e-06
+  }
+}

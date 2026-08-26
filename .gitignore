@@ -33,6 +33,19 @@ migrate_working_dir/
 .pub/
 /build/
 
+# Local model-release runtimes and generated training corpora. Canonical
+# deployables and datasets live in the purpose-named Desktop package and on
+# Hugging Face/Kaggle; Git keeps the reproducible programs, schemas, manifests,
+# audits, and documentation without multi-gigabyte generated artifacts.
+.venv-model-release/
+core_v5/**/*.zip
+core_v5/ready_synthetic_v1/**/*.jsonl
+core_v5/staging/core_v5_staging.jsonl
+core_v5/correction/ready_*/*.jsonl
+core_v5/correction/release_gate_job/ready_*/*.jsonl
+core_v5/release/Voice-Intent-and-Action-Qwen3-0.6B-Final/
+core_v5/release/final_antiregression_kaggle_output/
+
 # Symbolisation related
 app.*.symbols
 

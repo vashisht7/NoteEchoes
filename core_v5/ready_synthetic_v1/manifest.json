@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "release_ready": true,
+  "audit_passed": true,
+  "release_kind": "experimental_synthetic",
+  "created_at": "2026-08-24T00:00:00-04:00",
+  "review_policy": "synthetic_waiver_user_authorized_2026-08-24",
+  "user_review_claim": false,
+  "generator_seed": 20260824,
+  "files": {
+    "train": {
+      "name": "sft/train.jsonl",
+      "rows": 60000,
+      "sha256": "f3891f95ea70a0a2f8a8ab95eb6181fa5e3fd82c86b6f1ae7144dbd5e6ad9bb8"
+    },
+    "validation": {
+      "name": "sft/validation.jsonl",
+      "rows": 4800,
+      "sha256": "247388dd2fbf07a0ef1459851372db2f55ef4fbc856e7f245b733edfa184b464"
+    },
+    "test": {
+      "name": "sft/test.jsonl",
+      "rows": 4800,
+      "sha256": "f880a66d0e677163596494c86bd30dbdd5594aea01d7e7ad61dd5686afacbb6b"
+    },
+    "challenge": {
+      "name": "sft/challenge.jsonl",
+      "rows": 2400,
+      "sha256": "22adcf6c0dfe918f973bce6b8f8aee7449742a34176475ca2e3aef2f991f4187"
+    }
+  },
+  "annotation_files": {
+    "train": {
+      "name": "annotations/train.annotated.jsonl",
+      "rows": 30000,
+      "sha256": "d9ce430075c5d854d344bfb9ba5d29588049015fa1336c51d49b23616178e0b2"
+    },
+    "validation": {
+      "name": "annotations/validation.annotated.jsonl",
+      "rows": 2400,
+      "sha256": "cb868218f3530147fd1a8ee353967fa6e930af7ae0438fbdf461c63898838078"
+    },
+    "test": {
+      "name": "annotations/test.annotated.jsonl",
+      "rows": 2400,
+      "sha256": "6a9f811d299cee51403f0798650729534c7a88556d23c922157fe717668dd6d5"
+    },
+    "challenge": {
+      "name": "annotations/challenge.annotated.jsonl",
+      "rows": 1200,
+      "sha256": "aa3388c81b153c3c8b3340b7e7ca811699b5e28704897f5225ed7dc98e73b03c"
+    }
+  },
+  "rl_files": {
+    "train": {
+      "name": "rl/train.jsonl",
+      "rows": 30000,
+      "sha256": "ec1a21ff9f5198d17de536b58227dd61b0901f4b9e20b20810b6be5f7f5a9237"
+    },
+    "validation": {
+      "name": "rl/validation.jsonl",
+      "rows": 2400,
+      "sha256": "494e85fdad5567decf2830d9e104296ee880cc3e7ee9f28459328b88bf84a2ab"
+    },
+    "test": {
+      "name": "rl/test.jsonl",
+      "rows": 2400,
+      "sha256": "2a3c2838168be4d6c89c5cefb92be9dac78bd1051dddee96f6087c7e06854ebe"
+    },
+    "challenge": {
+      "name": "rl/challenge.jsonl",
+      "rows": 1200,
+      "sha256": "4263647c79a5aa5b1b7f6d0c12fec84e55b1266e0da3d1a0f95aa5fead9ff1d5"
+    }
+  },
+  "audit": {
+    "name": "audit_report.json",
+    "sha256": "ec6cddd19969469d23dda3bd1c9f06cd008cca74959c498ee4ab110e2e17a01e",
+    "rows": 36000
+  },
+  "rates": {
+    "asr_noise": 0.5,
+    "code_mixed": 0.21833333333333332,
+    "correction": 0.16666666666666666
+  },
+  "training_policy": {
+    "base_model": "Qwen/Qwen3-0.6B",
+    "epochs": 1,
+    "completion_only_masking": true,
+    "seed": 3407,
+    "max_sequence": 1024,
+    "packing": false
+  }
+}
