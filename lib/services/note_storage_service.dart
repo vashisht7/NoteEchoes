@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -229,7 +230,10 @@ class NoteStorageService {
   Future<void> upsertNote(NoteModel note) async {
     final database = await _database();
     _upsert(database, note);
-    await _writeRecoveryBackup(database);
+    // SQLite is already durable at this point. Recovery mirrors can finish in
+    // the background instead of holding the Save interaction for up to four
+    // seconds across the local and App Group copies.
+    unawaited(_writeRecoveryBackup(database));
   }
 
   void _upsert(Database database, NoteModel note) {

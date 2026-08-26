@@ -272,6 +272,7 @@ class NoteService extends ChangeNotifier {
     String? noteId,
     DateTime? createdAt,
   }) async {
+    final capturedAt = createdAt ?? DateTime.now();
     spokenText = VoiceCaptureValidator.sanitizeTranscript(spokenText);
     if (!VoiceCaptureValidator.hasMeaningfulSpeech(spokenText)) {
       throw const FormatException('No meaningful speech was captured.');
@@ -291,42 +292,7 @@ class NoteService extends ChangeNotifier {
     var checklist = analysis.extractedChecklist;
     var reminders = const <Reminder>[];
 
-    // A verified Qwen installation upgrades spoken notes from keyword rules to
-    // content-aware titles, topics and action extraction. The lightweight path
-    // remains available when no model is downloaded.
-    try {
-      await ModelAvailabilityService.instance.refresh();
-    } catch (error) {
-      debugPrint('Could not refresh local model status: $error');
-    }
-
     final detectedLanguage = LanguageDetectionService.detect(spokenText);
-    if (ModelAvailabilityService.instance.qwen.isReady &&
-        detectedLanguage.primaryLanguage == 'en') {
-      try {
-        final provider = QwenLlamaProvider.instance;
-        if (!provider.isLoaded) await provider.load();
-        final richAnalysis = await provider.generateNoteAnalysis(
-          spokenText,
-          noteId: 'voice-preview-${DateTime.now().microsecondsSinceEpoch}',
-          noteCreatedAt: DateTime.now(),
-        );
-        if (richAnalysis.generatedTitle.trim().isNotEmpty) {
-          title = richAnalysis.generatedTitle.trim();
-        }
-        if (richAnalysis.summary.trim().isNotEmpty) {
-          summary = richAnalysis.summary.trim();
-        }
-        tagsSet.addAll(richAnalysis.topics);
-        tagsSet.addAll(richAnalysis.suggestedTags);
-        checklist = richAnalysis.actionItems
-            .map((item) => CheckListItem(id: item.id, text: item.task))
-            .toList();
-        reminders = richAnalysis.reminders;
-      } catch (error) {
-        debugPrint('Enhanced voice-note categorization fell back: $error');
-      }
-    }
 
     // Natural speech normally has no markdown bullets. Preserve an explicit
     // spoken enumeration ("first task ... second ...") even when a compact
@@ -371,10 +337,8 @@ class NoteService extends ChangeNotifier {
       }
     }
 
-    if (reminders.isNotEmpty) tagsSet.add('reminders');
-    final scheduledReminders = await _scheduleExplicitAppleReminders(reminders);
-    if (scheduledReminders > 0) {
-      tagsSet.add('reminder-scheduled');
+    if (reminders.isNotEmpty) {
+      tagsSet.addAll({'reminders', 'reminder-pending'});
     }
 
     final note = NoteModel(
@@ -385,7 +349,7 @@ class NoteService extends ChangeNotifier {
       contentType: NoteContentType.textOnly,
       summarySnippet: summary,
       textContent: cleanNoteText,
-      createdAt: createdAt ?? DateTime.now(),
+      createdAt: capturedAt,
       tags: tagsSet.toList(),
       checklist: checklist,
       contentBlocks: checklist.isEmpty
@@ -400,10 +364,100 @@ class NoteService extends ChangeNotifier {
                 )
                 .toList(),
       isPinned: false,
+      reminderAt: reminders
+          .map((reminder) => reminder.triggerDate)
+          .whereType<DateTime>()
+          .firstOrNull,
     );
 
     await addNote(note);
+    if (reminders.isNotEmpty) {
+      unawaited(_scheduleVoiceRemindersInBackground(note.noteId, reminders));
+    }
+    if (detectedLanguage.primaryLanguage == 'en') {
+      unawaited(
+        _enhanceVoiceNoteInBackground(
+          note.noteId,
+          spokenText,
+          preserveSpokenChecklist: spokenChecklist.length >= 2,
+        ),
+      );
+    }
     return note;
+  }
+
+  Future<void> _scheduleVoiceRemindersInBackground(
+    String noteId,
+    List<Reminder> reminders,
+  ) async {
+    final scheduled = await _scheduleExplicitAppleReminders(reminders);
+    final index = _notes.indexWhere((note) => note.noteId == noteId);
+    if (index == -1) return;
+    final current = _notes[index];
+    final tags = current.tags.toSet()..remove('reminder-pending');
+    tags.add(scheduled > 0 ? 'reminder-scheduled' : 'reminder-failed');
+    await updateNote(current.copyWith(tags: tags.toList()));
+  }
+
+  Future<void> _enhanceVoiceNoteInBackground(
+    String noteId,
+    String spokenText, {
+    required bool preserveSpokenChecklist,
+  }) async {
+    try {
+      await ModelAvailabilityService.instance.refresh().timeout(
+        const Duration(seconds: 2),
+      );
+      if (!ModelAvailabilityService.instance.qwen.isReady) return;
+      final provider = QwenLlamaProvider.instance;
+      if (!provider.isLoaded) {
+        await provider.load().timeout(const Duration(seconds: 8));
+      }
+      final richAnalysis = await provider
+          .generateNoteAnalysis(
+            spokenText,
+            noteId: noteId,
+            noteCreatedAt: DateTime.now(),
+          )
+          .timeout(const Duration(seconds: 15));
+      final index = _notes.indexWhere((note) => note.noteId == noteId);
+      if (index == -1) return;
+      final current = _notes[index];
+      final enhancedChecklist = preserveSpokenChecklist
+          ? current.checklist
+          : richAnalysis.actionItems
+                .map((item) => CheckListItem(id: item.id, text: item.task))
+                .toList();
+      final tags = current.tags.toSet()
+        ..addAll(richAnalysis.topics)
+        ..addAll(richAnalysis.suggestedTags);
+      await updateNote(
+        current.copyWith(
+          title: richAnalysis.generatedTitle.trim().isEmpty
+              ? current.title
+              : VoiceNoteTitleService.concise(
+                  proposedTitle: richAnalysis.generatedTitle,
+                  spokenText: spokenText,
+                ),
+          summarySnippet: richAnalysis.summary.trim().isEmpty
+              ? current.summarySnippet
+              : richAnalysis.summary.trim(),
+          tags: tags.toList(),
+          checklist: enhancedChecklist,
+          contentBlocks: enhancedChecklist
+              .map(
+                (item) => NoteBlockData.checklist(
+                  checklistId: item.id,
+                  checklistText: item.text,
+                  checklistCompleted: item.isCompleted,
+                ),
+              )
+              .toList(),
+        ),
+      );
+    } catch (error) {
+      debugPrint('Background voice-note enhancement skipped: $error');
+    }
   }
 
   Future<int> _scheduleExplicitAppleReminders(List<Reminder> reminders) async {

@@ -78,7 +78,18 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
   @override
   void initState() {
     super.initState();
+    NoteService().addListener(_handleNoteServiceUpdate);
     _initSpeechAndStart();
+  }
+
+  void _handleNoteServiceUpdate() {
+    final completed = _completedNote;
+    if (!mounted || completed == null) return;
+    final matches = NoteService().allNotes.where(
+      (note) => note.noteId == completed.noteId,
+    );
+    if (matches.isEmpty) return;
+    setState(() => _completedNote = matches.first);
   }
 
   Future<void> _initSpeechAndStart() async {
@@ -256,8 +267,12 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
 
     var cleanText = _spokenText.trim();
 
-    // Verify audio transcription with offline/multilingual Whisper if available
-    if (recordedPath != null && await File(recordedPath).exists()) {
+    // Live speech is already usable for the common path. Running a second
+    // full-file Whisper pass made every Save feel frozen; reserve it for the
+    // rare case where live recognition did not capture meaningful words.
+    if (!VoiceCaptureValidator.hasMeaningfulSpeech(cleanText) &&
+        recordedPath != null &&
+        await File(recordedPath).exists()) {
       try {
         final langCode = AppPreferences.instance.speechLanguageCode;
         final audioLang = AudioLanguageExt.fromBcp47(langCode);
@@ -273,6 +288,10 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
           await File(recordedPath).delete();
         } catch (_) {}
       }
+    } else if (recordedPath != null) {
+      try {
+        await File(recordedPath).delete();
+      } catch (_) {}
     }
 
     cleanText = VoiceCaptureValidator.sanitizeTranscript(cleanText);
@@ -376,6 +395,7 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
   @override
   void dispose() {
     _durationTimer?.cancel();
+    NoteService().removeListener(_handleNoteServiceUpdate);
     if (_isSpeechAvailable) {
       _speech.stop();
     }
@@ -518,6 +538,10 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
                                     'reminder-scheduled',
                                   )
                                   ? AppColors.accentGreen.withValues(alpha: .12)
+                                  : _completedNote!.tags.contains(
+                                      'reminder-pending',
+                                    )
+                                  ? accent.withValues(alpha: .12)
                                   : const Color(
                                       0xFFFF9F0A,
                                     ).withValues(alpha: .12),
@@ -530,6 +554,10 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
                                         'reminder-scheduled',
                                       )
                                       ? Icons.notifications_active_rounded
+                                      : _completedNote!.tags.contains(
+                                          'reminder-pending',
+                                        )
+                                      ? Icons.schedule_rounded
                                       : Icons.notifications_off_rounded,
                                   size: 18,
                                   color:
@@ -537,6 +565,10 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
                                         'reminder-scheduled',
                                       )
                                       ? AppColors.accentGreen
+                                      : _completedNote!.tags.contains(
+                                          'reminder-pending',
+                                        )
+                                      ? accent
                                       : const Color(0xFFFF9F0A),
                                 ),
                                 const SizedBox(width: 8),
@@ -546,6 +578,10 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
                                           'reminder-scheduled',
                                         )
                                         ? 'iPhone reminder scheduled'
+                                        : _completedNote!.tags.contains(
+                                            'reminder-pending',
+                                          )
+                                        ? 'Saved • scheduling iPhone reminder'
                                         : 'Reminder not scheduled — allow Reminders and Notifications in Settings',
                                     style: GoogleFonts.inter(
                                       fontSize: 12,

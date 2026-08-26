@@ -239,7 +239,8 @@ class VoiceAssistantService extends ChangeNotifier {
             final langCode = AppPreferences.instance.speechLanguageCode;
             final audioLang = AudioLanguageExt.fromBcp47(langCode);
             final provenance = await OfflineSpeechBridge.instance
-                .transcribeAudioFile(audioPath: path, language: audioLang);
+                .transcribeAudioFile(audioPath: path, language: audioLang)
+                .timeout(const Duration(seconds: 10));
             if (provenance.text.trim().isNotEmpty) {
               userSpokenText = VoiceCaptureValidator.sanitizeTranscript(
                 provenance.text,
@@ -296,11 +297,19 @@ class VoiceAssistantService extends ChangeNotifier {
       final queryLang = LanguageDetectionService.detect(
         userSpokenText,
       ).primaryLanguage;
-      var candidates = await HybridRetrievalService.retrieveCandidates(
-        query: userSpokenText,
-        database: AiDatabase(),
-        topK: 6,
-      );
+      List<HybridCandidate> candidates;
+      try {
+        candidates = await HybridRetrievalService.retrieveCandidates(
+          query: userSpokenText,
+          database: AiDatabase(),
+          topK: 6,
+        ).timeout(const Duration(seconds: 8));
+      } on TimeoutException {
+        candidates = _fallbackCandidates(
+          query: userSpokenText,
+          includeRecentNotes: _isBroadSummaryRequest(userSpokenText),
+        );
+      }
 
       // Broad summary requests are intentionally grounded in the user's most
       // recent notes. They should not depend on FTS matching words such as
@@ -319,11 +328,21 @@ class VoiceAssistantService extends ChangeNotifier {
           .where((note) => candidateIds.contains(note.noteId))
           .toList();
 
-      final answer = await HybridRetrievalService.answerQuery(
-        query: userSpokenText,
-        candidates: candidates,
-        queryLanguage: queryLang,
-      );
+      GroundedAnswerResult answer;
+      try {
+        answer = await HybridRetrievalService.answerQuery(
+          query: userSpokenText,
+          candidates: candidates,
+          queryLanguage: queryLang,
+        ).timeout(const Duration(seconds: 12));
+      } on TimeoutException {
+        answer = await HybridRetrievalService.answerQuery(
+          query: userSpokenText,
+          candidates: candidates,
+          queryLanguage: queryLang,
+          forceExtractive: true,
+        );
+      }
 
       _fullGeneratedResponse = answer.displayText;
       _summaryTitle = _isBroadSummaryRequest(userSpokenText)
@@ -665,7 +684,8 @@ class VoiceAssistantService extends ChangeNotifier {
         .join(' ');
     final segments = _aiLyricLines
         .skip(_activeLyricIndex)
-        .map((line) => line.text)
+        .map((line) => SpeechOutputService.cleanSpeechText(line.text))
+        .where((line) => line.isNotEmpty)
         .toList();
 
     try {
@@ -685,7 +705,7 @@ class VoiceAssistantService extends ChangeNotifier {
         );
       }
       _speechStartWatchdog = Timer(
-        const Duration(milliseconds: 1400),
+        const Duration(milliseconds: 2500),
         () async {
           if (_state != VoiceAssistantState.speaking || !_isPlayingAudio) {
             return;

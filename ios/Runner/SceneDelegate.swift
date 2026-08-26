@@ -20,7 +20,7 @@ class SceneDelegate: FlutterSceneDelegate, AVSpeechSynthesizerDelegate {
     private var noteBackupChannel: FlutterMethodChannel?
     private var lockScreenActivityChannel: FlutterMethodChannel?
     private var isChannelRetryScheduled = false
-    private let speechSynthesizer = AVSpeechSynthesizer()
+    private var speechSynthesizer = AVSpeechSynthesizer()
     private var speechSegmentIndices: [ObjectIdentifier: Int] = [:]
     private var finalSpeechSegmentIndex: Int?
 
@@ -450,9 +450,18 @@ class SceneDelegate: FlutterSceneDelegate, AVSpeechSynthesizerDelegate {
             }
             do {
                 let session = AVAudioSession.sharedInstance()
-                try session.setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])
-                try session.setActive(true)
+                speechSegmentIndices.removeAll()
+                finalSpeechSegmentIndex = nil
                 speechSynthesizer.stopSpeaking(at: .immediate)
+                speechSynthesizer.delegate = nil
+                speechSynthesizer = AVSpeechSynthesizer()
+                speechSynthesizer.delegate = self
+                try? session.setActive(
+                    false,
+                    options: [.notifyOthersOnDeactivation]
+                )
+                try session.setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])
+                try session.setActive(true, options: [])
                 let language = arguments["language"] as? String ?? "en-US"
                 let requestedVoiceId = arguments["voiceIdentifier"] as? String
                 let voice = self.bestInstalledVoice(for: language, identifier: requestedVoiceId)
@@ -484,7 +493,9 @@ class SceneDelegate: FlutterSceneDelegate, AVSpeechSynthesizerDelegate {
                     "started": true,
                     "voice": voice?.name ?? "System voice",
                     "voiceIdentifier": voice?.identifier ?? "",
-                    "quality": voiceQualityName(voice?.quality)
+                    "quality": voiceQualityName(voice?.quality),
+                    "route": session.currentRoute.outputs.first?.portName ?? "iPhone speaker",
+                    "outputVolume": session.outputVolume
                 ])
             } catch {
                 result(FlutterError(code: "SPEECH_OUTPUT_FAILED", message: error.localizedDescription, details: nil))

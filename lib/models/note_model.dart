@@ -163,6 +163,7 @@ class NoteModel {
   final List<CheckListItem> checklist;
   final List<NoteBlockData> contentBlocks;
   final int? accentColor;
+  final DateTime? reminderAt;
 
   const NoteModel({
     required this.noteId,
@@ -177,6 +178,7 @@ class NoteModel {
     this.checklist = const [],
     this.contentBlocks = const [],
     this.accentColor,
+    this.reminderAt,
   });
 
   NoteModel copyWith({
@@ -192,6 +194,7 @@ class NoteModel {
     List<CheckListItem>? checklist,
     List<NoteBlockData>? contentBlocks,
     int? accentColor,
+    DateTime? reminderAt,
   }) {
     return NoteModel(
       noteId: noteId ?? this.noteId,
@@ -206,6 +209,7 @@ class NoteModel {
       checklist: checklist ?? this.checklist,
       contentBlocks: contentBlocks ?? this.contentBlocks,
       accentColor: accentColor ?? this.accentColor,
+      reminderAt: reminderAt ?? this.reminderAt,
     );
   }
 
@@ -224,6 +228,7 @@ class NoteModel {
     'checklist': checklist.map((e) => e.toJson()).toList(),
     'content_blocks': contentBlocks.map((e) => e.toJson()).toList(),
     if (accentColor != null) 'accent_color': accentColor,
+    if (reminderAt != null) 'reminder_at': reminderAt!.toIso8601String(),
   };
 
   factory NoteModel.fromJson(Map<String, dynamic> json) {
@@ -263,6 +268,7 @@ class NoteModel {
               .toList() ??
           [],
       accentColor: json['accent_color'] as int?,
+      reminderAt: DateTime.tryParse(json['reminder_at'] as String? ?? ''),
     );
   }
 }

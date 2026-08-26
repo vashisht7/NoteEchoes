@@ -210,6 +210,7 @@ class HybridRetrievalService {
     required String query,
     required List<HybridCandidate> candidates,
     required String queryLanguage,
+    bool forceExtractive = false,
   }) async {
     final citations = <SourceCitation>[];
     final noteIds = <String>[];
@@ -262,7 +263,7 @@ class HybridRetrievalService {
     // produces action JSON instead of a readable report. Conversation mode
     // therefore uses a deterministic, cited extractive report. This keeps the
     // output useful, private, and strictly grounded in saved note text.
-    if (_isSummaryRequest(query)) {
+    if (forceExtractive || _isSummaryRequest(query)) {
       return _extractiveReport(
         query: query,
         candidates: candidates,

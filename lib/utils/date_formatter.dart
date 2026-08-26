@@ -2,12 +2,14 @@
 // Human-readable date and timestamp formatting for NoteEchoes cards and headers.
 
 String formatNoteTimestamp(DateTime dt) {
+  dt = dt.toLocal();
   final now = DateTime.now();
   final isToday =
       now.year == dt.year && now.month == dt.month && now.day == dt.day;
 
   final yesterday = now.subtract(const Duration(days: 1));
-  final isYesterday = yesterday.year == dt.year &&
+  final isYesterday =
+      yesterday.year == dt.year &&
       yesterday.month == dt.month &&
       yesterday.day == dt.day;
 
@@ -28,7 +30,7 @@ String formatNoteTimestamp(DateTime dt) {
     'Sep',
     'Oct',
     'Nov',
-    'Dec'
+    'Dec',
   ];
 
   if (isToday) {
@@ -43,6 +45,7 @@ String formatNoteTimestamp(DateTime dt) {
 }
 
 String formatNoteDateShort(DateTime dt) {
+  dt = dt.toLocal();
   final now = DateTime.now();
   if (now.year == dt.year && now.month == dt.month && now.day == dt.day) {
     final hour = dt.hour == 0 ? 12 : (dt.hour > 12 ? dt.hour - 12 : dt.hour);
@@ -62,7 +65,7 @@ String formatNoteDateShort(DateTime dt) {
     'Sep',
     'Oct',
     'Nov',
-    'Dec'
+    'Dec',
   ];
   return '${months[dt.month - 1]} ${dt.day}';
 }

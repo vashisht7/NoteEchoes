@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../models/note_model.dart';
 import '../theme/app_colors.dart';
 import '../utils/date_formatter.dart';
+import '../services/note_quick_action_service.dart';
 
 class KeepTextNoteCard extends StatelessWidget {
   final NoteModel note;
@@ -23,6 +24,7 @@ class KeepTextNoteCard extends StatelessWidget {
     final accent = Theme.of(context).colorScheme.primary;
     final isVoiceMemo =
         note.tags.contains('voice-memo') || note.tags.contains('voice');
+    final quickAction = NoteQuickActionService.classify(note);
 
     return Semantics(
       button: true,
@@ -145,18 +147,40 @@ class KeepTextNoteCard extends StatelessWidget {
                     height: 1.25,
                   ),
                 ),
-                if (note.tags.contains('reminder-scheduled')) ...[
+                if (note.tags.contains('reminders')) ...[
                   const SizedBox(height: 7),
                   Row(
                     children: [
-                      Icon(Icons.alarm_rounded, size: 13, color: accent),
+                      Icon(
+                        note.tags.contains('reminder-failed')
+                            ? Icons.error_outline_rounded
+                            : note.tags.contains('reminder-pending')
+                            ? Icons.schedule_rounded
+                            : Icons.alarm_rounded,
+                        size: 13,
+                        color: note.tags.contains('reminder-failed')
+                            ? const Color(0xFFFF9F0A)
+                            : accent,
+                      ),
                       const SizedBox(width: 5),
-                      Text(
-                        'Reminder scheduled',
-                        style: GoogleFonts.inter(
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w600,
-                          color: accent,
+                      Expanded(
+                        child: Text(
+                          note.tags.contains('reminder-failed')
+                              ? 'Reminder needs attention'
+                              : note.tags.contains('reminder-pending')
+                              ? 'Scheduling reminder…'
+                              : note.reminderAt == null
+                              ? 'Reminder scheduled'
+                              : 'Reminder • ${formatNoteTimestamp(note.reminderAt!)}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.inter(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w600,
+                            color: note.tags.contains('reminder-failed')
+                                ? const Color(0xFFFF9F0A)
+                                : accent,
+                          ),
                         ),
                       ),
                     ],
@@ -233,44 +257,138 @@ class KeepTextNoteCard extends StatelessWidget {
                   const SizedBox(height: 10),
                 ],
 
-                // Bottom Tags
-                Wrap(
-                  spacing: 5,
-                  runSpacing: 4,
+                // Compact metadata with one predictable action at bottom-right.
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    ...note.tags.take(3).map((tag) {
-                      final isVoiceTag =
-                          tag == 'voice-memos' || tag == 'voice-memo';
-                      return Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 7,
-                          vertical: 2.5,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isVoiceTag
-                              ? accent.withValues(alpha: 0.10)
-                              : AppColors.badgeTag,
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(
-                            color: isVoiceTag
-                                ? accent.withValues(alpha: 0.24)
-                                : Colors.transparent,
-                          ),
-                        ),
-                        child: Text(
-                          "#$tag",
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                            color: isVoiceTag ? accent : AppColors.primaryText,
-                          ),
-                        ),
-                      );
-                    }),
+                    Expanded(
+                      child: Wrap(
+                        spacing: 5,
+                        runSpacing: 4,
+                        children: note.tags
+                            .where(
+                              (tag) => !{
+                                'reminder-pending',
+                                'reminder-scheduled',
+                                'reminder-failed',
+                              }.contains(tag),
+                            )
+                            .take(2)
+                            .map((tag) {
+                              final isVoiceTag =
+                                  tag == 'voice-memos' || tag == 'voice-memo';
+                              return Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 7,
+                                  vertical: 2.5,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: isVoiceTag
+                                      ? accent.withValues(alpha: 0.10)
+                                      : AppColors.badgeTag,
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(
+                                    color: isVoiceTag
+                                        ? accent.withValues(alpha: 0.24)
+                                        : Colors.transparent,
+                                  ),
+                                ),
+                                child: Text(
+                                  "#$tag",
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                    color: isVoiceTag
+                                        ? accent
+                                        : AppColors.primaryText,
+                                  ),
+                                ),
+                              );
+                            })
+                            .toList(),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    _NoteQuickActionButton(
+                      kind: quickAction,
+                      onTap: () async {
+                        if (quickAction == NoteQuickActionKind.message ||
+                            quickAction == NoteQuickActionKind.email) {
+                          final opened =
+                              await NoteQuickActionService.launchComposer(note);
+                          if (!opened && context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Could not open the composer.'),
+                              ),
+                            );
+                          }
+                          return;
+                        }
+                        onTap?.call();
+                      },
+                    ),
                   ],
                 ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NoteQuickActionButton extends StatelessWidget {
+  const _NoteQuickActionButton({required this.kind, required this.onTap});
+
+  final NoteQuickActionKind kind;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = Theme.of(context).colorScheme.primary;
+    final (icon, label, color) = switch (kind) {
+      NoteQuickActionKind.reminder => (
+        Icons.alarm_rounded,
+        'Open reminder note',
+        const Color(0xFFFF9F0A),
+      ),
+      NoteQuickActionKind.checklist => (
+        Icons.checklist_rounded,
+        'Open checklist',
+        AppColors.accentGreen,
+      ),
+      NoteQuickActionKind.email => (
+        Icons.mail_outline_rounded,
+        'Compose email',
+        const Color(0xFF64D2FF),
+      ),
+      NoteQuickActionKind.message => (
+        Icons.chat_bubble_outline_rounded,
+        'Compose message',
+        AppColors.accentGreen,
+      ),
+      NoteQuickActionKind.note => (Icons.notes_rounded, 'Open note', accent),
+    };
+    return Semantics(
+      button: true,
+      label: label,
+      child: Tooltip(
+        message: label,
+        child: InkResponse(
+          key: ValueKey('note_quick_action_${kind.name}'),
+          onTap: onTap,
+          radius: 22,
+          child: Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: .12),
+              shape: BoxShape.circle,
+              border: Border.all(color: color.withValues(alpha: .22)),
+            ),
+            child: Icon(icon, size: 15, color: color),
           ),
         ),
       ),

@@ -17,7 +17,8 @@ class NoteAnalysisResult {
 }
 
 class AiCategorizationEngine {
-  static final AiCategorizationEngine _instance = AiCategorizationEngine._internal();
+  static final AiCategorizationEngine _instance =
+      AiCategorizationEngine._internal();
   factory AiCategorizationEngine() => _instance;
   AiCategorizationEngine._internal();
 
@@ -40,7 +41,8 @@ class AiCategorizationEngine {
     final checklist = <CheckListItem>[];
 
     // 1. Math & Formulas
-    final hasMath = lower.contains("math") ||
+    final hasMath =
+        lower.contains("math") ||
         lower.contains("equation") ||
         lower.contains("formula") ||
         lower.contains("integral") ||
@@ -55,7 +57,8 @@ class AiCategorizationEngine {
     }
 
     // 2. Grocery & Shopping
-    final hasGrocery = lower.contains("grocery") ||
+    final hasGrocery =
+        lower.contains("grocery") ||
         lower.contains("milk") ||
         lower.contains("coffee") ||
         lower.contains("bread") ||
@@ -72,7 +75,8 @@ class AiCategorizationEngine {
     }
 
     // 3. Tasks & Todo Actions
-    final hasTasks = lower.contains("todo") ||
+    final hasTasks =
+        lower.contains("todo") ||
         lower.contains("task") ||
         lower.contains("sprint") ||
         lower.contains("deadline") ||
@@ -88,7 +92,8 @@ class AiCategorizationEngine {
     }
 
     // 4. Meetings & Discussions
-    final hasMeeting = lower.contains("meeting") ||
+    final hasMeeting =
+        lower.contains("meeting") ||
         lower.contains("discussion") ||
         lower.contains("agenda") ||
         lower.contains("client") ||
@@ -101,7 +106,8 @@ class AiCategorizationEngine {
     }
 
     // 5. Ideas & Brainstorming
-    final hasIdeas = lower.contains("idea") ||
+    final hasIdeas =
+        lower.contains("idea") ||
         lower.contains("brainstorm") ||
         lower.contains("concept") ||
         lower.contains("innovation") ||
@@ -114,7 +120,8 @@ class AiCategorizationEngine {
     }
 
     // 6. UI / UX Design & Architecture
-    final hasDesign = lower.contains("design") ||
+    final hasDesign =
+        lower.contains("design") ||
         lower.contains("ui") ||
         lower.contains("ux") ||
         lower.contains("layout") ||
@@ -129,7 +136,8 @@ class AiCategorizationEngine {
     }
 
     // 7. Finance & Expenses
-    final hasFinance = lower.contains("budget") ||
+    final hasFinance =
+        lower.contains("budget") ||
         lower.contains("expense") ||
         lower.contains("cost") ||
         lower.contains("price") ||
@@ -144,7 +152,8 @@ class AiCategorizationEngine {
     }
 
     // 8. Study & Research
-    final hasStudy = lower.contains("study") ||
+    final hasStudy =
+        lower.contains("study") ||
         lower.contains("research") ||
         lower.contains("learn") ||
         lower.contains("paper") ||
@@ -157,7 +166,8 @@ class AiCategorizationEngine {
     }
 
     // 9. Document & PDF Excerpt
-    final hasDoc = lower.contains("pdf") ||
+    final hasDoc =
+        lower.contains("pdf") ||
         lower.contains("document") ||
         lower.contains("table") ||
         lower.contains("specification") ||
@@ -167,7 +177,8 @@ class AiCategorizationEngine {
     }
 
     // 10. Reminders & Alerts
-    final hasReminder = lower.contains("remind") ||
+    final hasReminder =
+        lower.contains("remind") ||
         lower.contains("reminder") ||
         lower.contains("alert") ||
         lower.contains("don't forget") ||
@@ -178,7 +189,8 @@ class AiCategorizationEngine {
     }
 
     // 11. Calendar Events & Schedules
-    final hasEvent = lower.contains("calendar") ||
+    final hasEvent =
+        lower.contains("calendar") ||
         lower.contains("schedule") ||
         lower.contains("appointment") ||
         lower.contains("tomorrow at") ||
@@ -192,8 +204,21 @@ class AiCategorizationEngine {
       categories.add("events");
     }
 
+    final hasEmail = RegExp(
+      r'\b(?:email|e-mail|mail)\b',
+      caseSensitive: false,
+    ).hasMatch(text);
+    if (hasEmail) categories.add('email');
+
+    final hasMessage = RegExp(
+      r'\b(?:message|text|sms|iMessage|WhatsApp)\b',
+      caseSensitive: false,
+    ).hasMatch(text);
+    if (hasMessage) categories.add('message');
+
     // 12. Travel & Trips
-    final hasTravel = lower.contains("flight") ||
+    final hasTravel =
+        lower.contains("flight") ||
         lower.contains("hotel") ||
         lower.contains("airport") ||
         lower.contains("trip") ||
@@ -207,7 +232,8 @@ class AiCategorizationEngine {
     }
 
     // 13. Health & Fitness
-    final hasHealth = lower.contains("workout") ||
+    final hasHealth =
+        lower.contains("workout") ||
         lower.contains("gym") ||
         lower.contains("doctor") ||
         lower.contains("medicine") ||
@@ -231,20 +257,28 @@ class AiCategorizationEngine {
       if (cleanLine.startsWith('- [ ]') || cleanLine.startsWith('- [x]')) {
         final itemText = cleanLine.substring(5).trim();
         if (itemText.isNotEmpty) {
-          checklist.add(CheckListItem(
-            id: "chk_${DateTime.now().millisecondsSinceEpoch}_${checklist.length}",
-            text: itemText,
-            isCompleted: cleanLine.startsWith('- [x]'),
-          ));
+          checklist.add(
+            CheckListItem(
+              id: "chk_${DateTime.now().millisecondsSinceEpoch}_${checklist.length}",
+              text: itemText,
+              isCompleted: cleanLine.startsWith('- [x]'),
+            ),
+          );
         }
-      } else if (cleanLine.startsWith('- ') || cleanLine.startsWith('• ') || RegExp(r'^\d+\.\s+').hasMatch(cleanLine)) {
-        final itemText = cleanLine.replaceFirst(RegExp(r'^[-•\d\.]+\s*'), '').trim();
+      } else if (cleanLine.startsWith('- ') ||
+          cleanLine.startsWith('• ') ||
+          RegExp(r'^\d+\.\s+').hasMatch(cleanLine)) {
+        final itemText = cleanLine
+            .replaceFirst(RegExp(r'^[-•\d\.]+\s*'), '')
+            .trim();
         if (itemText.isNotEmpty && (hasGrocery || hasTasks)) {
-          checklist.add(CheckListItem(
-            id: "chk_${DateTime.now().millisecondsSinceEpoch}_${checklist.length}",
-            text: itemText,
-            isCompleted: false,
-          ));
+          checklist.add(
+            CheckListItem(
+              id: "chk_${DateTime.now().millisecondsSinceEpoch}_${checklist.length}",
+              text: itemText,
+              isCompleted: false,
+            ),
+          );
         }
       }
     }
@@ -266,13 +300,22 @@ class AiCategorizationEngine {
 
   String _generateTitle(String text, Set<String> categories) {
     // 1. Clean leading punctuation, checkboxes, bullet points
-    var cleanText = text.split('\n').first.trim().replaceAll(RegExp(r'^[#\-•\d\.\s]+'), '');
+    var cleanText = text
+        .split('\n')
+        .first
+        .trim()
+        .replaceAll(RegExp(r'^[#\-•\d\.\s]+'), '');
 
     // 2. Strip common conversational filler prefixes for a clean minimal highlight
-    cleanText = cleanText.replaceFirst(
-      RegExp(r"^(remember to|need to|make sure to|don't forget to|hey can you|please|i want to|so i was thinking that|note to self|voice memo|recording|just wanted to)\s+", caseSensitive: false),
-      '',
-    ).trim();
+    cleanText = cleanText
+        .replaceFirst(
+          RegExp(
+            r"^(remember to|need to|make sure to|don't forget to|hey can you|please|i want to|so i was thinking that|note to self|voice memo|recording|just wanted to)\s+",
+            caseSensitive: false,
+          ),
+          '',
+        )
+        .trim();
 
     if (cleanText.isEmpty) {
       cleanText = text.trim();
@@ -286,7 +329,11 @@ class AiCategorizationEngine {
     final words = cleanText.split(RegExp(r'\s+'));
     if (words.length > 5) {
       final shortTitle = words.take(5).join(' ');
-      return _capitalize(shortTitle.length > 32 ? "${shortTitle.substring(0, 30)}..." : shortTitle);
+      return _capitalize(
+        shortTitle.length > 32
+            ? "${shortTitle.substring(0, 30)}..."
+            : shortTitle,
+      );
     }
 
     if (cleanText.length <= 35) {
@@ -295,11 +342,16 @@ class AiCategorizationEngine {
 
     final truncated = cleanText.substring(0, 32);
     final lastSpace = truncated.lastIndexOf(' ');
-    return _capitalize("${lastSpace > 12 ? truncated.substring(0, lastSpace) : truncated}...");
+    return _capitalize(
+      "${lastSpace > 12 ? truncated.substring(0, lastSpace) : truncated}...",
+    );
   }
 
   String _generateSummarySnippet(String text) {
-    final clean = text.replaceAll(RegExp(r'[\#\*\`\$\-]'), '').replaceAll(RegExp(r'\s+'), ' ').trim();
+    final clean = text
+        .replaceAll(RegExp(r'[\#\*\`\$\-]'), '')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
     if (clean.length <= 130) {
       return clean.isNotEmpty ? clean : "Voice recorded thought note.";
     }
