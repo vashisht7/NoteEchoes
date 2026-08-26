@@ -872,7 +872,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = NoteEchoesLiveActivity/NoteEchoesLiveActivity.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 15;
+				CURRENT_PROJECT_VERSION = 16;
 				DEVELOPMENT_TEAM = 8UKWK3U3Y2;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = NoteEchoesLiveActivity/Info.plist;
@@ -882,7 +882,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.10.1;
+				MARKETING_VERSION = 2.10.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.vashisht.notechoes.NoteEchoesLiveActivity;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -899,7 +899,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = NoteEchoesLiveActivity/NoteEchoesLiveActivity.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 15;
+				CURRENT_PROJECT_VERSION = 16;
 				DEVELOPMENT_TEAM = 8UKWK3U3Y2;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = NoteEchoesLiveActivity/Info.plist;
@@ -909,7 +909,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.10.1;
+				MARKETING_VERSION = 2.10.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.vashisht.notechoes.NoteEchoesLiveActivity;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -925,7 +925,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = NoteEchoesLiveActivity/NoteEchoesLiveActivity.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 15;
+				CURRENT_PROJECT_VERSION = 16;
 				DEVELOPMENT_TEAM = 8UKWK3U3Y2;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = NoteEchoesLiveActivity/Info.plist;
@@ -935,7 +935,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.10.1;
+				MARKETING_VERSION = 2.10.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.vashisht.notechoes.NoteEchoesLiveActivity;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;

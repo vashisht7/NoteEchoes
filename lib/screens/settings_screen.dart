@@ -5,6 +5,7 @@ import 'package:permission_handler/permission_handler.dart';
 import '../ai/presentation/ai_model_settings_page.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_preferences.dart';
+import 'noteechoes_guide_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -166,6 +167,51 @@ class _SettingsScreenState extends State<SettingsScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
         children: [
+          const _SectionLabel('Learn NoteEchoes'),
+          _SettingsCard(
+            child: ListTile(
+              key: const ValueKey('noteechoes_guide_tile'),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 7,
+              ),
+              leading: Container(
+                padding: const EdgeInsets.all(9),
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  Icons.auto_awesome_rounded,
+                  color: accent,
+                  size: 20,
+                ),
+              ),
+              title: Text(
+                'NoteEchoes Guide',
+                style: GoogleFonts.inter(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+              subtitle: Text(
+                'Voice commands, examples, and reliable results',
+                style: GoogleFonts.inter(fontSize: 12.5, color: Colors.white54),
+              ),
+              trailing: const Icon(
+                Icons.chevron_right_rounded,
+                color: Colors.white38,
+                size: 20,
+              ),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const NoteEchoesGuideScreen(),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
           const _SectionLabel('Appearance'),
           _SettingsCard(
             child: Padding(
@@ -376,7 +422,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Column(
               children: [
                 Text(
-                  'NoteEchoes v2.10.1',
+                  'NoteEchoes v2.10.2',
                   style: GoogleFonts.inter(
                     color: Colors.white54,
                     fontSize: 13,
@@ -497,11 +543,11 @@ class _SettingsCard extends StatelessWidget {
   const _SettingsCard({required this.child});
 
   @override
-  Widget build(BuildContext context) => Container(
-    decoration: BoxDecoration(
-      color: const Color(0xFF1C1C1E),
+  Widget build(BuildContext context) => Material(
+    color: const Color(0xFF1C1C1E),
+    shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: const Color(0xFF2C2C2E)),
+      side: const BorderSide(color: Color(0xFF2C2C2E)),
     ),
     clipBehavior: Clip.antiAlias,
     child: child,
