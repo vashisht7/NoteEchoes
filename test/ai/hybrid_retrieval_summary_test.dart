@@ -27,10 +27,12 @@ void main() {
         queryLanguage: 'en',
       );
 
-      expect(result.displayText, startsWith('Based on your saved notes:'));
-      expect(result.displayText, contains('Launch plan:'));
+      expect(result.displayText, startsWith('Summary'));
+      expect(result.displayText, contains('Key points'));
+      expect(result.displayText, contains('Sources'));
+      expect(result.displayText, contains('Launch plan'));
       expect(result.displayText, contains('[1]'));
-      expect(result.displayText, contains('Customer feedback:'));
+      expect(result.displayText, contains('Customer feedback'));
       expect(result.displayText, contains('[2]'));
       expect(result.sourceNoteIds, ['launch-plan', 'customer-feedback']);
       expect(

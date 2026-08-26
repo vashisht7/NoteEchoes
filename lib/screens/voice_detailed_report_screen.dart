@@ -84,6 +84,7 @@ class _VoiceDetailedReportScreenState extends State<VoiceDetailedReportScreen> {
   Widget build(BuildContext context) {
     final lines = _voiceService.aiLyricLines;
     final accent = Theme.of(context).colorScheme.primary;
+    final audioError = _voiceService.audioOutputError;
 
     return Scaffold(
       backgroundColor: AppColors.deepMatteBlack,
@@ -146,7 +147,9 @@ class _VoiceDetailedReportScreenState extends State<VoiceDetailedReportScreen> {
                             ),
                             const SizedBox(height: 10),
                             Text(
-                              'Generated from your notes on this device',
+                              _voiceService.contextualNotes.isEmpty
+                                  ? 'Grounded in your saved notes on this device'
+                                  : 'Grounded in ${_voiceService.contextualNotes.length} saved notes on this device',
                               style: GoogleFonts.inter(
                                 fontSize: 12,
                                 color: AppColors.secondaryText,
@@ -159,9 +162,33 @@ class _VoiceDetailedReportScreenState extends State<VoiceDetailedReportScreen> {
 
                     final lineIndex = index - 1;
                     final line = lines[lineIndex];
+                    final isHeading = const {
+                      'Summary',
+                      'Key points',
+                      'Sources',
+                      'सारांश',
+                      'मुख्य बातें',
+                      'स्रोत नोट्स',
+                      'సారాంశం',
+                      'ముఖ్య విషయాలు',
+                      'మూల నోట్స్',
+                    }.contains(line.text);
                     final isActive =
                         lineIndex == _voiceService.activeLyricIndex;
                     final isPast = lineIndex < _voiceService.activeLyricIndex;
+                    if (isHeading) {
+                      return Padding(
+                        padding: const EdgeInsets.fromLTRB(2, 14, 2, 10),
+                        child: Text(
+                          line.text,
+                          style: GoogleFonts.outfit(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primaryText,
+                          ),
+                        ),
+                      );
+                    }
                     return AnimatedContainer(
                       duration: MediaQuery.of(context).disableAnimations
                           ? Duration.zero
@@ -208,16 +235,55 @@ class _VoiceDetailedReportScreenState extends State<VoiceDetailedReportScreen> {
                   top: BorderSide(color: Colors.white.withValues(alpha: 0.07)),
                 ),
               ),
-              child: SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  key: const ValueKey('copy_detailed_report_button'),
-                  onPressed: _copyReport,
-                  icon: Icon(
-                    _copied ? Icons.check_rounded : Icons.copy_rounded,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (audioError != null) ...[
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.volume_off_rounded,
+                          size: 18,
+                          color: Color(0xFFFF9F0A),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            audioError,
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: AppColors.secondaryText,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          key: const ValueKey('replay_detailed_report_button'),
+                          onPressed: _voiceService.restartKaraoke,
+                          icon: const Icon(Icons.volume_up_rounded),
+                          label: const Text('Replay'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: FilledButton.icon(
+                          key: const ValueKey('copy_detailed_report_button'),
+                          onPressed: _copyReport,
+                          icon: Icon(
+                            _copied ? Icons.check_rounded : Icons.copy_rounded,
+                          ),
+                          label: Text(_copied ? 'Copied' : 'Copy report'),
+                        ),
+                      ),
+                    ],
                   ),
-                  label: Text(_copied ? 'Copied' : 'Copy report'),
-                ),
+                ],
               ),
             ),
           ],

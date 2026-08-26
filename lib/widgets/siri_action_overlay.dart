@@ -505,6 +505,59 @@ class _SiriActionOverlayState extends State<SiriActionOverlay>
                             color: Colors.white,
                           ),
                         ),
+                        if (_completedNote!.tags.contains('reminders')) ...[
+                          const SizedBox(height: 10),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
+                            decoration: BoxDecoration(
+                              color:
+                                  _completedNote!.tags.contains(
+                                    'reminder-scheduled',
+                                  )
+                                  ? AppColors.accentGreen.withValues(alpha: .12)
+                                  : const Color(
+                                      0xFFFF9F0A,
+                                    ).withValues(alpha: .12),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  _completedNote!.tags.contains(
+                                        'reminder-scheduled',
+                                      )
+                                      ? Icons.notifications_active_rounded
+                                      : Icons.notifications_off_rounded,
+                                  size: 18,
+                                  color:
+                                      _completedNote!.tags.contains(
+                                        'reminder-scheduled',
+                                      )
+                                      ? AppColors.accentGreen
+                                      : const Color(0xFFFF9F0A),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    _completedNote!.tags.contains(
+                                          'reminder-scheduled',
+                                        )
+                                        ? 'iPhone reminder scheduled'
+                                        : 'Reminder not scheduled — allow Reminders and Notifications in Settings',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white70,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: 6),
                         Text(
                           _completedNote?.textContent ?? '',

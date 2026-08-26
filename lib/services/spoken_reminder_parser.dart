@@ -45,7 +45,7 @@ class SpokenReminderParser {
     result = result.replaceAll(
       RegExp(
         r'\b(?:today|tomorrow|repu|ivala|kal|aaj|next\s+\w+)\b|'
-        r'\bin\s+\d{1,3}\s+(?:minutes?|hours?)\b|'
+        r'\bin\s+(?:(?:\d{1,3})|(?:a|an|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty)(?:[-\s](?:one|two|three|four|five|six|seven|eight|nine))?)\s+(?:minutes?|hours?)\b|'
         r'\b(?:at|by)\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)?\b|'
         r'ఈరోజు|రేపు|आज|कल|'
         r'\d{1,2}(?::\d{2})?\s*(?:గంటలకు|గంటకి|बजे)',

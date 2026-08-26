@@ -287,14 +287,14 @@ class SceneDelegate: FlutterSceneDelegate, AVSpeechSynthesizerDelegate {
         case "requestReminderPermissions":
             if #available(iOS 17.0, *) {
                 eventStore.requestFullAccessToReminders { granted, _ in
-                    ReminderNotificationCoordinator.requestPermission {
-                        DispatchQueue.main.async { result(granted) }
+                    ReminderNotificationCoordinator.requestPermission { notificationsGranted in
+                        DispatchQueue.main.async { result(granted && notificationsGranted) }
                     }
                 }
             } else {
                 eventStore.requestAccess(to: .reminder) { granted, _ in
-                    ReminderNotificationCoordinator.requestPermission {
-                        DispatchQueue.main.async { result(granted) }
+                    ReminderNotificationCoordinator.requestPermission { notificationsGranted in
+                        DispatchQueue.main.async { result(granted && notificationsGranted) }
                     }
                 }
             }
@@ -363,7 +363,10 @@ class SceneDelegate: FlutterSceneDelegate, AVSpeechSynthesizerDelegate {
             }
             if let dueMs = args["dueDateMs"] as? Double {
                 let dueDate = Date(timeIntervalSince1970: dueMs / 1000.0)
-                reminder.dueDateComponents = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: dueDate)
+                reminder.dueDateComponents = Calendar.current.dateComponents(
+                    [.year, .month, .day, .hour, .minute, .second],
+                    from: dueDate
+                )
                 reminder.addAlarm(EKAlarm(absoluteDate: dueDate))
             }
             reminder.calendar = eventStore.defaultCalendarForNewReminders()
@@ -374,7 +377,20 @@ class SceneDelegate: FlutterSceneDelegate, AVSpeechSynthesizerDelegate {
                         title: title,
                         dueDate: dueDate,
                         reminderIdentifier: reminder.calendarItemIdentifier
-                    )
+                    ) { error in
+                        DispatchQueue.main.async {
+                            if let error {
+                                result(FlutterError(
+                                    code: "REMINDER_NOTIFICATION_FAILED",
+                                    message: error.localizedDescription,
+                                    details: reminder.calendarItemIdentifier
+                                ))
+                            } else {
+                                result(reminder.calendarItemIdentifier)
+                            }
+                        }
+                    }
+                    return
                 }
                 result(reminder.calendarItemIdentifier)
             } catch {

@@ -100,6 +100,7 @@ class VoiceAssistantService extends ChangeNotifier {
   StreamSubscription<Amplitude>? _amplitudeSub;
   Timer? _orbitalStepTimer;
   Timer? _karaokeTimer;
+  Timer? _speechStartWatchdog;
   String? _currentRecordingPath;
   bool _isProcessingQuery = false;
 
@@ -110,6 +111,8 @@ class VoiceAssistantService extends ChangeNotifier {
         final arguments = call.arguments as Map?;
         final index = arguments?['index'] as int?;
         if (index == null || index < 0 || index >= _aiLyricLines.length) return;
+        _speechStartWatchdog?.cancel();
+        _audioOutputError = null;
         _karaokeTimer?.cancel();
         _activeLyricIndex = index;
         _isPlayingAudio = true;
@@ -199,6 +202,7 @@ class VoiceAssistantService extends ChangeNotifier {
     _amplitudeSub?.cancel();
     _orbitalStepTimer?.cancel();
     _karaokeTimer?.cancel();
+    _speechStartWatchdog?.cancel();
     _isPlayingAudio = false;
 
     if (Platform.environment.containsKey('FLUTTER_TEST')) {
@@ -307,6 +311,13 @@ class VoiceAssistantService extends ChangeNotifier {
           includeRecentNotes: _isBroadSummaryRequest(userSpokenText),
         );
       }
+      candidates = _hydrateCandidates(candidates);
+      final candidateIds = candidates
+          .map((candidate) => candidate.noteId)
+          .toSet();
+      _contextualNotes = NoteService().allNotes
+          .where((note) => candidateIds.contains(note.noteId))
+          .toList();
 
       final answer = await HybridRetrievalService.answerQuery(
         query: userSpokenText,
@@ -315,9 +326,11 @@ class VoiceAssistantService extends ChangeNotifier {
       );
 
       _fullGeneratedResponse = answer.displayText;
-      _summaryTitle = candidates.isNotEmpty
+      _summaryTitle = _isBroadSummaryRequest(userSpokenText)
+          ? 'Conversation summary'
+          : candidates.isNotEmpty
           ? candidates.first.title
-          : "Notes Summary";
+          : 'Notes Summary';
 
       // Setup lyric lines for Karaoke
       final parts = answer.displayText
@@ -403,9 +416,7 @@ class VoiceAssistantService extends ChangeNotifier {
 
     return ranked.take(6).map((entry) {
       final note = entry.note;
-      final passage = note.textContent.trim().isNotEmpty
-          ? note.textContent.trim()
-          : note.summarySnippet.trim();
+      final passage = _notePassage(note);
       return HybridCandidate(
         noteId: note.noteId,
         title: note.title,
@@ -415,6 +426,49 @@ class VoiceAssistantService extends ChangeNotifier {
         updatedAt: note.createdAt.millisecondsSinceEpoch,
       );
     }).toList();
+  }
+
+  List<HybridCandidate> _hydrateCandidates(List<HybridCandidate> candidates) {
+    final notesById = {
+      for (final note in NoteService().allNotes) note.noteId: note,
+    };
+    return candidates
+        .map((candidate) {
+          final note = notesById[candidate.noteId];
+          if (note == null) return candidate;
+          final passage = _notePassage(note);
+          return HybridCandidate(
+            noteId: candidate.noteId,
+            title: note.title.trim().isEmpty ? 'Untitled note' : note.title,
+            passageText: passage,
+            ftsRank: candidate.ftsRank,
+            semanticRank: candidate.semanticRank,
+            rrfScore: candidate.rrfScore,
+            isPinned: note.isPinned,
+            updatedAt: note.createdAt.millisecondsSinceEpoch,
+          );
+        })
+        .where((candidate) => candidate.passageText.trim().isNotEmpty)
+        .toList();
+  }
+
+  String _notePassage(NoteModel note) {
+    final parts = <String>[
+      if (note.textContent.trim().isNotEmpty) note.textContent.trim(),
+      if (note.textContent.trim().isEmpty &&
+          note.summarySnippet.trim().isNotEmpty)
+        note.summarySnippet.trim(),
+      ...note.checklist
+          .where((item) => item.text.trim().isNotEmpty)
+          .map(
+            (item) =>
+                '${item.isCompleted ? 'Done' : 'To do'}: ${item.text.trim()}',
+          ),
+      ...note.contentBlocks
+          .map((block) => block.searchableText.trim())
+          .where((text) => text.isNotEmpty),
+    ];
+    return parts.toSet().join('\n');
   }
 
   Future<void> transitionToSpeakingState() async {
@@ -427,7 +481,11 @@ class VoiceAssistantService extends ChangeNotifier {
       _setupResponseLyrics();
     }
 
-    _startKaraokePlayback();
+    // Give iOS a moment to release the recording route before activating the
+    // speaker. This prevents the first utterance from being silently queued.
+    if (!Platform.environment.containsKey('FLUTTER_TEST')) {
+      await Future<void>.delayed(const Duration(milliseconds: 180));
+    }
     await _speakRemainingResponse();
 
     notifyListeners();
@@ -471,6 +529,7 @@ class VoiceAssistantService extends ChangeNotifier {
   void transitionToListeningState() {
     _orbitalStepTimer?.cancel();
     _karaokeTimer?.cancel();
+    _speechStartWatchdog?.cancel();
     _speechOutputChannel.invokeMethod<void>('stop').catchError((_) {});
 
     startVoiceSession();
@@ -485,7 +544,6 @@ class VoiceAssistantService extends ChangeNotifier {
     _isPlayingAudio = !_isPlayingAudio;
     if (_isPlayingAudio) {
       _speakRemainingResponse();
-      _startKaraokePlayback(startAt: _activeLyricIndex);
     } else {
       _speechOutputChannel.invokeMethod<void>('stop').catchError((_) {});
       _karaokeTimer?.cancel();
@@ -496,7 +554,6 @@ class VoiceAssistantService extends ChangeNotifier {
   void restartKaraoke() {
     _activeLyricIndex = 0;
     _isPlayingAudio = true;
-    _startKaraokePlayback();
     _speakRemainingResponse();
     notifyListeners();
   }
@@ -612,55 +669,49 @@ class VoiceAssistantService extends ChangeNotifier {
         .toList();
 
     try {
-      await _speechOutputChannel
-          .invokeMethod<Object?>('speak', {
+      _speechStartWatchdog?.cancel();
+      final response = await _speechOutputChannel
+          .invokeMapMethod<String, dynamic>('speak', {
             'text': text,
             'segments': segments,
             'startIndex': _activeLyricIndex,
             'language': _speechLocale,
           })
-          .timeout(const Duration(milliseconds: 200), onTimeout: () => null);
-      _audioOutputError = null;
+          .timeout(const Duration(seconds: 3));
+      if (response?['started'] != true) {
+        throw PlatformException(
+          code: 'SPEECH_NOT_STARTED',
+          message: 'The iPhone speaker did not start.',
+        );
+      }
+      _speechStartWatchdog = Timer(
+        const Duration(milliseconds: 1400),
+        () async {
+          if (_state != VoiceAssistantState.speaking || !_isPlayingAudio) {
+            return;
+          }
+          final status = await audioOutputStatus();
+          if (status['speaking'] != true) {
+            _isPlayingAudio = false;
+            _audioOutputError =
+                'Voice could not start. Tap Replay and check iPhone volume.';
+            notifyListeners();
+          }
+        },
+      );
     } on MissingPluginException {
       _audioOutputError = 'Spoken output is available when running on iPhone.';
     } on PlatformException catch (error) {
       _audioOutputError =
           error.message ?? 'Could not play the spoken response.';
-    } catch (_) {}
-    notifyListeners();
-  }
-
-  void _startKaraokePlayback({int startAt = 0}) {
-    if (Platform.environment.containsKey('FLUTTER_TEST')) return;
-    _karaokeTimer?.cancel();
-    _karaokeTimer = null;
-    int current = startAt;
-
-    void scheduleNext() {
-      if (!_isPlayingAudio || _state != VoiceAssistantState.speaking) {
-        _karaokeTimer?.cancel();
-        _karaokeTimer = null;
-        return;
-      }
-
-      if (current < _aiLyricLines.length) {
-        _activeLyricIndex = current;
-        notifyListeners();
-
-        final duration = _aiLyricLines[current].duration;
-        current++;
-        _karaokeTimer = Timer(duration, () {
-          scheduleNext();
-        });
-      } else {
-        _isPlayingAudio = false;
-        _karaokeTimer?.cancel();
-        _karaokeTimer = null;
-        notifyListeners();
-      }
+    } on TimeoutException {
+      _isPlayingAudio = false;
+      _audioOutputError = 'Voice took too long to start. Tap Replay.';
+    } catch (_) {
+      _isPlayingAudio = false;
+      _audioOutputError = 'Could not play the spoken response. Tap Replay.';
     }
-
-    scheduleNext();
+    notifyListeners();
   }
 
   void _cleanupTempAudio() {
@@ -678,6 +729,7 @@ class VoiceAssistantService extends ChangeNotifier {
     _amplitudeSub?.cancel();
     _orbitalStepTimer?.cancel();
     _karaokeTimer?.cancel();
+    _speechStartWatchdog?.cancel();
     _cleanupTempAudio();
     super.dispose();
   }

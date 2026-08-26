@@ -371,9 +371,10 @@ class NoteService extends ChangeNotifier {
       }
     }
 
+    if (reminders.isNotEmpty) tagsSet.add('reminders');
     final scheduledReminders = await _scheduleExplicitAppleReminders(reminders);
     if (scheduledReminders > 0) {
-      tagsSet.addAll({'reminders', 'reminder-scheduled'});
+      tagsSet.add('reminder-scheduled');
     }
 
     final note = NoteModel(

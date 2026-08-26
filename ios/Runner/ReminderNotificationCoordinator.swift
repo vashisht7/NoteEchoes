@@ -28,18 +28,26 @@ enum ReminderNotificationCoordinator {
         ])
     }
 
-    static func requestPermission(completion: @escaping () -> Void) {
+    static func requestPermission(completion: @escaping (Bool) -> Void) {
         UNUserNotificationCenter.current().requestAuthorization(
             options: [.alert, .sound, .badge]
-        ) { _, _ in completion() }
+        ) { granted, _ in completion(granted) }
     }
 
     static func schedule(
         title: String,
         dueDate: Date,
-        reminderIdentifier: String
+        reminderIdentifier: String,
+        completion: ((Error?) -> Void)? = nil
     ) {
-        guard dueDate > Date() else { return }
+        guard dueDate > Date() else {
+            completion?(NSError(
+                domain: "NoteEchoesReminder",
+                code: 1,
+                userInfo: [NSLocalizedDescriptionKey: "Reminder time is in the past."]
+            ))
+            return
+        }
         let content = UNMutableNotificationContent()
         content.title = "Reminder"
         content.body = title
@@ -65,7 +73,9 @@ enum ReminderNotificationCoordinator {
                 repeats: false
             )
         )
-        UNUserNotificationCenter.current().add(request)
+        UNUserNotificationCenter.current().add(request) { error in
+            completion?(error)
+        }
     }
 
     static func handle(
@@ -120,7 +130,7 @@ enum ReminderNotificationCoordinator {
               ) as? EKReminder else { return }
         reminder.alarms = [EKAlarm(absoluteDate: date)]
         reminder.dueDateComponents = Calendar.current.dateComponents(
-            [.year, .month, .day, .hour, .minute],
+            [.year, .month, .day, .hour, .minute, .second],
             from: date
         )
         try? eventStore.save(reminder, commit: true)

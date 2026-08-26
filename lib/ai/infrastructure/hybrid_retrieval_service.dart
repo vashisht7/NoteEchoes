@@ -358,20 +358,42 @@ Grounded Answer:''';
     required List<String> noteIds,
     required String queryLanguage,
   }) {
-    final heading = switch (queryLanguage) {
-      'te' => 'మీ నోట్స్ ఆధారంగా:',
-      'hi' => 'आपके नोट्स के आधार पर:',
-      _ => 'Based on your saved notes:',
+    final summaryHeading = switch (queryLanguage) {
+      'te' => 'సారాంశం',
+      'hi' => 'सारांश',
+      _ => 'Summary',
     };
-    final lines = <String>[heading];
+    final keyPointsHeading = switch (queryLanguage) {
+      'te' => 'ముఖ్య విషయాలు',
+      'hi' => 'मुख्य बातें',
+      _ => 'Key points',
+    };
+    final sourcesHeading = switch (queryLanguage) {
+      'te' => 'మూల నోట్స్',
+      'hi' => 'स्रोत नोट्स',
+      _ => 'Sources',
+    };
+    final excerpts = candidates
+        .map((candidate) => _conciseExcerpt(candidate.passageText))
+        .where((excerpt) => excerpt.isNotEmpty)
+        .toList();
+    final opening = excerpts.isEmpty
+        ? switch (queryLanguage) {
+            'te' => 'ఎంచుకున్న నోట్స్‌లో సారాంశం చేయడానికి వచనం లేదు.',
+            'hi' => 'चुने गए नोट्स में सारांश बनाने के लिए सामग्री नहीं है।',
+            _ => 'The selected notes do not contain text to summarize.',
+          }
+        : excerpts.take(2).join(' ');
+    final lines = <String>[summaryHeading, opening, keyPointsHeading];
     for (var index = 0; index < candidates.length; index++) {
       final candidate = candidates[index];
       final excerpt = _conciseExcerpt(candidate.passageText);
-      lines.add(
-        excerpt.isEmpty
-            ? '${index + 1}. ${candidate.title} [${index + 1}]'
-            : '${index + 1}. ${candidate.title}: $excerpt [${index + 1}]',
-      );
+      if (excerpt.isNotEmpty) lines.add('• $excerpt [${index + 1}]');
+    }
+    lines.add(sourcesHeading);
+    for (var index = 0; index < candidates.length; index++) {
+      final title = candidates[index].title.trim();
+      lines.add('• ${title.isEmpty ? 'Untitled note' : title} [${index + 1}]');
     }
     final report = lines.join('\n\n');
     return GroundedAnswerResult(

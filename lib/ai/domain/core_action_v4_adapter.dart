@@ -179,11 +179,11 @@ class CoreActionV4Adapter {
     if (spoken.isEmpty) return null;
     final lower = spoken.toLowerCase();
     final relative = RegExp(
-      r'\bin\s+(\d{1,3})\s+(minute|minutes|hour|hours)\b',
+      r'\bin\s+((?:\d{1,3})|(?:a|an|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty)(?:[-\s](?:one|two|three|four|five|six|seven|eight|nine))?)\s+(minute|minutes|hour|hours)\b',
       caseSensitive: false,
     ).firstMatch(lower);
     if (relative != null) {
-      final amount = int.tryParse(relative.group(1)!) ?? 0;
+      final amount = _spokenNumber(relative.group(1)!) ?? 0;
       if (amount > 0) {
         return relative.group(2)!.startsWith('hour')
             ? base.add(Duration(hours: amount))
@@ -275,6 +275,46 @@ class CoreActionV4Adapter {
 
   static DateTime? parseSpokenDateTime(String value, DateTime base) =>
       _parseDate(value, null, base);
+
+  static int? _spokenNumber(String value) {
+    final normalized = value.toLowerCase().replaceAll('-', ' ').trim();
+    final direct = int.tryParse(normalized);
+    if (direct != null) return direct;
+    if (normalized == 'a' || normalized == 'an') return 1;
+    const units = {
+      'one': 1,
+      'two': 2,
+      'three': 3,
+      'four': 4,
+      'five': 5,
+      'six': 6,
+      'seven': 7,
+      'eight': 8,
+      'nine': 9,
+      'ten': 10,
+      'eleven': 11,
+      'twelve': 12,
+      'thirteen': 13,
+      'fourteen': 14,
+      'fifteen': 15,
+      'sixteen': 16,
+      'seventeen': 17,
+      'eighteen': 18,
+      'nineteen': 19,
+    };
+    if (units[normalized] case final value?) return value;
+    const tens = {
+      'twenty': 20,
+      'thirty': 30,
+      'forty': 40,
+      'fifty': 50,
+      'sixty': 60,
+    };
+    final words = normalized.split(RegExp(r'\s+'));
+    final tensValue = tens[words.first];
+    if (tensValue == null) return null;
+    return words.length == 1 ? tensValue : tensValue + (units[words[1]] ?? 0);
+  }
 
   static String _safeTitle(String value) {
     final compact = value.trim().replaceAll(RegExp(r'\s+'), ' ');

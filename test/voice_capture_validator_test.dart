@@ -55,4 +55,13 @@ void main() {
       isTrue,
     );
   });
+
+  test('removes plain gasp words and their punctuation', () {
+    expect(
+      VoiceCaptureValidator.sanitizeTranscript(
+        'Gasp. Remind me to call Ravi, breathing.',
+      ),
+      'Remind me to call Ravi',
+    );
+  });
 }

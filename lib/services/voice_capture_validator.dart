@@ -63,11 +63,18 @@ class VoiceCaptureValidator {
     caseSensitive: false,
   );
 
+  static final _plainNonSpeech = RegExp(
+    r'(?:[,.;:!?]\s*)?(?<![\p{L}\p{N}])(?:gasp(?:s|ing)?|sigh(?:s|ing)?|breath(?:ing)?|cough(?:ing)?|sniff(?:ing)?|laugh(?:ter|ing)?|background\s+noise|inaudible|silence)(?![\p{L}\p{N}])(?:\s*[,.;:!?])?',
+    caseSensitive: false,
+    unicode: true,
+  );
+
   /// Removes transcription annotations that describe sounds rather than words.
   /// Meaningful speech around an annotation is preserved verbatim.
   static String sanitizeTranscript(String value) => value
       .replaceAll(_annotatedNonSpeech, ' ')
       .replaceAll(_asteriskNonSpeech, ' ')
+      .replaceAll(_plainNonSpeech, ' ')
       .replaceAll(RegExp(r'\s+'), ' ')
       .trim();
 

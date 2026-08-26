@@ -22,6 +22,37 @@ void main() {
     expect(reminder?.triggerDate, now.add(const Duration(minutes: 2)));
   });
 
+  test('supports the natural one-minute phrase used on iPhone', () {
+    final now = DateTime(2026, 8, 26, 10, 15);
+    final reminder = SpokenReminderParser.parse(
+      'Remind me in one minute to check app',
+      now: now,
+    );
+
+    expect(reminder, isNotNull);
+    expect(reminder!.triggerDate, now.add(const Duration(minutes: 1)));
+    expect(reminder.title.toLowerCase(), contains('check app'));
+    expect(reminder.title.toLowerCase(), isNot(contains('one minute')));
+  });
+
+  test('supports a and compound spoken relative times', () {
+    final now = DateTime(2026, 8, 26, 10);
+    expect(
+      SpokenReminderParser.parse(
+        'Remind me in a minute to stand up',
+        now: now,
+      )?.triggerDate,
+      now.add(const Duration(minutes: 1)),
+    );
+    expect(
+      SpokenReminderParser.parse(
+        'Remind me in twenty one minutes to leave',
+        now: now,
+      )?.triggerDate,
+      now.add(const Duration(minutes: 21)),
+    );
+  });
+
   test('does not create a reminder without a specific time', () {
     expect(
       SpokenReminderParser.parse(

@@ -44,6 +44,25 @@ import UserNotifications
         )
     }
 
+    override func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification,
+        withCompletionHandler completionHandler: @escaping (
+            UNNotificationPresentationOptions
+        ) -> Void
+    ) {
+        if notification.request.content.categoryIdentifier ==
+            ReminderNotificationCoordinator.categoryIdentifier {
+            completionHandler([.banner, .list, .sound, .badge])
+            return
+        }
+        super.userNotificationCenter(
+            center,
+            willPresent: notification,
+            withCompletionHandler: completionHandler
+        )
+    }
+
     func didInitializeImplicitFlutterEngine(
         _ engineBridge: FlutterImplicitEngineBridge
     ) {

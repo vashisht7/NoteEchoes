@@ -264,6 +264,10 @@ void main() {
       final sheet = find.byKey(const ValueKey('voice_report_sheet'));
       expect(sheet, findsOneWidget);
       expect(find.text('Report ready'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('replay_detailed_report_button')),
+        findsOneWidget,
+      );
       final expandButton = find.widgetWithIcon(
         IconButton,
         Icons.open_in_full_rounded,
