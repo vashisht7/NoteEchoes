@@ -376,7 +376,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Column(
               children: [
                 Text(
-                  'NoteEchoes v2.10.0',
+                  'NoteEchoes v2.10.1',
                   style: GoogleFonts.inter(
                     color: Colors.white54,
                     fontSize: 13,

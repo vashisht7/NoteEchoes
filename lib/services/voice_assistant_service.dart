@@ -496,7 +496,7 @@ class VoiceAssistantService extends ChangeNotifier {
   Future<void> transitionToSpeakingState() async {
     _orbitalStepTimer?.cancel();
     _state = VoiceAssistantState.speaking;
-    _isPlayingAudio = true;
+    _isPlayingAudio = false;
     _activeLyricIndex = 0;
 
     if (_aiLyricLines.isEmpty) {
@@ -563,21 +563,19 @@ class VoiceAssistantService extends ChangeNotifier {
   }
 
   void togglePlayPause() {
-    _isPlayingAudio = !_isPlayingAudio;
     if (_isPlayingAudio) {
-      _speakRemainingResponse();
-    } else {
+      _isPlayingAudio = false;
       _speechOutputChannel.invokeMethod<void>('stop').catchError((_) {});
       _karaokeTimer?.cancel();
+      notifyListeners();
+    } else {
+      _speakRemainingResponse();
     }
-    notifyListeners();
   }
 
   void restartKaraoke() {
     _activeLyricIndex = 0;
-    _isPlayingAudio = true;
     _speakRemainingResponse();
-    notifyListeners();
   }
 
   @visibleForTesting
@@ -693,6 +691,9 @@ class VoiceAssistantService extends ChangeNotifier {
 
     try {
       _speechStartWatchdog?.cancel();
+      _isPlayingAudio = false;
+      _audioOutputError = null;
+      notifyListeners();
       final response = await _speechOutputChannel
           .invokeMapMethod<String, dynamic>('speak', {
             'text': text,
@@ -700,7 +701,7 @@ class VoiceAssistantService extends ChangeNotifier {
             'startIndex': _activeLyricIndex,
             'language': _speechLocale,
           })
-          .timeout(const Duration(seconds: 3));
+          .timeout(const Duration(seconds: 5));
       if (response?['started'] != true) {
         throw PlatformException(
           code: 'SPEECH_NOT_STARTED',
@@ -723,7 +724,9 @@ class VoiceAssistantService extends ChangeNotifier {
         },
       );
     } on MissingPluginException {
-      _audioOutputError = 'Spoken output is available when running on iPhone.';
+      _isPlayingAudio = false;
+      _audioOutputError =
+          'The iPhone speech bridge did not load. Close and reopen NoteEchoes.';
     } on PlatformException catch (error) {
       _audioOutputError =
           error.message ?? 'Could not play the spoken response.';

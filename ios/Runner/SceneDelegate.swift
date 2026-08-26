@@ -1,10 +1,9 @@
 import Flutter
 import UIKit
-import AVFoundation
 import EventKit
 import UserNotifications
 
-class SceneDelegate: FlutterSceneDelegate, AVSpeechSynthesizerDelegate {
+class SceneDelegate: FlutterSceneDelegate {
     private let actionChannelName =
         "com.vashisht.notechoes/action_button"
 
@@ -16,13 +15,9 @@ class SceneDelegate: FlutterSceneDelegate, AVSpeechSynthesizerDelegate {
     private var actionChannel: FlutterMethodChannel?
     private var mlxChannel: FlutterMethodChannel?
     private var pdfVisionChannel: FlutterMethodChannel?
-    private var speechOutputChannel: FlutterMethodChannel?
     private var noteBackupChannel: FlutterMethodChannel?
     private var lockScreenActivityChannel: FlutterMethodChannel?
     private var isChannelRetryScheduled = false
-    private var speechSynthesizer = AVSpeechSynthesizer()
-    private var speechSegmentIndices: [ObjectIdentifier: Int] = [:]
-    private var finalSpeechSegmentIndex: Int?
 
     override func scene(
         _ scene: UIScene,
@@ -134,16 +129,6 @@ class SceneDelegate: FlutterSceneDelegate, AVSpeechSynthesizerDelegate {
             default:
                 result(FlutterMethodNotImplemented)
             }
-        }
-
-        let speechOutputChannel = FlutterMethodChannel(
-            name: "notechoes/speech_output",
-            binaryMessenger: flutterViewController.binaryMessenger
-        )
-        self.speechOutputChannel = speechOutputChannel
-        speechSynthesizer.delegate = self
-        speechOutputChannel.setMethodCallHandler { [weak self] call, result in
-            self?.handleSpeechOutput(call, result: result)
         }
 
         let noteBackupChannel = FlutterMethodChannel(
@@ -433,196 +418,6 @@ class SceneDelegate: FlutterSceneDelegate, AVSpeechSynthesizerDelegate {
 
         default:
             result(FlutterMethodNotImplemented)
-        }
-    }
-
-    private func handleSpeechOutput(
-        _ call: FlutterMethodCall,
-        result: @escaping FlutterResult
-    ) {
-        switch call.method {
-        case "speak":
-            guard let arguments = call.arguments as? [String: Any],
-                  let text = arguments["text"] as? String,
-                  !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-                result(FlutterError(code: "INVALID_SPEECH", message: "Text is required.", details: nil))
-                return
-            }
-            do {
-                let session = AVAudioSession.sharedInstance()
-                speechSegmentIndices.removeAll()
-                finalSpeechSegmentIndex = nil
-                speechSynthesizer.stopSpeaking(at: .immediate)
-                speechSynthesizer.delegate = nil
-                speechSynthesizer = AVSpeechSynthesizer()
-                speechSynthesizer.delegate = self
-                try? session.setActive(
-                    false,
-                    options: [.notifyOthersOnDeactivation]
-                )
-                // Voice-prompt mode reliably hands recording audio back to
-                // speech output, supports AirPods, and defaults to the iPhone
-                // speaker when no Bluetooth route is active.
-                try session.setCategory(
-                    .playAndRecord,
-                    mode: .voicePrompt,
-                    options: [.defaultToSpeaker, .allowBluetoothHFP, .allowBluetoothA2DP, .duckOthers]
-                )
-                try session.setActive(true, options: [])
-                let language = arguments["language"] as? String ?? "en-US"
-                let requestedVoiceId = arguments["voiceIdentifier"] as? String
-                let voice = self.bestInstalledVoice(for: language, identifier: requestedVoiceId)
-                let customRate = (arguments["rate"] as? Double) ?? 0.88
-                let customPitch = (arguments["pitch"] as? Double) ?? 0.98
-                let suppliedSegments = arguments["segments"] as? [String]
-                let sentences = suppliedSegments?.filter {
-                    !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                } ?? naturalSpeechSegments(from: text)
-                let startIndex = arguments["startIndex"] as? Int ?? 0
-                speechSegmentIndices.removeAll()
-                finalSpeechSegmentIndex = sentences.isEmpty
-                    ? nil
-                    : startIndex + sentences.count - 1
-
-                for (index, sentence) in sentences.enumerated() {
-                    let utterance = AVSpeechUtterance(string: sentence)
-                    speechSegmentIndices[ObjectIdentifier(utterance)] =
-                        startIndex + index
-                    utterance.voice = voice
-                    utterance.rate = Float(AVSpeechUtteranceDefaultSpeechRate) * Float(customRate)
-                    utterance.pitchMultiplier = Float(customPitch)
-                    utterance.volume = 1.0
-                    utterance.preUtteranceDelay = index == 0 ? 0.02 : 0.06
-                    utterance.postUtteranceDelay = 0.05
-                    speechSynthesizer.speak(utterance)
-                }
-                result([
-                    "started": true,
-                    "voice": voice?.name ?? "System voice",
-                    "voiceIdentifier": voice?.identifier ?? "",
-                    "quality": voiceQualityName(voice?.quality),
-                    "route": session.currentRoute.outputs.first?.portName ?? "iPhone speaker",
-                    "outputVolume": session.outputVolume
-                ])
-            } catch {
-                result(FlutterError(code: "SPEECH_OUTPUT_FAILED", message: error.localizedDescription, details: nil))
-            }
-        case "stop":
-            speechSynthesizer.stopSpeaking(at: .immediate)
-            speechSegmentIndices.removeAll()
-            finalSpeechSegmentIndex = nil
-            result(true)
-        case "getAvailableVoices":
-            let voices = AVSpeechSynthesisVoice.speechVoices().map { v in
-                return [
-                    "identifier": v.identifier,
-                    "name": v.name,
-                    "language": v.language,
-                    "quality": voiceQualityName(v.quality),
-                    "gender": v.gender == .female ? "female" : (v.gender == .male ? "male" : "unspecified")
-                ]
-            }
-            result(voices)
-        case "audioStatus":
-            let session = AVAudioSession.sharedInstance()
-            result([
-                "outputVolume": session.outputVolume,
-                "route": session.currentRoute.outputs.first?.portName ?? "iPhone speaker",
-                "speaking": speechSynthesizer.isSpeaking,
-                "voice": bestInstalledVoice(for: "en-US")?.name ?? "System voice",
-                "voiceQuality": voiceQualityName(bestInstalledVoice(for: "en-US")?.quality)
-            ])
-        default:
-            result(FlutterMethodNotImplemented)
-        }
-    }
-
-    func speechSynthesizer(
-        _ synthesizer: AVSpeechSynthesizer,
-        didStart utterance: AVSpeechUtterance
-    ) {
-        guard let index = speechSegmentIndices[ObjectIdentifier(utterance)] else {
-            return
-        }
-        speechOutputChannel?.invokeMethod(
-            "onSpeechSegment",
-            arguments: ["index": index]
-        )
-    }
-
-    func speechSynthesizer(
-        _ synthesizer: AVSpeechSynthesizer,
-        didFinish utterance: AVSpeechUtterance
-    ) {
-        let identifier = ObjectIdentifier(utterance)
-        guard let index = speechSegmentIndices.removeValue(forKey: identifier) else {
-            return
-        }
-        if index == finalSpeechSegmentIndex {
-            finalSpeechSegmentIndex = nil
-            speechOutputChannel?.invokeMethod(
-                "onSpeechFinished",
-                arguments: nil
-            )
-        }
-    }
-
-    func speechSynthesizer(
-        _ synthesizer: AVSpeechSynthesizer,
-        didCancel utterance: AVSpeechUtterance
-    ) {
-        speechSegmentIndices.removeValue(forKey: ObjectIdentifier(utterance))
-    }
-
-    private func bestInstalledVoice(
-        for requestedLanguage: String,
-        identifier: String? = nil
-    ) -> AVSpeechSynthesisVoice? {
-        let allVoices = AVSpeechSynthesisVoice.speechVoices()
-        if let id = identifier, let matched = allVoices.first(where: { $0.identifier == id }) {
-            return matched
-        }
-
-        let normalized = requestedLanguage.lowercased()
-        let languageCode = normalized.split(separator: "-").first.map(String.init)
-            ?? normalized
-        let matching = allVoices.filter { voice in
-            let candidate = voice.language.lowercased()
-            return candidate == normalized || candidate.hasPrefix("\(languageCode)-")
-        }
-
-        return matching.sorted { first, second in
-            if first.quality.rawValue != second.quality.rawValue {
-                return first.quality.rawValue > second.quality.rawValue
-            }
-            let firstExact = first.language.lowercased() == normalized
-            let secondExact = second.language.lowercased() == normalized
-            if firstExact != secondExact { return firstExact }
-            return first.name.localizedCaseInsensitiveCompare(second.name)
-                == .orderedAscending
-        }.first ?? AVSpeechSynthesisVoice(language: requestedLanguage)
-    }
-
-    private func naturalSpeechSegments(from text: String) -> [String] {
-        var segments: [String] = []
-        text.enumerateSubstrings(
-            in: text.startIndex..<text.endIndex,
-            options: [.bySentences, .substringNotRequired]
-        ) { _, range, _, _ in
-            let sentence = text[range]
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-            if !sentence.isEmpty { segments.append(sentence) }
-        }
-        return segments.isEmpty ? [text] : segments
-    }
-
-    private func voiceQualityName(
-        _ quality: AVSpeechSynthesisVoiceQuality?
-    ) -> String {
-        switch quality {
-        case .premium: return "Premium"
-        case .enhanced: return "Enhanced"
-        default: return "Standard"
         }
     }
 
