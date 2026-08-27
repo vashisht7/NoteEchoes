@@ -440,6 +440,10 @@ class _BestResultsCard extends StatelessWidget {
         const _Tip(
           text: 'Use an exact time for reminders and calendar events.',
         ),
+        const _Tip(
+          text:
+              'After asking a question, pause naturally—NoteEchoes starts searching automatically.',
+        ),
         const _Tip(text: 'Say “first,” “second,” and “third” for a checklist.'),
         const _Tip(
           text: 'Say “cancel” before saving if you want to discard it.',
@@ -447,6 +451,10 @@ class _BestResultsCard extends StatelessWidget {
         const _Tip(
           text:
               'Review reminders, events, messages, and emails before confirming.',
+        ),
+        const _Tip(
+          text:
+              'If your notes do not contain the answer, conversation mode can use an attributed web source while online.',
         ),
         const SizedBox(height: 14),
         Container(

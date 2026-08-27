@@ -86,7 +86,6 @@ class _VoiceDetailedReportScreenState extends State<VoiceDetailedReportScreen> {
   @override
   Widget build(BuildContext context) {
     final accent = Theme.of(context).colorScheme.primary;
-    final sourceCount = _voiceService.contextualNotes.length;
     final blocks = _reportBlocks(_voiceService.fullGeneratedResponse);
     final audioError = _voiceService.audioOutputError;
 
@@ -167,9 +166,7 @@ class _VoiceDetailedReportScreenState extends State<VoiceDetailedReportScreen> {
                               ),
                               const SizedBox(height: 7),
                               Text(
-                                sourceCount == 0
-                                    ? 'Private • On-device'
-                                    : '$sourceCount sources • Private • On-device',
+                                _voiceService.reportSourceLabel,
                                 style: GoogleFonts.inter(
                                   fontSize: 11.5,
                                   fontWeight: FontWeight.w500,

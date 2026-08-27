@@ -36,6 +36,7 @@ class AppPreferences extends ChangeNotifier {
 
   String get speechLanguageLabel => switch (_speechLanguageCode) {
     'te' => 'Telugu',
+    'te-en-mixed' => 'Telugu & English Mixed',
     'hi' => 'Hindi',
     'auto' => 'Automatic',
     _ => 'English',
@@ -55,7 +56,7 @@ class AppPreferences extends ChangeNotifier {
   }
 
   Future<void> setSpeechLanguage(String code) async {
-    if (!const {'en', 'te', 'hi', 'auto'}.contains(code) ||
+    if (!const {'en', 'te', 'te-en-mixed', 'hi', 'auto'}.contains(code) ||
         code == _speechLanguageCode) {
       return;
     }

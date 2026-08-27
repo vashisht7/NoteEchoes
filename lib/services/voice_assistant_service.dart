@@ -21,6 +21,7 @@ import 'speech_output_service.dart';
 import 'checklist_status_service.dart';
 import 'personal_memory_answer_service.dart';
 import 'voice_capture_validator.dart';
+import 'web_knowledge_service.dart';
 
 enum VoiceAssistantState {
   listening, // Real mic recording + live amplitude ripple
@@ -51,7 +52,8 @@ class VoiceAssistantService extends ChangeNotifier {
     _speechOutputChannel.setMethodCallHandler(_handleSpeechOutputCallback);
   }
 
-  final AudioRecorder _audioRecorder = AudioRecorder();
+  AudioRecorder? _audioRecorder;
+  AudioRecorder get _recorder => _audioRecorder ??= AudioRecorder();
   static const _speechOutputChannel = MethodChannel('noteechoes/speech_output');
 
   VoiceAssistantState _state = VoiceAssistantState.listening;
@@ -95,6 +97,12 @@ class VoiceAssistantService extends ChangeNotifier {
   String _summaryTitle = "Notes Summary & Grounded Insights";
   String get summaryTitle => _summaryTitle;
 
+  String _processingStatus = 'Listening…';
+  String get processingStatus => _processingStatus;
+
+  String _reportSourceLabel = 'Private • On-device';
+  String get reportSourceLabel => _reportSourceLabel;
+
   String _fullGeneratedResponse = "";
   String get fullGeneratedResponse => _fullGeneratedResponse;
 
@@ -102,8 +110,18 @@ class VoiceAssistantService extends ChangeNotifier {
   Timer? _orbitalStepTimer;
   Timer? _karaokeTimer;
   Timer? _speechStartWatchdog;
+  Timer? _silenceTimer;
   String? _currentRecordingPath;
   bool _isProcessingQuery = false;
+  bool _heardVoiceActivity = false;
+  bool _autoSubmitTriggered = false;
+  DateTime? _recordingStartedAt;
+  DateTime? _lastVoiceActivityAt;
+  int _queryEpoch = 0;
+  String _activeResponseLocale = 'en-US';
+  WebKnowledgeService? _webKnowledgeService;
+  WebKnowledgeService get _webKnowledge =>
+      _webKnowledgeService ??= WebKnowledgeService();
 
   Future<void> _handleSpeechOutputCallback(MethodCall call) async {
     if (_state != VoiceAssistantState.speaking) return;
@@ -129,6 +147,8 @@ class VoiceAssistantService extends ChangeNotifier {
 
   /// Starts real conversational microphone session.
   Future<void> startVoiceSession({String? initialPrompt}) async {
+    _queryEpoch++;
+    _isProcessingQuery = false;
     _state = VoiceAssistantState.listening;
     _userTranscriptLines.clear();
     _activeOrbitNoteIndex = 0;
@@ -136,6 +156,12 @@ class VoiceAssistantService extends ChangeNotifier {
     _activeLyricIndex = 0;
     _isPlayingAudio = false;
     _audioOutputError = null;
+    _fullGeneratedResponse = '';
+    _aiLyricLines = [];
+    _summaryTitle = 'Conversation';
+    _reportSourceLabel = 'Private • On-device';
+    _processingStatus = 'Listening…';
+    _activeResponseLocale = _preferredSpeechLocale;
 
     if (initialPrompt != null && initialPrompt.isNotEmpty) {
       _currentActiveUserSentence = initialPrompt;
@@ -146,6 +172,11 @@ class VoiceAssistantService extends ChangeNotifier {
     _contextualNotes = NoteService().allNotes.take(4).toList();
     notifyListeners();
 
+    if (!Platform.environment.containsKey('FLUTTER_TEST')) {
+      try {
+        await _speechOutputChannel.invokeMethod<void>('stop');
+      } catch (_) {}
+    }
     await _startRealMicrophoneCapture();
   }
 
@@ -157,37 +188,52 @@ class VoiceAssistantService extends ChangeNotifier {
     }
 
     try {
-      final hasPermission = await _audioRecorder.hasPermission().timeout(
-        const Duration(milliseconds: 250),
+      final hasPermission = await _recorder.hasPermission().timeout(
+        const Duration(seconds: 2),
         onTimeout: () => false,
       );
       if (!hasPermission) {
-        _currentActiveUserSentence = "Microphone ready.";
+        _currentActiveUserSentence =
+            "Microphone permission is required to hear your question.";
         notifyListeners();
         return;
       }
 
       final tempDir = await getTemporaryDirectory().timeout(
-        const Duration(milliseconds: 250),
+        const Duration(seconds: 1),
         onTimeout: () => Directory.systemTemp,
       );
       final audioPath =
           '${tempDir.path}/voice_assistant_${DateTime.now().millisecondsSinceEpoch}.m4a';
       _currentRecordingPath = audioPath;
 
-      await _audioRecorder.start(
+      await _recorder.start(
         const RecordConfig(encoder: AudioEncoder.aacLc, sampleRate: 16000),
         path: audioPath,
       );
 
+      _recordingStartedAt = DateTime.now();
+      _lastVoiceActivityAt = null;
+      _heardVoiceActivity = false;
+      _autoSubmitTriggered = false;
+      _startSilenceMonitor();
+
       _amplitudeSub?.cancel();
-      _amplitudeSub = _audioRecorder
+      _amplitudeSub = _recorder
           .onAmplitudeChanged(const Duration(milliseconds: 60))
           .listen((amp) {
             if (_state == VoiceAssistantState.listening) {
               // Normalize -60dB -> 0dB to 0.0 -> 1.0
               final normalized = ((amp.current + 50.0) / 50.0).clamp(0.08, 1.0);
               _micAmplitude = normalized;
+              if (amp.current > -42.0) {
+                _lastVoiceActivityAt = DateTime.now();
+                if (!_heardVoiceActivity) {
+                  _heardVoiceActivity = true;
+                  _currentActiveUserSentence =
+                      "I hear you — pause when your question is finished.";
+                }
+              }
               notifyListeners();
             }
           });
@@ -200,10 +246,13 @@ class VoiceAssistantService extends ChangeNotifier {
 
   /// Stops voice session and cleans up resources.
   Future<void> stopVoiceSession() async {
+    _queryEpoch++;
+    _isProcessingQuery = false;
     _amplitudeSub?.cancel();
     _orbitalStepTimer?.cancel();
     _karaokeTimer?.cancel();
     _speechStartWatchdog?.cancel();
+    _silenceTimer?.cancel();
     _isPlayingAudio = false;
 
     if (Platform.environment.containsKey('FLUTTER_TEST')) {
@@ -212,8 +261,8 @@ class VoiceAssistantService extends ChangeNotifier {
     }
 
     try {
-      if (await _audioRecorder.isRecording()) {
-        await _audioRecorder.stop();
+      if (await _recorder.isRecording()) {
+        await _recorder.stop();
       }
       _cleanupTempAudio();
     } catch (_) {}
@@ -222,20 +271,93 @@ class VoiceAssistantService extends ChangeNotifier {
     notifyListeners();
   }
 
+  void _startSilenceMonitor() {
+    _silenceTimer?.cancel();
+    _silenceTimer = Timer.periodic(const Duration(milliseconds: 220), (_) {
+      if (_state != VoiceAssistantState.listening || _autoSubmitTriggered) {
+        return;
+      }
+      final now = DateTime.now();
+      final startedAt = _recordingStartedAt;
+      if (startedAt == null) return;
+      final listeningFor = now.difference(startedAt);
+      final lastVoice = _lastVoiceActivityAt;
+      if (_shouldAutoSubmit(
+        heardVoice: _heardVoiceActivity,
+        listeningFor: listeningFor,
+        silenceFor: lastVoice == null
+            ? Duration.zero
+            : now.difference(lastVoice),
+      )) {
+        _autoSubmitTriggered = true;
+        _silenceTimer?.cancel();
+        unawaited(transitionToThinkingState());
+      } else if (!_heardVoiceActivity &&
+          listeningFor >= const Duration(seconds: 20)) {
+        _recordingStartedAt = now;
+        _currentActiveUserSentence =
+            "Still listening — ask whenever you are ready.";
+        notifyListeners();
+      }
+    });
+  }
+
+  static bool _shouldAutoSubmit({
+    required bool heardVoice,
+    required Duration listeningFor,
+    required Duration silenceFor,
+  }) =>
+      heardVoice &&
+      listeningFor >= const Duration(milliseconds: 1400) &&
+      silenceFor >= const Duration(milliseconds: 1050);
+
+  @visibleForTesting
+  static bool shouldAutoSubmitForTesting({
+    required bool heardVoice,
+    required Duration listeningFor,
+    required Duration silenceFor,
+  }) => _shouldAutoSubmit(
+    heardVoice: heardVoice,
+    listeningFor: listeningFor,
+    silenceFor: silenceFor,
+  );
+
   /// Transitions to thinking state and executes hybrid grounded retrieval.
   Future<void> transitionToThinkingState([String? customPrompt]) async {
     _amplitudeSub?.cancel();
+    _silenceTimer?.cancel();
 
     if (_isProcessingQuery) return;
     _isProcessingQuery = true;
+    final queryEpoch = ++_queryEpoch;
+
+    _state = VoiceAssistantState.thinking;
+    _processingStatus = customPrompt?.trim().isNotEmpty == true
+        ? 'Understanding your question…'
+        : 'Transcribing your question…';
+    _activeOrbitNoteIndex = 0;
+    _orbitalAngleDegrees = 0.0;
+    _fullGeneratedResponse = '';
+    _aiLyricLines = [];
+    _summaryTitle = 'Working on your question';
+    _contextualNotes = [];
+    _reportSourceLabel = 'Private • On-device';
+    _audioOutputError = null;
+    notifyListeners();
+    _startOrbitalStepScanner();
 
     String userSpokenText = customPrompt ?? "";
+    String? stoppedRecordingPath;
 
-    // If we were recording audio, stop and transcribe via Whisper
-    if (userSpokenText.isEmpty && _currentRecordingPath != null) {
+    // Always release the microphone before retrieval or playback. A typed
+    // question must not leave the recorder holding the iOS audio session.
+    if (_currentRecordingPath != null) {
       try {
-        if (await _audioRecorder.isRecording()) {
-          final path = await _audioRecorder.stop();
+        if (await _recorder.isRecording()) {
+          stoppedRecordingPath = await _recorder.stop();
+        }
+        if (userSpokenText.isEmpty) {
+          final path = stoppedRecordingPath ?? _currentRecordingPath;
           if (path != null && File(path).existsSync()) {
             final langCode = AppPreferences.instance.speechLanguageCode;
             final audioLang = AudioLanguageExt.fromBcp47(langCode);
@@ -255,21 +377,32 @@ class VoiceAssistantService extends ChangeNotifier {
     }
 
     _cleanupTempAudio();
+    if (queryEpoch != _queryEpoch) return;
 
     userSpokenText = VoiceCaptureValidator.sanitizeTranscript(userSpokenText);
     if (!VoiceCaptureValidator.hasMeaningfulSpeech(userSpokenText)) {
-      userSpokenText = "Discuss and summarize my notes";
+      _isProcessingQuery = false;
+      _state = VoiceAssistantState.listening;
+      _processingStatus = 'Listening…';
+      _currentActiveUserSentence =
+          "I didn't catch a complete question. Please try again.";
+      _orbitalStepTimer?.cancel();
+      notifyListeners();
+      if (!Platform.environment.containsKey('FLUTTER_TEST')) {
+        await Future<void>.delayed(const Duration(milliseconds: 450));
+        if (queryEpoch == _queryEpoch) await _startRealMicrophoneCapture();
+      }
+      return;
     }
 
     _currentActiveUserSentence = userSpokenText;
     _userTranscriptLines.add(userSpokenText);
-
-    _state = VoiceAssistantState.thinking;
-    _activeOrbitNoteIndex = 0;
-    _orbitalAngleDegrees = 0.0;
+    final queryLang = LanguageDetectionService.detect(
+      userSpokenText,
+    ).primaryLanguage;
+    _activeResponseLocale = _speechLocaleForLanguage(queryLang);
+    _processingStatus = 'Searching your notes…';
     notifyListeners();
-
-    _startOrbitalStepScanner();
 
     // Perform Grounded Retrieval
     try {
@@ -278,8 +411,11 @@ class VoiceAssistantService extends ChangeNotifier {
         NoteService().allNotes,
       );
       if (memoryAnswer != null) {
+        if (queryEpoch != _queryEpoch) return;
         _contextualNotes = memoryAnswer.sourceNotes;
+        _reportSourceLabel = 'Your notes • Private • On-device';
         _setGeneratedResponse(memoryAnswer.title, memoryAnswer.text);
+        _processingStatus = 'Report ready';
         return await transitionToSpeakingState();
       }
 
@@ -288,14 +424,14 @@ class VoiceAssistantService extends ChangeNotifier {
         NoteService().allNotes,
       );
       if (checklistAnswer != null) {
+        if (queryEpoch != _queryEpoch) return;
         _contextualNotes = [checklistAnswer.note];
+        _reportSourceLabel = 'Your notes • Private • On-device';
         _setGeneratedResponse(checklistAnswer.note.title, checklistAnswer.text);
+        _processingStatus = 'Report ready';
         return await transitionToSpeakingState();
       }
 
-      final queryLang = LanguageDetectionService.detect(
-        userSpokenText,
-      ).primaryLanguage;
       List<HybridCandidate> candidates;
       try {
         candidates = await HybridRetrievalService.retrieveCandidates(
@@ -320,12 +456,29 @@ class VoiceAssistantService extends ChangeNotifier {
         );
       }
       candidates = _hydrateCandidates(candidates);
+      candidates = _relevantCandidates(userSpokenText, candidates);
+
+      if (candidates.isEmpty) {
+        if (queryEpoch != _queryEpoch) return;
+        await _answerFromWeb(
+          question: userSpokenText,
+          queryLanguage: queryLang,
+          queryEpoch: queryEpoch,
+        );
+        if (queryEpoch != _queryEpoch) return;
+        _processingStatus = 'Report ready';
+        return await transitionToSpeakingState();
+      }
+
       final candidateIds = candidates
           .map((candidate) => candidate.noteId)
           .toSet();
       _contextualNotes = NoteService().allNotes
           .where((note) => candidateIds.contains(note.noteId))
           .toList();
+      _reportSourceLabel = 'Your notes • Private • On-device';
+      _processingStatus = 'Preparing a grounded answer…';
+      notifyListeners();
 
       GroundedAnswerResult answer;
       try {
@@ -342,6 +495,7 @@ class VoiceAssistantService extends ChangeNotifier {
           forceExtractive: true,
         );
       }
+      if (queryEpoch != _queryEpoch) return;
 
       final title = _isBroadSummaryRequest(userSpokenText)
           ? 'Conversation summary'
@@ -350,14 +504,21 @@ class VoiceAssistantService extends ChangeNotifier {
           : 'Notes Summary';
 
       _setGeneratedResponse(title, answer.displayText);
+      _processingStatus = 'Report ready';
     } catch (e) {
       debugPrint("[VoiceAssistant] Grounded answer error: $e");
-      _setupResponseLyrics();
+      _contextualNotes = [];
+      _reportSourceLabel = 'No source used';
+      _setGeneratedResponse(
+        'I couldn’t complete that answer',
+        'I could not reliably answer that question. Please try again in a moment.',
+      );
+      _processingStatus = 'Report ready';
     } finally {
-      _isProcessingQuery = false;
+      if (queryEpoch == _queryEpoch) _isProcessingQuery = false;
     }
 
-    await transitionToSpeakingState();
+    if (queryEpoch == _queryEpoch) await transitionToSpeakingState();
   }
 
   void _setGeneratedResponse(String title, String text) {
@@ -393,6 +554,130 @@ class VoiceAssistantService extends ChangeNotifier {
       ];
     }
   }
+
+  Future<void> _answerFromWeb({
+    required String question,
+    required String queryLanguage,
+    required int queryEpoch,
+  }) async {
+    _processingStatus = 'Not found in notes • Searching the web…';
+    _contextualNotes = [];
+    notifyListeners();
+
+    final result = await _webKnowledge.answer(
+      question,
+      languageCode: queryLanguage,
+    );
+    if (queryEpoch != _queryEpoch) return;
+    switch (result.status) {
+      case WebKnowledgeStatus.answered:
+        _reportSourceLabel = 'Web • Wikipedia';
+        final sourceUrl = result.sourceUrl?.toString() ?? '';
+        _setGeneratedResponse(
+          result.sourceTitle,
+          '${result.answer}\n\nSources\n\n• ${result.sourceTitle}'
+          '${sourceUrl.isEmpty ? '' : '\n$sourceUrl'}',
+        );
+        return;
+      case WebKnowledgeStatus.offline:
+        _reportSourceLabel = 'No source used';
+        _setGeneratedResponse(
+          'Not found in your notes',
+          'There is nothing about that in your notes, and the web is not available right now. Connect to the internet and ask me again if you want me to search the web.',
+        );
+        return;
+      case WebKnowledgeStatus.noReliableResult:
+        _reportSourceLabel = 'No reliable source found';
+        _setGeneratedResponse(
+          'I need a little more detail',
+          'There is nothing about that in your notes, and I could not find a reliable web answer. Try asking again with a more specific name or topic.',
+        );
+        return;
+    }
+  }
+
+  List<HybridCandidate> _relevantCandidates(
+    String query,
+    List<HybridCandidate> candidates,
+  ) {
+    if (_isBroadSummaryRequest(query)) return candidates;
+    final terms = query
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^\p{L}\p{N}\s]+', unicode: true), ' ')
+        .split(RegExp(r'\s+'))
+        .where((term) => term.length >= 2 && !_queryStopWords.contains(term))
+        .toSet();
+    if (terms.isEmpty) return const [];
+    return candidates.where((candidate) {
+      final candidateTerms = '${candidate.title} ${candidate.passageText}'
+          .toLowerCase();
+      final tokens = candidateTerms
+          .replaceAll(RegExp(r'[^\p{L}\p{N}\s]+', unicode: true), ' ')
+          .split(RegExp(r'\s+'))
+          .where((term) => term.isNotEmpty)
+          .toSet();
+      return terms.any(tokens.contains);
+    }).toList();
+  }
+
+  @visibleForTesting
+  bool hasRelevantEvidenceForTesting({
+    required String query,
+    required String title,
+    required String text,
+  }) => _relevantCandidates(query, [
+    HybridCandidate(
+      noteId: 'test-note',
+      title: title,
+      passageText: text,
+      rrfScore: 1,
+    ),
+  ]).isNotEmpty;
+
+  static const _queryStopWords = <String>{
+    'about',
+    'and',
+    'answer',
+    'calculate',
+    'could',
+    'explain',
+    'for',
+    'find',
+    'from',
+    'give',
+    'have',
+    'how',
+    'in',
+    'is',
+    'it',
+    'know',
+    'me',
+    'my',
+    'notes',
+    'of',
+    'on',
+    'or',
+    'please',
+    'show',
+    'tell',
+    'to',
+    'that',
+    'the',
+    'their',
+    'there',
+    'these',
+    'this',
+    'value',
+    'what',
+    'when',
+    'where',
+    'which',
+    'who',
+    'why',
+    'with',
+    'would',
+    'your',
+  };
 
   bool _isBroadSummaryRequest(String query) {
     final lower = query.toLowerCase();
@@ -557,6 +842,28 @@ class VoiceAssistantService extends ChangeNotifier {
     startVoiceSession();
   }
 
+  Future<void> handleRecognitionLanguageChanged() async {
+    _queryEpoch++;
+    _silenceTimer?.cancel();
+    _amplitudeSub?.cancel();
+    _isProcessingQuery = false;
+    _isPlayingAudio = false;
+    _audioOutputError = null;
+    _activeResponseLocale = _preferredSpeechLocale;
+    if (!Platform.environment.containsKey('FLUTTER_TEST')) {
+      try {
+        if (await _recorder.isRecording()) {
+          await _recorder.stop();
+        }
+      } catch (_) {}
+      try {
+        await _speechOutputChannel.invokeMethod<void>('stop');
+      } catch (_) {}
+    }
+    _cleanupTempAudio();
+    notifyListeners();
+  }
+
   void setManualQuery(String query) {
     _currentActiveUserSentence = query;
     transitionToThinkingState(query);
@@ -669,12 +976,22 @@ class VoiceAssistantService extends ChangeNotifier {
     _fullGeneratedResponse = lines.map((l) => l.text).join('\n\n');
   }
 
-  String get _speechLocale =>
+  String get _preferredSpeechLocale =>
       switch (AppPreferences.instance.speechLanguageCode) {
         'te' => 'te-IN',
+        'te-en-mixed' => 'te-IN',
         'hi' => 'hi-IN',
         _ => 'en-US',
       };
+
+  String _speechLocaleForLanguage(String language) => switch (language) {
+    'te' => 'te-IN',
+    'mixed' => 'te-IN',
+    'hi' => 'hi-IN',
+    _ => 'en-US',
+  };
+
+  String get _speechLocale => _activeResponseLocale;
 
   Future<void> _speakRemainingResponse() async {
     if (Platform.environment.containsKey('FLUTTER_TEST')) return;
@@ -701,7 +1018,7 @@ class VoiceAssistantService extends ChangeNotifier {
             'startIndex': _activeLyricIndex,
             'language': _speechLocale,
           })
-          .timeout(const Duration(seconds: 5));
+          .timeout(const Duration(seconds: 8));
       if (response?['started'] != true) {
         throw PlatformException(
           code: 'SPEECH_NOT_STARTED',
@@ -756,6 +1073,7 @@ class VoiceAssistantService extends ChangeNotifier {
     _orbitalStepTimer?.cancel();
     _karaokeTimer?.cancel();
     _speechStartWatchdog?.cancel();
+    _silenceTimer?.cancel();
     _cleanupTempAudio();
     super.dispose();
   }

@@ -37,6 +37,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
   List<NoteNode> _candidateNodes = [];
   bool _didCheckAudio = false;
   bool _reportSheetVisible = false;
+  final TextEditingController _questionController = TextEditingController();
 
   // Thoughts revolving loop dynamically generated from real user notes
   List<String> get _thoughtSuggestions {
@@ -223,6 +224,14 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
     ).showSnackBar(const SnackBar(content: Text('Response copied')));
   }
 
+  void _submitTypedQuestion(String value) {
+    final question = value.trim();
+    if (question.isEmpty) return;
+    FocusScope.of(context).unfocus();
+    _questionController.clear();
+    _voiceService.setManualQuery(question);
+  }
+
   Future<void> _saveAiResponseAsNote() async {
     final text = _voiceService.fullGeneratedResponse.isNotEmpty
         ? _voiceService.fullGeneratedResponse
@@ -262,6 +271,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
     _voiceService.stopVoiceSession();
     _animationController.dispose();
     _wheelScrollController.dispose();
+    _questionController.dispose();
     super.dispose();
   }
 
@@ -385,10 +395,10 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
                     Flexible(
                       child: Text(
                         _state == VoiceState.listening
-                            ? 'Listening'
+                            ? 'Listening automatically'
                             : _state == VoiceState.thinking
-                            ? 'Gathering context'
-                            : 'Responding',
+                            ? _voiceService.processingStatus
+                            : 'Speaking your answer',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.inter(
@@ -516,6 +526,39 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              Container(
+                decoration: BoxDecoration(
+                  color: AppColors.elevation1.withValues(alpha: 0.94),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.glassBorderBright),
+                ),
+                child: TextField(
+                  key: const ValueKey('conversation_question_field'),
+                  controller: _questionController,
+                  textInputAction: TextInputAction.send,
+                  onSubmitted: _submitTypedQuestion,
+                  style: GoogleFonts.inter(color: Colors.white, fontSize: 13),
+                  decoration: InputDecoration(
+                    hintText: 'Or type a question…',
+                    hintStyle: GoogleFonts.inter(
+                      color: AppColors.secondaryText,
+                      fontSize: 13,
+                    ),
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.fromLTRB(14, 12, 4, 12),
+                    suffixIcon: IconButton(
+                      tooltip: 'Ask question',
+                      onPressed: () =>
+                          _submitTypedQuestion(_questionController.text),
+                      icon: Icon(
+                        Icons.arrow_upward_rounded,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
               if (!ModelAvailabilityService.instance.qwen.isReady) ...[
                 Semantics(
                   button: true,
@@ -630,6 +673,8 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
   Widget _buildMemoryNetwork({required bool showResult}) {
     final accent = Theme.of(context).colorScheme.primary;
     final contextual = _voiceService.contextualNotes;
+    final searchingWeb = _voiceService.processingStatus.contains('web');
+    final canShowRecentNotes = !searchingWeb && !showResult;
     final nodes = contextual.isNotEmpty
         ? contextual.take(6).map((note) {
             return NoteNode(
@@ -640,7 +685,9 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
                   : note.textContent,
             );
           }).toList()
-        : _candidateNodes.take(6).toList();
+        : canShowRecentNotes
+        ? _candidateNodes.take(6).toList()
+        : <NoteNode>[];
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -719,7 +766,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
                 child: Column(
                   children: [
                     Text(
-                      'Connecting the right memories',
+                      _voiceService.processingStatus,
                       textAlign: TextAlign.center,
                       style: GoogleFonts.outfit(
                         fontSize: 16,
@@ -729,7 +776,9 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
                     ),
                     const SizedBox(height: 5),
                     Text(
-                      'Your notes stay on this device',
+                      _voiceService.processingStatus.contains('web')
+                          ? 'Using an attributed public web source'
+                          : 'Your notes stay on this device',
                       style: GoogleFonts.inter(
                         fontSize: 11,
                         color: AppColors.secondaryText,

@@ -97,6 +97,14 @@ import AVFoundation
                     SpeechOutputChannelService.shared.runDeviceSmokeTest()
                 }
             }
+            if ProcessInfo.processInfo.arguments.contains(
+                "--noteechoes-speech-language-switch-test"
+            ) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    SpeechOutputChannelService.shared
+                        .runLanguageSwitchSmokeTest()
+                }
+            }
         }
     }
 }
@@ -163,7 +171,7 @@ final class SpeechOutputChannelService: NSObject,
     static let shared = SpeechOutputChannelService()
 
     private var channel: FlutterMethodChannel?
-    private let synthesizer = AVSpeechSynthesizer()
+    private var synthesizer = AVSpeechSynthesizer()
     private var segmentIndices: [ObjectIdentifier: Int] = [:]
     private var finalSegmentIndex: Int?
     private var pendingStartResult: FlutterResult?
@@ -201,6 +209,41 @@ final class SpeechOutputChannelService: NSObject,
         }
     }
 
+    /// Reproduces the reported Telugu-to-English sequence and proves a fresh
+    /// synthesizer can start the new language after interrupting the old one.
+    func runLanguageSwitchSmokeTest() {
+        speak(
+            text: "నోట్ ఎకోస్ తెలుగు వాయిస్ సిద్ధంగా ఉంది.",
+            arguments: [
+                "language": "te-IN",
+                "segments": ["నోట్ ఎకోస్ తెలుగు వాయిస్ సిద్ధంగా ఉంది."],
+                "startIndex": 0
+            ]
+        ) { response in
+            print(
+                "[NoteEchoesSpeech] Telugu switch test: "
+                    + "\(String(describing: response))"
+            )
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            self.speak(
+                text: "NoteEchoes switched back to English successfully.",
+                arguments: [
+                    "language": "en-US",
+                    "segments": [
+                        "NoteEchoes switched back to English successfully."
+                    ],
+                    "startIndex": 0
+                ]
+            ) { response in
+                print(
+                    "[NoteEchoesSpeech] English switch test: "
+                        + "\(String(describing: response))"
+                )
+            }
+        }
+    }
+
     private func handle(
         _ call: FlutterMethodCall,
         result: @escaping FlutterResult
@@ -222,7 +265,7 @@ final class SpeechOutputChannelService: NSObject,
 
         case "stop":
             cancelPendingStart(message: "Speech was stopped.")
-            synthesizer.stopSpeaking(at: .immediate)
+            resetSynthesizer()
             segmentIndices.removeAll()
             finalSegmentIndex = nil
             result(true)
@@ -265,7 +308,7 @@ final class SpeechOutputChannelService: NSObject,
         result: @escaping FlutterResult
     ) {
         cancelPendingStart(message: "A newer spoken report replaced this one.")
-        synthesizer.stopSpeaking(at: .immediate)
+        resetSynthesizer()
         segmentIndices.removeAll()
         finalSegmentIndex = nil
 
@@ -341,7 +384,7 @@ final class SpeechOutputChannelService: NSObject,
             }
             startTimeout = timeout
             DispatchQueue.main.asyncAfter(
-                deadline: .now() + 2.5,
+                deadline: .now() + 5.0,
                 execute: timeout
             )
         } catch {
@@ -391,6 +434,10 @@ final class SpeechOutputChannelService: NSObject,
         if index == finalSegmentIndex {
             finalSegmentIndex = nil
             channel?.invokeMethod("onSpeechFinished", arguments: nil)
+            try? AVAudioSession.sharedInstance().setActive(
+                false,
+                options: [.notifyOthersOnDeactivation]
+            )
         }
     }
 
@@ -413,6 +460,16 @@ final class SpeechOutputChannelService: NSObject,
                 details: nil
             ))
         }
+    }
+
+    /// AVSpeechSynthesizer can remain wedged after a recording category or
+    /// voice-language transition. A fresh instance per request reliably
+    /// releases that stale queue while keeping one Flutter channel owner.
+    private func resetSynthesizer() {
+        synthesizer.stopSpeaking(at: .immediate)
+        synthesizer.delegate = nil
+        synthesizer = AVSpeechSynthesizer()
+        synthesizer.delegate = self
     }
 
     private func outputRoute(_ session: AVAudioSession) -> String {

@@ -5,6 +5,7 @@ import 'package:permission_handler/permission_handler.dart';
 import '../ai/presentation/ai_model_settings_page.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_preferences.dart';
+import '../services/voice_assistant_service.dart';
 import 'noteechoes_guide_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -40,6 +41,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
     'auto' => 'Auto-detect Language',
     _ => 'English',
   };
+
+  Future<void> _selectSpeechLanguage(
+    BuildContext sheetContext,
+    String code,
+  ) async {
+    await _preferences.setSpeechLanguage(code);
+    await VoiceAssistantService().handleRecognitionLanguageChanged();
+    if (sheetContext.mounted) Navigator.pop(sheetContext);
+  }
 
   void _openLanguagePicker(BuildContext context) {
     showModalBottomSheet<void>(
@@ -94,49 +104,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   title: 'English',
                   subtitle: 'Standard English dictation & Whisper (en)',
                   selected: _preferences.speechLanguageCode == 'en',
-                  onTap: () {
-                    _preferences.setSpeechLanguage('en');
-                    Navigator.pop(ctx);
-                  },
+                  onTap: () => _selectSpeechLanguage(ctx, 'en'),
                 ),
                 _LanguageOptionTile(
                   title: 'Telugu (తెలుగు)',
                   subtitle: 'Pure Telugu speech recognition (te)',
                   selected: _preferences.speechLanguageCode == 'te',
-                  onTap: () {
-                    _preferences.setSpeechLanguage('te');
-                    Navigator.pop(ctx);
-                  },
+                  onTap: () => _selectSpeechLanguage(ctx, 'te'),
                 ),
                 _LanguageOptionTile(
                   title: 'Telugu & English Mixed',
                   subtitle:
                       'Telugu-English conversational speech with technical terms',
                   selected: _preferences.speechLanguageCode == 'te-en-mixed',
-                  onTap: () {
-                    _preferences.setSpeechLanguage('te-en-mixed');
-                    Navigator.pop(ctx);
-                  },
+                  onTap: () => _selectSpeechLanguage(ctx, 'te-en-mixed'),
                 ),
                 _LanguageOptionTile(
                   title: 'Hindi (हिन्दी)',
                   subtitle:
                       'Hindi speech recognition in Devanagari script (hi)',
                   selected: _preferences.speechLanguageCode == 'hi',
-                  onTap: () {
-                    _preferences.setSpeechLanguage('hi');
-                    Navigator.pop(ctx);
-                  },
+                  onTap: () => _selectSpeechLanguage(ctx, 'hi'),
                 ),
                 _LanguageOptionTile(
                   title: 'Auto-detect Language',
                   subtitle:
                       'Automatically identifies spoken language per recording',
                   selected: _preferences.speechLanguageCode == 'auto',
-                  onTap: () {
-                    _preferences.setSpeechLanguage('auto');
-                    Navigator.pop(ctx);
-                  },
+                  onTap: () => _selectSpeechLanguage(ctx, 'auto'),
                 ),
               ],
             ),
@@ -422,7 +417,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Column(
               children: [
                 Text(
-                  'NoteEchoes v2.10.2',
+                  'NoteEchoes v2.11.0',
                   style: GoogleFonts.inter(
                     color: Colors.white54,
                     fontSize: 13,
