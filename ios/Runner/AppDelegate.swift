@@ -105,6 +105,13 @@ import AVFoundation
                         .runLanguageSwitchSmokeTest()
                 }
             }
+            if ProcessInfo.processInfo.arguments.contains(
+                "--noteechoes-voice-capture-test"
+            ) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    SpeechOutputChannelService.shared.runVoiceCaptureSmokeTest()
+                }
+            }
         }
     }
 }
@@ -244,6 +251,15 @@ final class SpeechOutputChannelService: NSObject,
         }
     }
 
+    func runVoiceCaptureSmokeTest() {
+        do {
+            let response = try prepareVoiceCapture()
+            print("[NoteEchoesCapture] voice processing: \(response)")
+        } catch {
+            print("[NoteEchoesCapture] failed: \(error.localizedDescription)")
+        }
+    }
+
     private func handle(
         _ call: FlutterMethodCall,
         result: @escaping FlutterResult
@@ -269,6 +285,17 @@ final class SpeechOutputChannelService: NSObject,
             segmentIndices.removeAll()
             finalSegmentIndex = nil
             result(true)
+
+        case "prepareVoiceCapture":
+            do {
+                result(try prepareVoiceCapture())
+            } catch {
+                result(FlutterError(
+                    code: "VOICE_CAPTURE_SETUP_FAILED",
+                    message: error.localizedDescription,
+                    details: nil
+                ))
+            }
 
         case "getAvailableVoices":
             result(AVSpeechSynthesisVoice.speechVoices().map { voice in
@@ -300,6 +327,24 @@ final class SpeechOutputChannelService: NSObject,
         default:
             result(FlutterMethodNotImplemented)
         }
+    }
+
+    private func prepareVoiceCapture() throws -> [String: Any] {
+        let session = AVAudioSession.sharedInstance()
+        try session.setCategory(
+            .playAndRecord,
+            mode: .voiceChat,
+            options: [.defaultToSpeaker, .allowBluetoothHFP]
+        )
+        try? session.setPreferredSampleRate(16_000)
+        try? session.setPreferredIOBufferDuration(0.02)
+        try session.setActive(true, options: [])
+        return [
+            "voiceProcessing": session.mode == .voiceChat,
+            "mode": session.mode.rawValue,
+            "input": session.currentRoute.inputs.first?.portName
+                ?? "iPhone microphone"
+        ]
     }
 
     private func speak(

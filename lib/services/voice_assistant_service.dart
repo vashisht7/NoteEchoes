@@ -115,6 +115,8 @@ class VoiceAssistantService extends ChangeNotifier {
   bool _isProcessingQuery = false;
   bool _heardVoiceActivity = false;
   bool _autoSubmitTriggered = false;
+  double _noiseFloorDb = -55.0;
+  int _probableVoiceFrameStreak = 0;
   DateTime? _recordingStartedAt;
   DateTime? _lastVoiceActivityAt;
   int _queryEpoch = 0;
@@ -208,14 +210,32 @@ class VoiceAssistantService extends ChangeNotifier {
       _currentRecordingPath = audioPath;
 
       await _recorder.start(
-        const RecordConfig(encoder: AudioEncoder.aacLc, sampleRate: 16000),
+        const RecordConfig(
+          encoder: AudioEncoder.aacLc,
+          sampleRate: 16000,
+          numChannels: 1,
+          autoGain: true,
+          echoCancel: true,
+          noiseSuppress: true,
+        ),
         path: audioPath,
       );
+      // AVAudioRecorder file capture does not enable Apple's voice-processing
+      // path by itself. Apply voiceChat mode after the recorder configures its
+      // play-and-record session so stationary noise and acoustic echo are
+      // reduced before turn detection and transcription.
+      try {
+        await _speechOutputChannel.invokeMethod<void>('prepareVoiceCapture');
+      } catch (error) {
+        debugPrint('[VoiceAssistant] Voice processing unavailable: $error');
+      }
 
       _recordingStartedAt = DateTime.now();
       _lastVoiceActivityAt = null;
       _heardVoiceActivity = false;
       _autoSubmitTriggered = false;
+      _noiseFloorDb = -55.0;
+      _probableVoiceFrameStreak = 0;
       _startSilenceMonitor();
 
       _amplitudeSub?.cancel();
@@ -226,7 +246,8 @@ class VoiceAssistantService extends ChangeNotifier {
               // Normalize -60dB -> 0dB to 0.0 -> 1.0
               final normalized = ((amp.current + 50.0) / 50.0).clamp(0.08, 1.0);
               _micAmplitude = normalized;
-              if (amp.current > -42.0) {
+              final probableVoice = _observeAudioFrame(amp.current);
+              if (probableVoice) {
                 _lastVoiceActivityAt = DateTime.now();
                 if (!_heardVoiceActivity) {
                   _heardVoiceActivity = true;
@@ -309,7 +330,55 @@ class VoiceAssistantService extends ChangeNotifier {
   }) =>
       heardVoice &&
       listeningFor >= const Duration(milliseconds: 1400) &&
-      silenceFor >= const Duration(milliseconds: 1050);
+      (silenceFor >= const Duration(milliseconds: 900) ||
+          listeningFor >= const Duration(seconds: 25));
+
+  bool _observeAudioFrame(double decibels) {
+    if (!decibels.isFinite || decibels <= -100) {
+      _probableVoiceFrameStreak = 0;
+      return false;
+    }
+
+    final startedAt = _recordingStartedAt;
+    final calibrating =
+        startedAt != null &&
+        DateTime.now().difference(startedAt) <
+            const Duration(milliseconds: 450);
+    final voiceThreshold = _voiceThresholdForNoiseFloor(_noiseFloorDb);
+    final aboveVoiceThreshold = decibels >= voiceThreshold;
+
+    // Learn the room floor only from frames that are not probable speech.
+    // This adapts to a fan or road noise without allowing that sound to keep a
+    // turn open forever.
+    if (!aboveVoiceThreshold || calibrating) {
+      final capped = decibels.clamp(-75.0, -28.0);
+      final weight = calibrating ? 0.18 : 0.035;
+      _noiseFloorDb = (_noiseFloorDb * (1 - weight)) + (capped * weight);
+    }
+
+    if (calibrating) {
+      _probableVoiceFrameStreak = 0;
+      return false;
+    }
+
+    if (decibels >= _voiceThresholdForNoiseFloor(_noiseFloorDb)) {
+      _probableVoiceFrameStreak++;
+    } else {
+      _probableVoiceFrameStreak = 0;
+    }
+
+    // Four 60 ms frames reject taps, gasps, and brief environmental sounds.
+    return _probableVoiceFrameStreak >= 4;
+  }
+
+  static double _voiceThresholdForNoiseFloor(double noiseFloorDb) =>
+      max(-50.0, noiseFloorDb + 8.0);
+
+  @visibleForTesting
+  static bool isProbableVoiceLevelForTesting({
+    required double noiseFloorDb,
+    required double levelDb,
+  }) => levelDb >= _voiceThresholdForNoiseFloor(noiseFloorDb);
 
   @visibleForTesting
   static bool shouldAutoSubmitForTesting({

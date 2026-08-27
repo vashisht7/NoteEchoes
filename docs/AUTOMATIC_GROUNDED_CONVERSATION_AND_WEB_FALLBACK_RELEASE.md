@@ -2,7 +2,7 @@
 
 ## Release
 
-- App version: `2.11.0+17`
+- App version: `2.11.1+18`
 - Product scope: iPhone conversation mode and recognition-language switching
 - Primary experience: English-first, with Telugu, Telugu-English mixed, Hindi, and automatic recognition modes
 
@@ -52,10 +52,26 @@ A device diagnostic reproduces the reported Telugu-to-English transition and req
 
 ## Verification
 
-- Full Flutter suite: 124 tests passed.
+- Full Flutter suite: 125 tests passed.
 - Changed-file static analysis: no issues.
 - Focused coverage includes mixed-language persistence, automatic silence submission, fresh-report reset, typed Send behavior, exact evidence gating, attributed web answers, and offline non-invention.
 - Live Wikipedia API query for `Calculate the value of pi` resolved to the `Pi` article.
 - Signed iPhone Release build `2.11.0 (17)` passed strict code-signature verification.
 - Physical iPhone language-switch diagnostic passed: Telugu reached native `didStart` with Apple Geeta, followed by English reaching native `didStart` with Enhanced Rishi; both used the phone speaker.
 - The update was installed in place. The app database UUID remained `7B579E2E-5573-452B-BED8-7EADDCF99B56`, confirming that existing app data was preserved.
+
+## Focused listening experience and voice activity correction
+
+The rotating prompt-suggestion wheel has been removed from the listening page. The page now contains only the live listening surface and an optional typed-question field.
+
+Turn detection no longer treats every sound above one fixed loudness as speech. It now:
+
+- calibrates an adaptive room-noise floor at the start of listening;
+- requires sustained probable-voice frames rather than a tap, gasp, or brief noise;
+- enables Apple's `voiceChat` capture mode, voice processing, echo cancellation, noise suppression, and automatic gain control;
+- submits after a natural 900 ms pause, with a 25-second turn ceiling so continuous environmental sound cannot leave the app listening forever;
+- publishes and opens the finished report before beginning spoken playback.
+
+This filters non-speech environmental noise. It is not speaker identification: another nearby person speaking may still be transcribed.
+
+Physical-device diagnostics confirmed `AVAudioSessionModeVoiceChat`, `voiceProcessing: true`, and the iPhone microphone input. Version `2.11.1 (18)` was installed in place with the same database UUID.

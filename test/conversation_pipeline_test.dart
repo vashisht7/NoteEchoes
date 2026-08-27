@@ -47,6 +47,38 @@ void main() {
     expect(
       VoiceAssistantService.shouldAutoSubmitForTesting(
         heardVoice: true,
+        listeningFor: const Duration(seconds: 25),
+        silenceFor: Duration.zero,
+      ),
+      isTrue,
+    );
+  });
+
+  test('adaptive voice level rejects room noise and accepts nearby speech', () {
+    expect(
+      VoiceAssistantService.isProbableVoiceLevelForTesting(
+        noiseFloorDb: -42,
+        levelDb: -38,
+      ),
+      isFalse,
+    );
+    expect(
+      VoiceAssistantService.isProbableVoiceLevelForTesting(
+        noiseFloorDb: -42,
+        levelDb: -28,
+      ),
+      isTrue,
+    );
+    expect(
+      VoiceAssistantService.isProbableVoiceLevelForTesting(
+        noiseFloorDb: -60,
+        levelDb: -45,
+      ),
+      isTrue,
+    );
+    expect(
+      VoiceAssistantService.shouldAutoSubmitForTesting(
+        heardVoice: true,
         listeningFor: const Duration(seconds: 2),
         silenceFor: const Duration(milliseconds: 300),
       ),
@@ -104,6 +136,12 @@ void main() {
     );
     expect(field.textInputAction, TextInputAction.send);
     expect(field.onSubmitted, isNotNull);
+    expect(find.text('Try asking about your notes'), findsNothing);
+    expect(find.byType(ListWheelScrollView), findsNothing);
+    expect(
+      find.text('Listening for your voice • pause when finished'),
+      findsOneWidget,
+    );
 
     await tester.pumpWidget(const SizedBox());
     await tester.pump();

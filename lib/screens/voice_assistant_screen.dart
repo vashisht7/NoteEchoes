@@ -39,42 +39,12 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
   bool _reportSheetVisible = false;
   final TextEditingController _questionController = TextEditingController();
 
-  // Thoughts revolving loop dynamically generated from real user notes
-  List<String> get _thoughtSuggestions {
-    final allNotes = NoteService().allNotes;
-    if (allNotes.isEmpty) {
-      return [
-        "Summarize my recent thoughts",
-        "Check my checklist tasks",
-        "Review today's notes",
-        "Find voice notes with action items",
-      ];
-    }
-    final suggestions = <String>[];
-    for (final note in allNotes.take(4)) {
-      suggestions.add("Summarize: ${note.title}");
-    }
-    final allTags = NoteService().allTags.where((t) => t != 'All').toList();
-    for (final tag in allTags.take(3)) {
-      suggestions.add("Show all notes in #$tag");
-    }
-    if (suggestions.length < 4) {
-      suggestions.add("Summarize all my notes");
-      suggestions.add("Find pending checklist tasks");
-    }
-    return suggestions;
-  }
-
-  late final FixedExtentScrollController _wheelScrollController;
-
   @override
   void initState() {
     super.initState();
     _state = widget.currentState;
     _voiceService = VoiceAssistantService();
     _voiceService.addListener(_onServiceUpdate);
-
-    _wheelScrollController = FixedExtentScrollController(initialItem: 1000);
 
     _animationController = AnimationController(
       vsync: this,
@@ -270,7 +240,6 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
     _voiceService.removeListener(_onServiceUpdate);
     _voiceService.stopVoiceSession();
     _animationController.dispose();
-    _wheelScrollController.dispose();
     _questionController.dispose();
     super.dispose();
   }
@@ -475,7 +444,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
   }
 
   // ==========================================================
-  // STATE 1: LISTENING SCREEN (Water Dropping Ripple + Revolving Thought Wheel at bottom)
+  // STATE 1: LISTENING SCREEN
   // ==========================================================
   Widget _buildListeningScreen() {
     return Column(
@@ -519,7 +488,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
           ),
         ),
 
-        // Bottom Revolving Thoughts Loop (Cylindrical Wheel Scroll Loop like a date picker)
+        // One quiet input surface keeps the listening experience focused.
         Container(
           margin: const EdgeInsets.only(bottom: 28),
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -579,75 +548,27 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen>
                 ),
                 const SizedBox(height: 4),
               ],
-              Text(
-                "Try asking about your notes",
-                style: GoogleFonts.inter(
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.secondaryText,
-                ),
-              ),
-              const SizedBox(height: 10),
-
-              // Cylindrical Loop Wheel
-              SizedBox(
-                height: 90,
-                child: ListWheelScrollView.useDelegate(
-                  controller: _wheelScrollController,
-                  itemExtent: 38,
-                  perspective: 0.004,
-                  diameterRatio: 1.4,
-                  physics: const FixedExtentScrollPhysics(),
-                  childDelegate: ListWheelChildLoopingListDelegate(
-                    children: _thoughtSuggestions.map((thought) {
-                      return GestureDetector(
-                        onTap: () {
-                          _voiceService.setManualQuery(thought);
-                        },
-                        child: Container(
-                          alignment: Alignment.center,
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          decoration: BoxDecoration(
-                            color: AppColors.elevation1.withValues(alpha: 0.9),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: AppColors.glassBorderBright,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.4),
-                                blurRadius: 6,
-                              ),
-                            ],
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.arrow_upward_rounded,
-                                size: 13,
-                                color: Theme.of(context).colorScheme.primary,
-                              ),
-                              const SizedBox(width: 8),
-                              Flexible(
-                                child: Text(
-                                  thought,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: GoogleFonts.inter(
-                                    fontSize: 12.5,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    }).toList(),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.mic_rounded,
+                    size: 14,
+                    color: Theme.of(context).colorScheme.primary,
                   ),
-                ),
+                  const SizedBox(width: 7),
+                  Flexible(
+                    child: Text(
+                      'Listening for your voice • pause when finished',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.secondaryText,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
