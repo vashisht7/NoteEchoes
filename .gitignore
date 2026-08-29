@@ -38,6 +38,13 @@ migrate_working_dir/
 # Hugging Face/Kaggle; Git keeps the reproducible programs, schemas, manifests,
 # audits, and documentation without multi-gigabyte generated artifacts.
 .venv-model-release/
+# Private model weights provisioned locally before an iPhone build. The signed
+# app receives these files, but Git and GitHub never receive the private model.
+ios/PrivateModelAssets/
+# Current multilingual training/evaluation workspace is synchronized to the
+# purpose-named Desktop model archive. App builds depend on the private Hub
+# revision and provisioning script, not on this multi-gigabyte local copy.
+multilingual_action_model/
 core_v5/**/*.zip
 core_v5/ready_synthetic_v1/**/*.jsonl
 core_v5/staging/core_v5_staging.jsonl

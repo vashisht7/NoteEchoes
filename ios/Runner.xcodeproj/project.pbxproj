@@ -23,6 +23,8 @@
 		A11000000000000000000008 /* PDFVisionExtractionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11000000000000000000009 /* PDFVisionExtractionService.swift */; };
 		A12000000000000000000001 /* OfflineSpeechService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A12000000000000000000002 /* OfflineSpeechService.swift */; };
 		A12000000000000000000003 /* WhisperKit in Frameworks */ = {isa = PBXBuildFile; productRef = A12000000000000000000005 /* WhisperKit */; };
+		A13000000000000000000001 /* MLXMultilingualActionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A13000000000000000000002 /* MLXMultilingualActionService.swift */; };
+		A13000000000000000000003 /* NoteEchoesMultilingualAction in Resources */ = {isa = PBXBuildFile; fileRef = A13000000000000000000004 /* NoteEchoesMultilingualAction */; };
 		A1B2C3D4E5F6078900112233 /* NotechoesShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6078900112234 /* NotechoesShortcuts.swift */; };
 		B87DE432F07D241E9ACD1B94 /* SaveDictatedNoteIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCC98FE1E3680450CB46AFD6 /* SaveDictatedNoteIntent.swift */; };
 		BBC47EA9C13714B26A97BDC7 /* PendingVoiceNoteStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE0C7A4A2642545CF8EA7BCC /* PendingVoiceNoteStore.swift */; };
@@ -101,6 +103,8 @@
 		A11000000000000000000002 /* MLXTextGenerationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MLXTextGenerationService.swift; sourceTree = "<group>"; };
 		A11000000000000000000009 /* PDFVisionExtractionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFVisionExtractionService.swift; sourceTree = "<group>"; };
 		A12000000000000000000002 /* OfflineSpeechService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineSpeechService.swift; sourceTree = "<group>"; };
+		A13000000000000000000002 /* MLXMultilingualActionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MLXMultilingualActionService.swift; sourceTree = "<group>"; };
+		A13000000000000000000004 /* NoteEchoesMultilingualAction */ = {isa = PBXFileReference; lastKnownFileType = folder; name = NoteEchoesMultilingualAction; path = PrivateModelAssets/NoteEchoesMultilingualAction; sourceTree = SOURCE_ROOT; };
 		A1B2C3D4E5F6078900112234 /* NotechoesShortcuts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotechoesShortcuts.swift; sourceTree = "<group>"; };
 		AA1234567890ABCDEF000001 /* Runner.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Runner.entitlements; sourceTree = "<group>"; };
 		BE7DE7415EA54E09E6FBAE17 /* Pods-Runner.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.release.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig"; sourceTree = "<group>"; };
@@ -228,6 +232,8 @@
 				74858FAE1ED2DC5600515810 /* AppDelegate.swift */,
 				7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */,
 				A11000000000000000000002 /* MLXTextGenerationService.swift */,
+				A13000000000000000000002 /* MLXMultilingualActionService.swift */,
+				A13000000000000000000004 /* NoteEchoesMultilingualAction */,
 				A11000000000000000000009 /* PDFVisionExtractionService.swift */,
 				A12000000000000000000002 /* OfflineSpeechService.swift */,
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
@@ -391,6 +397,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A13000000000000000000003 /* NoteEchoesMultilingualAction in Resources */,
 				97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */,
 				3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */,
 				97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */,
@@ -539,6 +546,7 @@
 				1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */,
 				7884E8682EC3CC0700C636F2 /* SceneDelegate.swift in Sources */,
 				A11000000000000000000001 /* MLXTextGenerationService.swift in Sources */,
+				A13000000000000000000001 /* MLXMultilingualActionService.swift in Sources */,
 				A11000000000000000000008 /* PDFVisionExtractionService.swift in Sources */,
 				A12000000000000000000001 /* OfflineSpeechService.swift in Sources */,
 				BBC47EA9C13714B26A97BDC7 /* PendingVoiceNoteStore.swift in Sources */,
@@ -872,7 +880,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = NoteEchoesLiveActivity/NoteEchoesLiveActivity.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 18;
+				CURRENT_PROJECT_VERSION = 19;
 				DEVELOPMENT_TEAM = 8UKWK3U3Y2;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = NoteEchoesLiveActivity/Info.plist;
@@ -882,7 +890,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.11.1;
+				MARKETING_VERSION = 2.12.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.vashisht.notechoes.NoteEchoesLiveActivity;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -899,7 +907,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = NoteEchoesLiveActivity/NoteEchoesLiveActivity.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 18;
+				CURRENT_PROJECT_VERSION = 19;
 				DEVELOPMENT_TEAM = 8UKWK3U3Y2;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = NoteEchoesLiveActivity/Info.plist;
@@ -909,7 +917,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.11.1;
+				MARKETING_VERSION = 2.12.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.vashisht.notechoes.NoteEchoesLiveActivity;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -925,7 +933,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = NoteEchoesLiveActivity/NoteEchoesLiveActivity.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 18;
+				CURRENT_PROJECT_VERSION = 19;
 				DEVELOPMENT_TEAM = 8UKWK3U3Y2;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = NoteEchoesLiveActivity/Info.plist;
@@ -935,7 +943,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.11.1;
+				MARKETING_VERSION = 2.12.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.vashisht.notechoes.NoteEchoesLiveActivity;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;

@@ -5,14 +5,12 @@
 import 'dart:math';
 import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
-import '../config/action_model_identity.dart';
 import '../domain/ai_models.dart';
 import '../domain/source_citation.dart';
 import 'ai_database.dart';
 import 'e5_embedding_service.dart';
 import 'model_availability_service.dart';
 import '../../services/speech_output_service.dart';
-import 'structured_generation_service.dart';
 
 class GroundedAnswerResult {
   final String query;
@@ -215,13 +213,9 @@ class HybridRetrievalService {
     final citations = <SourceCitation>[];
     final noteIds = <String>[];
 
-    final contextBuffer = StringBuffer();
     for (int i = 0; i < candidates.length; i++) {
       final c = candidates[i];
       final idx = i + 1;
-      contextBuffer.writeln(
-        '[$idx] Note Title: "${c.title}"\nContent: ${c.passageText}\n',
-      );
       citations.add(
         SourceCitation(
           citationKey: '[$idx]',
@@ -258,84 +252,8 @@ class HybridRetrievalService {
       );
     }
 
-    // The deployed Qwen model is deliberately specialized for the English
-    // action schema. Asking it to behave as an unrestricted chat summarizer
-    // produces action JSON instead of a readable report. Conversation mode
-    // therefore uses a deterministic, cited extractive report. This keeps the
-    // output useful, private, and strictly grounded in saved note text.
-    if (forceExtractive || _isSummaryRequest(query)) {
-      return _extractiveReport(
-        query: query,
-        candidates: candidates,
-        citations: citations,
-        noteIds: noteIds,
-        queryLanguage: queryLanguage,
-      );
-    }
-
-    // Generate grounded synthesis with Qwen MLX if ready
-    if (ModelAvailabilityService.instance.qwen.isReady) {
-      try {
-        final langInstruction = switch (queryLanguage) {
-          'te' => 'Respond in natural Telugu script.',
-          'hi' => 'Respond in natural Hindi script.',
-          'mixed' =>
-            'Respond in conversational Telugu and English code-mixed style.',
-          _ => 'Respond in clear English.',
-        };
-
-        final systemPrompt =
-            '''
-You are the NoteEchoes grounded conversational AI assistant.
-Answer the user's question STRICTLY based on the provided notes.
-$langInstruction
-Rules:
-1. Cite every factual claim using bracket numbers like [1] or [2].
-2. If the answer is not in the notes, say so honestly without inventing facts.
-3. Keep the response concise, informative, and natural.
-''';
-
-        final userPrompt =
-            '''
-User Question: "$query"
-
-Retrieved Notes Context:
-$contextBuffer
-
-Grounded Answer:''';
-
-        final response =
-            await StructuredGenerationService.generateStructured<String>(
-              prompt: userPrompt,
-              systemPrompt: systemPrompt,
-              fromJson: (json) => json['answer'] as String? ?? '',
-              modelId: NoteEchoesActionModelIdentity.modelId,
-              modelVersion: NoteEchoesActionModelIdentity.releaseVersion,
-              promptVersion: '1.0',
-              schemaVersion: 1,
-            );
-
-        final answerText = response.isSuccess
-            ? response.value?.trim() ?? ''
-            : '';
-
-        if (answerText.isNotEmpty) {
-          final speechText = SpeechOutputService.cleanSpeechText(answerText);
-          return GroundedAnswerResult(
-            query: query,
-            displayText: answerText,
-            speechText: speechText,
-            responseLanguage: queryLanguage,
-            citations: citations,
-            sourceNoteIds: noteIds,
-            provenance: response.provenance,
-          );
-        }
-      } catch (e) {
-        debugPrint("[HybridRetrieval] Qwen grounded synthesis notice: $e");
-      }
-    }
-
+    // The optional conversation brain is deliberately not part of this phone
+    // release. Keep answers private, cited, and deterministic.
     return _extractiveReport(
       query: query,
       candidates: candidates,
@@ -344,13 +262,6 @@ Grounded Answer:''';
       queryLanguage: queryLanguage,
     );
   }
-
-  static bool _isSummaryRequest(String query) => RegExp(
-    r'\b(?:summari[sz]e|summary|overview|recap|discuss|review)\b|'
-    r'(?:సారాంశం|సంగ్రహించు|నోట్స్\s+చెప్పు)|'
-    r'(?:सारांश|संक्षेप|नोट्स\s+बताओ)',
-    caseSensitive: false,
-  ).hasMatch(query);
 
   static GroundedAnswerResult _extractiveReport({
     required String query,

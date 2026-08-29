@@ -38,4 +38,26 @@ void main() {
       ['मॉडल चेक करना', 'ऐप चेक करना'],
     );
   });
+
+  test('extracts every Telugu-English mixed checklist item', () {
+    expect(
+      SpokenChecklistParser.extract(
+        'checklist తయారు చేయి: మొదట డెమో సిద్ధం చేయడం, తర్వాత రిపోర్ట్ సమర్పించడం, చివరగా డాక్టర్ appointment బుక్ చేయడం.',
+      ),
+      [
+        'డెమో సిద్ధం చేయడం',
+        'రిపోర్ట్ సమర్పించడం',
+        'డాక్టర్ appointment బుక్ చేయడం',
+      ],
+    );
+  });
+
+  test('extracts comma-separated Telugu-English task items', () {
+    expect(
+      SpokenChecklistParser.extract(
+        'నా checklist: milk కొనాలి, Ravi కి report పంపాలి, మరియు laptop charge చేయాలి.',
+      ),
+      ['milk కొనాలి', 'Ravi కి report పంపాలి', 'laptop charge చేయాలి'],
+    );
+  });
 }

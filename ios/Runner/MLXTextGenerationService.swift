@@ -72,6 +72,7 @@ actor MLXTextGenerationService {
     private func performLoad(
         onProgress: (@Sendable (Double, String) -> Void)?
     ) async throws {
+        await MLXMultilingualActionService.shared.unload()
         Memory.cacheLimit = 20 * 1024 * 1024
 
         let manager = FileManager.default

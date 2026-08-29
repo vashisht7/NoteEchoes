@@ -466,10 +466,9 @@ class VoiceAssistantService extends ChangeNotifier {
 
     _currentActiveUserSentence = userSpokenText;
     _userTranscriptLines.add(userSpokenText);
-    final queryLang = LanguageDetectionService.detect(
-      userSpokenText,
-    ).primaryLanguage;
-    _activeResponseLocale = _speechLocaleForLanguage(queryLang);
+    final queryDetection = LanguageDetectionService.detect(userSpokenText);
+    final queryLang = queryDetection.primaryLanguage;
+    _activeResponseLocale = _speechLocaleForDetection(queryDetection);
     _processingStatus = 'Searching your notes…';
     notifyListeners();
 
@@ -1053,12 +1052,14 @@ class VoiceAssistantService extends ChangeNotifier {
         _ => 'en-US',
       };
 
-  String _speechLocaleForLanguage(String language) => switch (language) {
-    'te' => 'te-IN',
-    'mixed' => 'te-IN',
-    'hi' => 'hi-IN',
-    _ => 'en-US',
-  };
+  String _speechLocaleForDetection(LanguageDetectionResult detection) =>
+      switch (detection.primaryLanguage) {
+        'te' => 'te-IN',
+        'mixed' when detection.mixedLanguages.contains('te') => 'te-IN',
+        'mixed' when detection.mixedLanguages.contains('hi') => 'hi-IN',
+        'hi' => 'hi-IN',
+        _ => 'en-US',
+      };
 
   String get _speechLocale => _activeResponseLocale;
 

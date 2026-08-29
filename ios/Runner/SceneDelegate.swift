@@ -83,6 +83,7 @@ class SceneDelegate: FlutterSceneDelegate {
         actionChannel = channel
         OfflineSpeechService.shared.register(with: flutterViewController)
         MLXTextGenerationChannelService.shared.register(with: flutterViewController)
+        MLXMultilingualActionChannelService.shared.register(with: flutterViewController)
 
         let pdfVisionChannel = FlutterMethodChannel(
             name: "notechoes/pdf_vision",

@@ -21,17 +21,63 @@ class LanguageDetectionResult {
 class LanguageDetectionService {
   // Romanized Telugu high-frequency markers
   static const _romanizedTeluguMarkers = {
-    'nenu', 'meeru', 'cheppandi', 'cheyali', 'cheyandi', 'unnanu', 'chesanu',
-    'repati', 'repu', 'vachanu', 'enti', 'ela', 'undi', 'chesi', 'manchi',
-    'ippudu', 'roju', 'kuda', 'gurinchi', 'cheyadam', 'chudali', 'chepparu',
-    'telugu', 'andaru', 'kavali', 'pampali', 'matladali', 'pedda', 'chinnadi'
+    'nenu',
+    'meeru',
+    'cheppandi',
+    'cheyali',
+    'cheyandi',
+    'unnanu',
+    'chesanu',
+    'repati',
+    'repu',
+    'vachanu',
+    'enti',
+    'ela',
+    'undi',
+    'chesi',
+    'manchi',
+    'ippudu',
+    'roju',
+    'kuda',
+    'gurinchi',
+    'cheyadam',
+    'chudali',
+    'chepparu',
+    'telugu',
+    'andaru',
+    'kavali',
+    'pampali',
+    'matladali',
+    'pedda',
+    'chinnadi',
   };
 
   // Romanized Hindi high-frequency markers
   static const _romanizedHindiMarkers = {
-    'karna', 'karenge', 'hoga', 'hai', 'kya', 'nahi', 'accha', 'kal',
-    'mujhe', 'hum', 'batao', 'raha', 'rahe', 'wala', 'karke', 'baat',
-    'aaj', 'shuru', 'bhejo', 'dekho', 'samajh', 'kaam', 'karte', 'kripya'
+    'karna',
+    'karenge',
+    'hoga',
+    'hai',
+    'kya',
+    'nahi',
+    'accha',
+    'kal',
+    'mujhe',
+    'hum',
+    'batao',
+    'raha',
+    'rahe',
+    'wala',
+    'karke',
+    'baat',
+    'aaj',
+    'shuru',
+    'bhejo',
+    'dekho',
+    'samajh',
+    'kaam',
+    'karte',
+    'kripya',
   };
 
   static LanguageDetectionResult detect(
@@ -69,7 +115,9 @@ class LanguageDetectionService {
     }
 
     final teluguRatio = totalLetters > 0 ? teluguCount / totalLetters : 0.0;
-    final devanagariRatio = totalLetters > 0 ? devanagariCount / totalLetters : 0.0;
+    final devanagariRatio = totalLetters > 0
+        ? devanagariCount / totalLetters
+        : 0.0;
     final latinRatio = totalLetters > 0 ? latinCount / totalLetters : 0.0;
 
     final scriptRatios = {
@@ -78,19 +126,18 @@ class LanguageDetectionService {
       'en': latinRatio,
     };
 
-    // 2. Pure native or code-mixed script cases
-    if (teluguRatio >= 0.15 && latinRatio >= 0.15) {
+    // 2. Native and code-mixed script cases. Detect every represented script
+    // before choosing a dominant language; the previous pairwise early returns
+    // lost Hindi in Telugu-Hindi-English and mislabeled Telugu-Hindi as pure.
+    final representedScripts = <String>[
+      if (teluguRatio >= 0.08) 'te',
+      if (devanagariRatio >= 0.08) 'hi',
+      if (latinRatio >= 0.08) 'en',
+    ];
+    if (representedScripts.length >= 2) {
       return LanguageDetectionResult(
         primaryLanguage: 'mixed',
-        mixedLanguages: ['te', 'en'],
-        confidence: 0.95,
-        scriptRatios: scriptRatios,
-      );
-    }
-    if (devanagariRatio >= 0.15 && latinRatio >= 0.15) {
-      return LanguageDetectionResult(
-        primaryLanguage: 'mixed',
-        mixedLanguages: ['hi', 'en'],
+        mixedLanguages: representedScripts,
         confidence: 0.95,
         scriptRatios: scriptRatios,
       );
@@ -128,7 +175,9 @@ class LanguageDetectionService {
       if (_romanizedTeluguMarkers.contains(w)) romanizedTeMatches++;
       if (_romanizedHindiMarkers.contains(w)) romanizedHiMatches++;
       // crude english word indicator
-      if (!w.contains('ch') && !w.contains('sh') && (w.endsWith('ing') || w.endsWith('ed') || w.startsWith('th'))) {
+      if (!w.contains('ch') &&
+          !w.contains('sh') &&
+          (w.endsWith('ing') || w.endsWith('ed') || w.startsWith('th'))) {
         englishWords++;
       }
     }
@@ -137,8 +186,21 @@ class LanguageDetectionService {
     final teScore = romanizedTeMatches / totalEvaluated;
     final hiScore = romanizedHiMatches / totalEvaluated;
 
+    if ((teScore >= 0.10 || romanizedTeMatches >= 2) &&
+        (hiScore >= 0.10 || romanizedHiMatches >= 2)) {
+      return LanguageDetectionResult(
+        primaryLanguage: 'mixed',
+        mixedLanguages: const ['te', 'hi'],
+        confidence: 0.88,
+        isRomanized: true,
+        scriptRatios: scriptRatios,
+      );
+    }
+
     if (teScore >= 0.15 || romanizedTeMatches >= 2) {
-      final isMixed = englishWords > 0 || (whisperReportedLang == 'en' && romanizedTeMatches < words.length);
+      final isMixed =
+          englishWords > 0 ||
+          (whisperReportedLang == 'en' && romanizedTeMatches < words.length);
       return LanguageDetectionResult(
         primaryLanguage: isMixed ? 'mixed' : 'te',
         mixedLanguages: isMixed ? ['te', 'en'] : ['te'],
@@ -149,7 +211,9 @@ class LanguageDetectionService {
     }
 
     if (hiScore >= 0.15 || romanizedHiMatches >= 2) {
-      final isMixed = englishWords > 0 || (whisperReportedLang == 'en' && romanizedHiMatches < words.length);
+      final isMixed =
+          englishWords > 0 ||
+          (whisperReportedLang == 'en' && romanizedHiMatches < words.length);
       return LanguageDetectionResult(
         primaryLanguage: isMixed ? 'mixed' : 'hi',
         mixedLanguages: isMixed ? ['hi', 'en'] : ['hi'],

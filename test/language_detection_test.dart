@@ -52,5 +52,21 @@ void main() {
       expect(res.primaryLanguage, equals('mixed'));
       expect(res.mixedLanguages, containsAll(['te', 'en']));
     });
+
+    test('preserves Telugu, Hindi, and English in three-language speech', () {
+      final res = LanguageDetectionService.detect(
+        'Ravi కోసం report भेजना, मुझे రేపు 6 PM remind చేయి',
+      );
+      expect(res.primaryLanguage, 'mixed');
+      expect(res.mixedLanguages, containsAll(['te', 'hi', 'en']));
+    });
+
+    test('detects Telugu-Hindi without requiring English', () {
+      final res = LanguageDetectionService.detect(
+        'రేపు Ravi కోసం रिपोर्ट भेजना और मुझे याद दिलाना',
+      );
+      expect(res.primaryLanguage, 'mixed');
+      expect(res.mixedLanguages, containsAll(['te', 'hi']));
+    });
   });
 }
