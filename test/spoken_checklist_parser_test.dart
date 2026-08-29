@@ -60,4 +60,23 @@ void main() {
       ['milk కొనాలి', 'Ravi కి report పంపాలి', 'laptop charge చేయాలి'],
     );
   });
+
+  test('extracts one explicit Telugu-English task without a model', () {
+    expect(SpokenChecklistParser.extract('పని: Ravi కి report పంపాలి.'), [
+      'Ravi కి report పంపాలి',
+    ]);
+  });
+
+  test('extracts one explicit Hindi-English task without a model', () {
+    expect(SpokenChecklistParser.extract('काम: Priya को invoice भेजना।'), [
+      'Priya को invoice भेजना',
+    ]);
+  });
+
+  test('does not turn ordinary Telugu prose into a task', () {
+    expect(
+      SpokenChecklistParser.extract('ఈరోజు Ravi తో report గురించి మాట్లాడాను.'),
+      isEmpty,
+    );
+  });
 }

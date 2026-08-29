@@ -19,8 +19,18 @@ class SpokenChecklistParser {
 
   static final RegExp _explicitList = RegExp(
     r'\b(?:check\s*list|checklist|task\s*list|tasks|todo|to-do|these\s+items)\b|'
-    r'(?:చెక్\s*లిస్ట్|చెక్‌లిస్ట్|పనులు|ఈ\s+items)|'
-    r'(?:चेकलिस्ट|काम\s+हैं|ये\s+चीज़ें|ये\s+items)',
+    r'(?:చెక్\s*లిస్ట్|చెక్‌లిస్ట్|పనులు|పని|ఈ\s+items)|'
+    r'(?:चेकलिस्ट|काम\s+हैं|काम|ये\s+चीज़ें|ये\s+items)',
+    caseSensitive: false,
+    unicode: true,
+  );
+
+  static final RegExp _explicitSingleTask = RegExp(
+    r'^(?:please\s+)?(?:add|create|save)\s+(?:a\s+)?task(?:\s+to)?\s*[:,-]?\s*(.+)$|'
+    r'^(?:task|పని|काम)\s*[:,-]\s*(.+)$|'
+    r'^(?:task|పని)\s+(?:తయారు\s+చేయి|చేయి|గా\s+(?:add|save)\s+చేయి)\s*[:,-]?\s*(.+)$|'
+    r'^(?:task|काम)\s+(?:बनाओ|बना\s+दो|में\s+(?:add|save)\s+करो)\s*[:,-]?\s*(.+)$|'
+    r'^(?:task)\s+(?:tayaru\s+cheyyi|add\s+cheyyi|banao|add\s+karo)\s*[:,-]?\s*(.+)$',
     caseSensitive: false,
     unicode: true,
   );
@@ -43,6 +53,16 @@ class SpokenChecklistParser {
       return items.length >= 2 ? items : const [];
     }
 
+    final singleTask = _explicitSingleTask.firstMatch(text);
+    if (singleTask != null) {
+      for (var group = 1; group <= singleTask.groupCount; group++) {
+        final value = singleTask.group(group);
+        if (value == null) continue;
+        final item = _clean(value);
+        if (item.isNotEmpty) return [item];
+      }
+    }
+
     final listCue = _explicitList.firstMatch(text);
     if (listCue == null) return const [];
     final colon = text.indexOf(':', listCue.end);
@@ -58,7 +78,7 @@ class SpokenChecklistParser {
         .map(_clean)
         .where((item) => item.isNotEmpty)
         .toList();
-    return parts.length >= 2 ? parts : const [];
+    return parts.isNotEmpty ? parts : const [];
   }
 
   static String _clean(String value) {

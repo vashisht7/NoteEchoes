@@ -309,10 +309,10 @@ class NoteService extends ChangeNotifier {
     final detectedLanguage = LanguageDetectionService.detect(spokenText);
 
     // Natural speech normally has no markdown bullets. Preserve an explicit
-    // spoken enumeration ("first task ... second ...") even when a compact
-    // model or the offline fallback returns a single task/plain note.
+    // spoken task or enumeration even when a compact model is unavailable or
+    // returns a plain note.
     final spokenChecklist = SpokenChecklistParser.extract(spokenText);
-    if (spokenChecklist.length >= 2) {
+    if (spokenChecklist.isNotEmpty) {
       checklist = spokenChecklist
           .asMap()
           .entries
@@ -398,7 +398,7 @@ class NoteService extends ChangeNotifier {
         _enhanceVoiceNoteInBackground(
           note.noteId,
           spokenText,
-          preserveSpokenChecklist: spokenChecklist.length >= 2,
+          preserveSpokenChecklist: spokenChecklist.isNotEmpty,
         ),
       );
     } else {
@@ -408,7 +408,7 @@ class NoteService extends ChangeNotifier {
           spokenText,
           recognitionLanguage: recognitionLanguage,
           detectedLanguage: detectedLanguage.primaryLanguage,
-          preserveSpokenChecklist: spokenChecklist.length >= 2,
+          preserveSpokenChecklist: spokenChecklist.isNotEmpty,
         ),
       );
     }

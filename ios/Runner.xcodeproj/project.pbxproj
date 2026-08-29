@@ -861,6 +861,7 @@
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
 				DEVELOPMENT_TEAM = 8UKWK3U3Y2;
 				ENABLE_BITCODE = NO;
+				EXCLUDED_SOURCE_FILE_NAMES = NoteEchoesMultilingualAction;
 				INFOPLIST_FILE = Runner/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
