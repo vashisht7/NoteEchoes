@@ -470,7 +470,7 @@ class _BestResultsCard extends StatelessWidget {
               const SizedBox(width: 9),
               Expanded(
                 child: Text(
-                  'English is currently the most reliable action language. For Telugu or Hindi, select the matching Recognition Language in Settings and review dates and actions before confirming.',
+                  'One compact action model handles English, Telugu, Hindi, and mixed speech. English remains the highest-priority path; select the matching Recognition Language for speech recognition and review dates and reminders before confirming.',
                   style: GoogleFonts.inter(
                     color: Colors.white70,
                     fontSize: 12,

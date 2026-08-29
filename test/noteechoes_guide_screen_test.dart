@@ -56,7 +56,7 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     expect(find.text('For the best results'), findsOneWidget);
-    expect(find.textContaining('English is currently'), findsOneWidget);
+    expect(find.textContaining('One compact action model'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

@@ -11,13 +11,10 @@ import 'note_tag_taxonomy.dart';
 import 'lock_screen_activity_service.dart';
 import 'note_storage_service.dart';
 import '../ai/domain/note_analysis.dart';
-import '../ai/domain/core_action_v5_adapter.dart';
 import '../ai/infrastructure/action_model_router.dart';
 import '../ai/infrastructure/knowledge_service.dart';
-import '../ai/infrastructure/language_detection_service.dart';
 import '../ai/infrastructure/model_availability_service.dart';
 import '../ai/infrastructure/multilingual_interpretation_service.dart';
-import '../ai/infrastructure/multilingual_action_provider.dart';
 import '../ai/infrastructure/qwen_llama_provider.dart';
 import '../ai/infrastructure/semantic_knowledge_service.dart';
 import '../platform/ios/apple_calendar_bridge.dart';
@@ -306,8 +303,6 @@ class NoteService extends ChangeNotifier {
     var checklist = analysis.extractedChecklist;
     var reminders = const <Reminder>[];
 
-    final detectedLanguage = LanguageDetectionService.detect(spokenText);
-
     // Natural speech normally has no markdown bullets. Preserve an explicit
     // spoken task or enumeration even when a compact model is unavailable or
     // returns a plain note.
@@ -393,25 +388,14 @@ class NoteService extends ChangeNotifier {
       recognitionLanguage: recognitionLanguage,
       transcript: spokenText,
     );
-    if (actionRoute == ActionModelRoute.english) {
-      unawaited(
-        _enhanceVoiceNoteInBackground(
-          note.noteId,
-          spokenText,
-          preserveSpokenChecklist: spokenChecklist.isNotEmpty,
-        ),
-      );
-    } else {
-      unawaited(
-        _enhanceMultilingualVoiceNoteInBackground(
-          note.noteId,
-          spokenText,
-          recognitionLanguage: recognitionLanguage,
-          detectedLanguage: detectedLanguage.primaryLanguage,
-          preserveSpokenChecklist: spokenChecklist.isNotEmpty,
-        ),
-      );
-    }
+    assert(actionRoute == ActionModelRoute.combined);
+    unawaited(
+      _enhanceVoiceNoteInBackground(
+        note.noteId,
+        spokenText,
+        preserveSpokenChecklist: spokenChecklist.isNotEmpty,
+      ),
+    );
     return note;
   }
 
@@ -486,86 +470,6 @@ class NoteService extends ChangeNotifier {
       );
     } catch (error) {
       debugPrint('Background voice-note enhancement skipped: $error');
-    }
-  }
-
-  Future<void> _enhanceMultilingualVoiceNoteInBackground(
-    String noteId,
-    String spokenText, {
-    required String recognitionLanguage,
-    required String detectedLanguage,
-    required bool preserveSpokenChecklist,
-  }) async {
-    try {
-      final provider = MultilingualActionProvider.instance;
-      if (!await provider.isReady().timeout(const Duration(seconds: 3))) {
-        debugPrint(
-          'Multilingual enhancement skipped: private bundled model is unavailable.',
-        );
-        return;
-      }
-      if (!provider.isLoaded) {
-        await provider.load().timeout(const Duration(seconds: 45));
-      }
-      final generated = await provider
-          .interpret(
-            transcript: spokenText,
-            whisperReportedLanguage: detectedLanguage,
-            preferredLanguage: recognitionLanguage,
-          )
-          .timeout(const Duration(seconds: 35));
-      if (!generated.isValid) {
-        debugPrint(
-          'Multilingual enhancement rejected safely: ${generated.errors.join('; ')}',
-        );
-        return;
-      }
-      final richAnalysis = CoreActionV5Adapter.toNoteAnalysis(
-        generated.envelope!,
-        noteContent: spokenText,
-        noteId: noteId,
-        modelVersion: provider.modelId,
-        analysedAt: DateTime.now(),
-      );
-      final index = _notes.indexWhere((note) => note.noteId == noteId);
-      if (index == -1) return;
-      final current = _notes[index];
-      final enhancedChecklist = preserveSpokenChecklist
-          ? current.checklist
-          : richAnalysis.actionItems
-                .map((item) => CheckListItem(id: item.id, text: item.task))
-                .toList();
-      final tags = current.tags.toSet()
-        ..addAll(richAnalysis.topics)
-        ..addAll(richAnalysis.suggestedTags);
-      await updateNote(
-        current.copyWith(
-          title: richAnalysis.generatedTitle.trim().isEmpty
-              ? current.title
-              : VoiceNoteTitleService.concise(
-                  proposedTitle: richAnalysis.generatedTitle,
-                  spokenText: spokenText,
-                ),
-          summarySnippet: richAnalysis.summary.trim().isEmpty
-              ? current.summarySnippet
-              : richAnalysis.summary.trim(),
-          tags: tags.toList(),
-          checklist: enhancedChecklist,
-          contentBlocks: enhancedChecklist
-              .map(
-                (item) => NoteBlockData.checklist(
-                  checklistId: item.id,
-                  checklistText: item.text,
-                  checklistCompleted: item.isCompleted,
-                ),
-              )
-              .toList(),
-        ),
-      );
-    } catch (error) {
-      // The original note is already safely saved. A model timeout, invalid
-      // response, or unavailable private bundle must never lose user content.
-      debugPrint('Background multilingual enhancement skipped: $error');
     }
   }
 

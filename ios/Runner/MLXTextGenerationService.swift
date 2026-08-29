@@ -100,7 +100,7 @@ actor MLXTextGenerationService {
             }
             if modelDirectory == nil {
                 try Self.ensureDownloadCapacity()
-                onProgress?(0, "Preparing the NoteEchoes English Action model download…")
+                onProgress?(0, "Preparing the NoteEchoes multilingual action model download…")
                 modelDirectory = try await Self.productHub.snapshot(
                     from: Self.primaryModelID,
                     revision: Self.productModelRevision,
@@ -108,7 +108,7 @@ actor MLXTextGenerationService {
                 ) { progress in
                     let fraction = progress.fractionCompleted
                     let percent = Int(fraction * 100)
-                    onProgress?(fraction, "Downloading NoteEchoes English Action model (\(percent)%)…")
+                    onProgress?(fraction, "Downloading NoteEchoes multilingual action model (\(percent)%)…")
                 }
                 guard let modelDirectory else {
                     throw MLXTextGenerationError.modelUnavailable
@@ -124,7 +124,7 @@ actor MLXTextGenerationService {
             configuration: ModelConfiguration(directory: modelDirectory)
         )
         container = loaded
-        onProgress?(1, "NoteEchoes English Action model is ready.")
+        onProgress?(1, "NoteEchoes multilingual action model is ready.")
     }
 
     func generate(
@@ -350,7 +350,7 @@ enum MLXTextGenerationError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .modelUnavailable:
-            "The NoteEchoes English Action model could not be loaded."
+            "The NoteEchoes multilingual action model could not be loaded."
         case .integrityFailure(let detail):
             "The downloaded NoteEchoes model failed verification. \(detail) Use Repair Model and try again."
         case .insufficientStorage(let required, let available):

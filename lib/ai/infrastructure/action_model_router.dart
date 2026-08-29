@@ -1,29 +1,14 @@
-import 'language_detection_service.dart';
+enum ActionModelRoute { combined }
 
-enum ActionModelRoute { english, multilingual }
-
-/// Chooses the action brain from the user's recognition-language setting.
+/// Chooses the production action brain.
 ///
-/// Explicit English always uses the proven English production model. Explicit
-/// Telugu, Hindi, or Telugu-English mixed modes always use the multilingual
-/// candidate. Auto mode inspects the actual transcript and keeps English on
-/// the proven path.
+/// The promoted Qwen3 0.6B Core v5 model was trained on English, Telugu, Hindi,
+/// Romanized speech, and code-mixed speech. Every recognition-language setting
+/// therefore uses the same downloaded runtime; the setting still controls ASR.
 abstract final class ActionModelRouter {
   static ActionModelRoute route({
     required String recognitionLanguage,
     required String transcript,
     String? whisperReportedLanguage,
-  }) {
-    if (recognitionLanguage == 'en') return ActionModelRoute.english;
-    if (recognitionLanguage != 'auto') {
-      return ActionModelRoute.multilingual;
-    }
-    final detected = LanguageDetectionService.detect(
-      transcript,
-      whisperReportedLang: whisperReportedLanguage,
-    );
-    return detected.primaryLanguage == 'en'
-        ? ActionModelRoute.english
-        : ActionModelRoute.multilingual;
-  }
+  }) => ActionModelRoute.combined;
 }

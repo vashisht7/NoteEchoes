@@ -217,10 +217,15 @@ class _AiModelSettingsPageState extends State<AiModelSettingsPage>
             _ModelCard(
               name: NoteEchoesActionModelIdentity.displayName,
               description:
-                  'The verified English action engine for clean voice notes, tasks, reminders, '
-                  'checklists, messages, prompts, grounded memory routing, and safe confirmations.',
+                  'One verified action engine for clean voice notes, tasks, reminders, '
+                  'checklists, grocery lists, grounded memory routing, and safe confirmations.',
               size: NoteEchoesActionModelIdentity.downloadSize,
-              languages: ['English'],
+              languages: [
+                'English',
+                'Telugu',
+                'Hindi',
+                'Telugu-English & Hindi-English',
+              ],
               isInstalled: _qwenInstalled,
               isDownloading: _qwenDownloading,
               downloadProgress: _qwenProgress,
@@ -348,36 +353,6 @@ class _AiModelSettingsPageState extends State<AiModelSettingsPage>
     );
   }
 
-  void _repairWhisper() async {
-    setState(() {
-      _whisperDownloading = true;
-      _whisperProgress = 0.05;
-      _whisperStatusText = 'Repairing Whisper installation…';
-    });
-    try {
-      await _speechBridge.repairWhisperBase();
-      if (!mounted) return;
-      await _syncModelStatus();
-      final isReady = _models.whisper.isReady;
-      setState(() {
-        _whisperDownloading = false;
-        _whisperProgress = isReady ? 1.0 : 0.0;
-        _whisperStatusText = '';
-        _whisperInstalled = isReady;
-      });
-      _showToast(isReady ? 'Whisper repaired and ready!' : 'Repair finished.');
-    } catch (e) {
-      if (!mounted) return;
-      await _syncModelStatus();
-      setState(() {
-        _whisperDownloading = false;
-        _whisperProgress = 0;
-        _whisperStatusText = '';
-      });
-      _showToast('Whisper repair failed: $e');
-    }
-  }
-
   Future<void> _disableWhisper() async {
     final confirmed = await _showDeleteDialog(
       'Whisper Base Multilingual',
@@ -421,7 +396,7 @@ class _AiModelSettingsPageState extends State<AiModelSettingsPage>
             _qwenStatusText = '';
           });
           _showToast(
-            'NoteEchoes English Action model is verified and ready. Reindexed ${allNotes.length} notes.',
+            'NoteEchoes multilingual action model is verified and ready. Reindexed ${allNotes.length} notes.',
           );
         } catch (error) {
           if (!mounted) return;
@@ -456,7 +431,7 @@ class _AiModelSettingsPageState extends State<AiModelSettingsPage>
       await _models.removeQwen();
       if (!mounted) return;
       await _syncModelStatus();
-      _showToast('NoteEchoes English Action model files were removed.');
+      _showToast('NoteEchoes multilingual action model files were removed.');
     }
   }
 
