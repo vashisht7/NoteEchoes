@@ -149,6 +149,10 @@ enum LockScreenActivityCoordinator {
     private static func visibleItems(
         from items: [NoteEchoesActivityAttributes.ChecklistItem]
     ) -> [NoteEchoesActivityAttributes.ChecklistItem] {
-        Array(items.filter { !$0.isCompleted }.prefix(4))
+        Array(
+            items
+                .filter { !$0.isCompleted }
+                .prefix(NoteEchoesLockScreenLayout.maximumVisibleChecklistItems)
+        )
     }
 }

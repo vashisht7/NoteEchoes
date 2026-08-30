@@ -64,7 +64,7 @@ class LockScreenActivityService {
   }
 
   /// Sends the complete checklist to the native shared store. ActivityKit only
-  /// renders four pending rows, but the native intent needs the remaining rows
+  /// renders three pending rows, but the native intent needs the remaining rows
   /// so it can rotate the next one into view immediately after a Lock Screen
   /// check-off.
   Map<String, dynamic> buildPayload(NoteModel note) {

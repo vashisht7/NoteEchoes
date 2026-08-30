@@ -8,15 +8,19 @@ struct NoteEchoesLiveActivityWidget: Widget {
         ActivityConfiguration(for: NoteEchoesActivityAttributes.self) { context in
             VStack(
                 alignment: .leading,
-                spacing: context.state.items.count >= 3 ? 6 : 9
+                spacing: context.state.items.count >= 3 ? 4 : 7
             ) {
-                HStack(spacing: 7) {
+                HStack(spacing: 6) {
                     Image(systemName: context.state.total > 0 ? "checklist" : "note.text")
+                        .font(.caption.weight(.semibold))
                         .foregroundStyle(.red)
                     Text("NoteEchoes")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
-                    Spacer()
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
+                        .layoutPriority(2)
+                    Spacer(minLength: 0)
                 }
 
                 Text(context.attributes.title)
@@ -25,7 +29,7 @@ struct NoteEchoesLiveActivityWidget: Widget {
                             ? .subheadline.weight(.semibold)
                             : .headline
                     )
-                    .lineLimit(2)
+                    .lineLimit(context.state.items.count >= 3 ? 1 : 2)
                     .minimumScaleFactor(0.78)
                     .allowsTightening(true)
                     .fixedSize(horizontal: false, vertical: true)
@@ -35,7 +39,11 @@ struct NoteEchoesLiveActivityWidget: Widget {
                         alignment: .leading,
                         spacing: context.state.items.count >= 3 ? 2 : 4
                     ) {
-                        ForEach(context.state.items.prefix(4)) { item in
+                        ForEach(
+                            context.state.items.prefix(
+                                NoteEchoesLockScreenLayout.maximumVisibleChecklistItems
+                            )
+                        ) { item in
                             Button(intent: ToggleLockScreenChecklistIntent(
                                 noteId: context.attributes.noteId,
                                 itemId: item.id,
@@ -43,7 +51,7 @@ struct NoteEchoesLiveActivityWidget: Widget {
                             )) {
                                 HStack(spacing: 8) {
                                     Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
-                                        .font(.system(size: 17, weight: .semibold))
+                                        .font(.system(size: 15, weight: .semibold))
                                         .symbolRenderingMode(.palette)
                                         .foregroundStyle(
                                             item.isCompleted ? .white : .secondary,
@@ -66,7 +74,7 @@ struct NoteEchoesLiveActivityWidget: Widget {
                                 .padding(.horizontal, 8)
                                 .padding(
                                     .vertical,
-                                    context.state.items.count >= 3 ? 3 : 5
+                                    context.state.items.count >= 3 ? 2 : 4
                                 )
                                 .background(
                                     item.isCompleted
@@ -99,7 +107,7 @@ struct NoteEchoesLiveActivityWidget: Widget {
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
-            .padding(context.state.items.count >= 3 ? 12 : 16)
+            .padding(context.state.items.count >= 3 ? 10 : 14)
             .activityBackgroundTint(Color(uiColor: .secondarySystemBackground))
             .activitySystemActionForegroundColor(.primary)
         } dynamicIsland: { context in

@@ -5,6 +5,12 @@ import Foundation
 private let noteEchoesAppGroup = "group.com.vashisht.notechoes"
 private let checklistActionsKey = "noteechoes_lock_screen_checklist_actions_v1"
 
+enum NoteEchoesLockScreenLayout {
+    // Three rows leave enough room for the app name, list title and progress
+    // on every supported Lock Screen Live Activity height.
+    static let maximumVisibleChecklistItems = 3
+}
+
 /// The complete checklist lives in the App Group rather than ActivityKit's
 /// small content-state payload. This lets the Live Activity rotate the next
 /// pending item into view immediately, even while Flutter is suspended.
@@ -130,7 +136,11 @@ struct ToggleLockScreenChecklistIntent: LiveActivityIntent {
                 }
             }
             if !allItems.isEmpty {
-                state.items = Array(allItems.filter { !$0.isCompleted }.prefix(4))
+                state.items = Array(
+                    allItems
+                        .filter { !$0.isCompleted }
+                        .prefix(NoteEchoesLockScreenLayout.maximumVisibleChecklistItems)
+                )
                 state.completed = allItems.filter(\.isCompleted).count
                 state.total = allItems.count
                 state.subtitle = state.completed == state.total
