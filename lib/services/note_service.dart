@@ -319,7 +319,9 @@ class NoteService extends ChangeNotifier {
           )
           .toList();
       tagsSet.add('tasks');
-      if (title == analysis.title) title = 'Checklist';
+      if (title == analysis.title) {
+        title = SpokenChecklistParser.suggestedTitle(spokenText);
+      }
     }
 
     title = VoiceNoteTitleService.concise(

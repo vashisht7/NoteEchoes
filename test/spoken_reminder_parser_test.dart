@@ -53,6 +53,28 @@ void main() {
     );
   });
 
+  test('supports natural reminder synonyms', () {
+    final now = DateTime(2026, 8, 26, 10);
+    for (final speech in const [
+      'Ping me in ten minutes to check the build',
+      'Notify me in ten minutes to check the build',
+      "Don't let me forget in ten minutes to check the build",
+      'Set an alarm in ten minutes to check the build',
+    ]) {
+      final reminder = SpokenReminderParser.parse(speech, now: now);
+      expect(
+        reminder?.triggerDate,
+        now.add(const Duration(minutes: 10)),
+        reason: speech,
+      );
+      expect(
+        reminder?.title.toLowerCase(),
+        contains('check the build'),
+        reason: speech,
+      );
+    }
+  });
+
   test('does not create a reminder without a specific time', () {
     expect(
       SpokenReminderParser.parse(

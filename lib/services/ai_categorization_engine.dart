@@ -77,7 +77,14 @@ class AiCategorizationEngine {
     // 3. Tasks & Todo Actions
     final hasTasks =
         lower.contains("todo") ||
+        lower.contains("to-do") ||
         lower.contains("task") ||
+        lower.contains("checklist") ||
+        lower.contains("check list") ||
+        lower.contains("things to do") ||
+        lower.contains("action item") ||
+        lower.contains("chore") ||
+        lower.contains("errand") ||
         lower.contains("sprint") ||
         lower.contains("deadline") ||
         lower.contains("finish") ||
@@ -86,7 +93,16 @@ class AiCategorizationEngine {
         lower.contains("deliverable") ||
         lower.contains("fix") ||
         lower.contains("remember to") ||
-        lower.contains("need to");
+        lower.contains("need to") ||
+        lower.contains("have to") ||
+        lower.contains("must do") ||
+        RegExp(
+          r'చెక్\s*లిస్ట్|చెక్‌లిస్ట్|పనుల\s*జాబితా|చేయాలి|పనులు|'
+          r'चेकलिस्ट|कामों\s+की\s+सूची|करना\s+(?:है|होगा)|काम|'
+          r'\b(?:panula\s+jabita|cheyali|kaam\s+ki\s+list|karna\s+hai)\b',
+          caseSensitive: false,
+          unicode: true,
+        ).hasMatch(text);
     if (hasTasks) {
       categories.add("tasks");
     }
@@ -182,8 +198,18 @@ class AiCategorizationEngine {
         lower.contains("reminder") ||
         lower.contains("alert") ||
         lower.contains("don't forget") ||
+        lower.contains("do not forget") ||
+        lower.contains("let me know when") ||
         lower.contains("notify me") ||
-        lower.contains("alarm");
+        lower.contains("ping me") ||
+        lower.contains("nudge me") ||
+        lower.contains("alarm") ||
+        RegExp(
+          r'గుర్తు\s*(?:చేయి|చెయ్యి)|రిమైండర్|याद\s+दिला|रिमाइंडर|'
+          r'\b(?:gurthu|gurtu)\s+chey|\byaad\s+dila',
+          caseSensitive: false,
+          unicode: true,
+        ).hasMatch(text);
     if (hasReminder) {
       categories.add("reminders");
     }
@@ -205,16 +231,28 @@ class AiCategorizationEngine {
     }
 
     final hasEmail = RegExp(
-      r'\b(?:email|e-mail|mail)\b',
+      r'\b(?:email|e-mail|mail|compose\s+(?:an?\s+)?email|draft\s+(?:an?\s+)?email)\b|'
+      r'ఈమెయిల్|మెయిల్|ईमेल|मेल',
       caseSensitive: false,
+      unicode: true,
     ).hasMatch(text);
     if (hasEmail) categories.add('email');
 
     final hasMessage = RegExp(
-      r'\b(?:message|text|sms|iMessage|WhatsApp)\b',
+      r'\b(?:message|text|sms|iMessage|WhatsApp|ping\s+(?:him|her|them|[A-Z][a-z]+))\b|'
+      r'మెసేజ్|సందేశం|मैसेज|संदेश',
       caseSensitive: false,
+      unicode: true,
     ).hasMatch(text);
     if (hasMessage) categories.add('message');
+
+    final hasPrompt = RegExp(
+      r'\b(?:prompt|agent\s+instructions?|instructions?\s+for\s+(?:codex|chatgpt|an?\s+ai)|'
+      r'ask\s+(?:codex|chatgpt|the\s+ai)\s+to)\b|ప్రాంప్ట్|प्रॉम्प्ट',
+      caseSensitive: false,
+      unicode: true,
+    ).hasMatch(text);
+    if (hasPrompt) categories.add('prompt');
 
     // 12. Travel & Trips
     final hasTravel =

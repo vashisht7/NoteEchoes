@@ -43,12 +43,14 @@ enum LockScreenActivityCoordinator {
             }
             let title = arguments["title"] as? String ?? "NoteEchoes"
             let subtitle = arguments["subtitle"] as? String ?? ""
-            let items = checklistItems(from: arguments).prefix(4)
+            let allItems = checklistItems(from: arguments)
+            LockScreenChecklistStore.replace(noteId: noteId, items: allItems)
+            let items = visibleItems(from: allItems)
             let completed = arguments["completed"] as? Int ?? 0
             let total = arguments["total"] as? Int ?? 0
             let state = NoteEchoesActivityAttributes.ContentState(
                 subtitle: subtitle,
-                items: Array(items),
+                items: items,
                 completed: completed,
                 total: total
             )
@@ -85,6 +87,7 @@ enum LockScreenActivityCoordinator {
                 }
             }
         case "remove":
+            LockScreenChecklistStore.remove(noteId: noteId)
             Task {
                 if let current = activity(for: noteId) {
                     await current.end(nil, dismissalPolicy: .immediate)
@@ -96,9 +99,11 @@ enum LockScreenActivityCoordinator {
                 result(false)
                 return
             }
+            let allItems = checklistItems(from: arguments)
+            LockScreenChecklistStore.replace(noteId: noteId, items: allItems)
             let state = NoteEchoesActivityAttributes.ContentState(
                 subtitle: arguments["subtitle"] as? String ?? "",
-                items: Array(checklistItems(from: arguments).prefix(4)),
+                items: visibleItems(from: allItems),
                 completed: arguments["completed"] as? Int ?? 0,
                 total: arguments["total"] as? Int ?? 0
             )
@@ -139,5 +144,11 @@ enum LockScreenActivityCoordinator {
                 isCompleted: value["isCompleted"] as? Bool ?? false
             )
         }
+    }
+
+    private static func visibleItems(
+        from items: [NoteEchoesActivityAttributes.ChecklistItem]
+    ) -> [NoteEchoesActivityAttributes.ChecklistItem] {
+        Array(items.filter { !$0.isCompleted }.prefix(4))
     }
 }

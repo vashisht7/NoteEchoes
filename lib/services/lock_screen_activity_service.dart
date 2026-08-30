@@ -29,7 +29,7 @@ class LockScreenActivityService {
         message: 'Lock Screen notes are available on iPhone.',
       );
     }
-    await _channel.invokeMethod<String>('show', _payload(note));
+    await _channel.invokeMethod<String>('show', buildPayload(note));
   }
 
   Future<void> remove(String noteId) async {
@@ -40,7 +40,7 @@ class LockScreenActivityService {
   Future<void> updateIfActive(NoteModel note) async {
     if (!Platform.isIOS) return;
     try {
-      await _channel.invokeMethod<bool>('update', _payload(note));
+      await _channel.invokeMethod<bool>('update', buildPayload(note));
     } catch (_) {}
   }
 
@@ -63,7 +63,11 @@ class LockScreenActivityService {
     }
   }
 
-  Map<String, dynamic> _payload(NoteModel note) {
+  /// Sends the complete checklist to the native shared store. ActivityKit only
+  /// renders four pending rows, but the native intent needs the remaining rows
+  /// so it can rotate the next one into view immediately after a Lock Screen
+  /// check-off.
+  Map<String, dynamic> buildPayload(NoteModel note) {
     final completed = note.checklist.where((item) => item.isCompleted).length;
     return {
       'noteId': note.noteId,
@@ -81,7 +85,6 @@ class LockScreenActivityService {
               'isCompleted': item.isCompleted,
             },
           )
-          .take(4)
           .toList(),
       'completed': completed,
       'total': note.checklist.length,

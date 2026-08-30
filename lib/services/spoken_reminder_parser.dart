@@ -25,7 +25,10 @@ class SpokenReminderParser {
   }
 
   static bool _hasReminderIntent(String value) => RegExp(
-    r'\b(?:remind\s+me|set\s+(?:a\s+)?reminder|reminder\s+(?:for|at)|'
+    r'\b(?:remind(?:\s+me)?|set\s+(?:a\s+)?reminder|reminder(?:\s+(?:for|at|to))?|'
+    r'alert\s+me|notify\s+me|ping\s+me|nudge\s+me|set\s+(?:an?\s+)?alarm|'
+    r"(?:do\s+not|don't)\s+let\s+me\s+forget|(?:do\s+not|don't)\s+forget|"
+    r'make\s+sure\s+i\s+(?:remember|do)|remember\s+(?:that\s+)?i\s+(?:need|have)\s+to|'
     r'gurthu\s+chey|gurtu\s+chey|yaad\s+dila|reminder\s+pettu)\b|'
     r'గుర్తు\s*(?:చేయి|చెయ్యి|చేయాలని)|రిమైండర్|'
     r'याद\s+दिल|रिमाइंडर',
@@ -36,6 +39,9 @@ class SpokenReminderParser {
     var result = value.replaceFirst(
       RegExp(
         r'^(?:please\s+)?(?:remind\s+me|set\s+(?:a\s+)?reminder(?:\s+for)?|'
+        r'alert\s+me|notify\s+me|ping\s+me|nudge\s+me|set\s+(?:an?\s+)?alarm|'
+        r"(?:do\s+not|don't)\s+let\s+me\s+forget|(?:do\s+not|don't)\s+forget|"
+        r'make\s+sure\s+i\s+(?:remember|do)|remember\s+(?:that\s+)?i\s+(?:need|have)\s+to|'
         r'reminder\s+pettu|gurthu\s+chey\w*|gurtu\s+chey\w*|yaad\s+dila\w*|'
         r'రిమైండర్|याद\s+दिला\w*|रिमाइंडर)\s*',
         caseSensitive: false,

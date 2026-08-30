@@ -21,6 +21,63 @@ void main() {
     );
   });
 
+  test('accepts a bare checklist cue followed by unnumbered sentences', () {
+    expect(
+      SpokenChecklistParser.extract(
+        'Checklist. Buy milk. Call Ravi. Charge the laptop. Pack the cable. Send the report.',
+      ),
+      [
+        'Buy milk',
+        'Call Ravi',
+        'Charge the laptop',
+        'Pack the cable',
+        'Send the report',
+      ],
+    );
+  });
+
+  test('does not cap a long comma-separated grocery list', () {
+    expect(
+      SpokenChecklistParser.extract(
+        'Groceries milk, coffee, bread, eggs, butter, apples, bananas, rice',
+      ),
+      [
+        'milk',
+        'coffee',
+        'bread',
+        'eggs',
+        'butter',
+        'apples',
+        'bananas',
+        'rice',
+      ],
+    );
+  });
+
+  test('accepts task and action-item synonyms without create wording', () {
+    expect(SpokenChecklistParser.extract('Task send the invoice'), [
+      'send the invoice',
+    ]);
+    expect(
+      SpokenChecklistParser.extract(
+        'Action items review the build, update screenshots, submit TestFlight',
+      ),
+      ['review the build', 'update screenshots', 'submit TestFlight'],
+    );
+  });
+
+  test('provides a useful localized or purpose-based list title', () {
+    expect(
+      SpokenChecklistParser.suggestedTitle('Grocery list milk and eggs'),
+      'Grocery List',
+    );
+    expect(
+      SpokenChecklistParser.suggestedTitle('పనులు report పంపాలి'),
+      'చెక్‌లిస్ట్',
+    );
+    expect(SpokenChecklistParser.suggestedTitle('Tasks ship the app'), 'Tasks');
+  });
+
   test('does not invent a checklist from ordinary prose', () {
     expect(
       SpokenChecklistParser.extract(

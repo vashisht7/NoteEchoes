@@ -46,6 +46,29 @@ void main() {
       expect(result.categories.contains('tasks'), isTrue);
     });
 
+    test('recognizes natural synonyms for actions', () {
+      expect(
+        engine
+            .analyzeNote('Action items review build and submit app')
+            .categories,
+        contains('tasks'),
+      );
+      expect(
+        engine.analyzeNote('Ping me tomorrow at 8 to call Ravi').categories,
+        contains('reminders'),
+      );
+      expect(
+        engine.analyzeNote('Compose an email to Priya about launch').categories,
+        contains('email'),
+      );
+      expect(
+        engine
+            .analyzeNote('Write a prompt for Codex to review this code')
+            .categories,
+        contains('prompt'),
+      );
+    });
+
     test('Categorizes Meeting Discussions', () {
       const meetingNote =
           "Client sync meeting agenda: discuss mobile deployment, TestFlight distribution, and offline latency benchmarks.";
@@ -67,6 +90,19 @@ void main() {
       ]);
       await NoteService().waitForPendingIndexingForTesting();
     });
+
+    test(
+      'voice capture preserves every item in a long unnumbered checklist',
+      () async {
+        final note = await NoteService().createFromVoiceTranscription(
+          'Checklist milk, coffee, bread, eggs, butter, apples, bananas, rice',
+        );
+
+        expect(note.checklist, hasLength(8));
+        expect(note.checklist.last.text, 'rice');
+        await NoteService().waitForPendingIndexingForTesting();
+      },
+    );
 
     test(
       'createFromVoiceTranscription saves note with AI categories',

@@ -5,6 +5,72 @@ import Foundation
 private let noteEchoesAppGroup = "group.com.vashisht.notechoes"
 private let checklistActionsKey = "noteechoes_lock_screen_checklist_actions_v1"
 
+/// The complete checklist lives in the App Group rather than ActivityKit's
+/// small content-state payload. This lets the Live Activity rotate the next
+/// pending item into view immediately, even while Flutter is suspended.
+enum LockScreenChecklistStore {
+    private static let listsKey = "noteechoes_lock_screen_checklists_v2"
+
+    static func replace(
+        noteId: String,
+        items: [NoteEchoesActivityAttributes.ChecklistItem]
+    ) {
+        guard let defaults = UserDefaults(suiteName: noteEchoesAppGroup) else {
+            return
+        }
+        var lists = defaults.dictionary(forKey: listsKey) ?? [:]
+        lists[noteId] = items.map { item in
+            [
+                "id": item.id,
+                "text": item.text,
+                "isCompleted": item.isCompleted,
+            ] as [String: Any]
+        }
+        defaults.set(lists, forKey: listsKey)
+    }
+
+    static func items(noteId: String) -> [NoteEchoesActivityAttributes.ChecklistItem] {
+        guard let defaults = UserDefaults(suiteName: noteEchoesAppGroup),
+              let lists = defaults.dictionary(forKey: listsKey),
+              let values = lists[noteId] as? [[String: Any]] else {
+            return []
+        }
+        return values.compactMap { value in
+            guard let id = value["id"] as? String,
+                  let text = value["text"] as? String else {
+                return nil
+            }
+            return NoteEchoesActivityAttributes.ChecklistItem(
+                id: id,
+                text: text,
+                isCompleted: value["isCompleted"] as? Bool ?? false
+            )
+        }
+    }
+
+    static func setCompleted(
+        noteId: String,
+        itemId: String,
+        completed: Bool
+    ) -> [NoteEchoesActivityAttributes.ChecklistItem] {
+        var allItems = items(noteId: noteId)
+        if let index = allItems.firstIndex(where: { $0.id == itemId }) {
+            allItems[index].isCompleted = completed
+            replace(noteId: noteId, items: allItems)
+        }
+        return allItems
+    }
+
+    static func remove(noteId: String) {
+        guard let defaults = UserDefaults(suiteName: noteEchoesAppGroup) else {
+            return
+        }
+        var lists = defaults.dictionary(forKey: listsKey) ?? [:]
+        lists.removeValue(forKey: noteId)
+        defaults.set(lists, forKey: listsKey)
+    }
+}
+
 struct NoteEchoesActivityAttributes: ActivityAttributes {
     struct ChecklistItem: Codable, Hashable, Identifiable {
         var id: String
@@ -52,15 +118,24 @@ struct ToggleLockScreenChecklistIntent: LiveActivityIntent {
         }
         if let activity {
             var state = activity.content.state
-            if let index = state.items.firstIndex(where: { $0.id == itemId }) {
-                let oldVisibleCompleted = state.items.filter(\.isCompleted).count
-                state.items[index].isCompleted = completed
-                let newVisibleCompleted = state.items.filter(\.isCompleted).count
-                state.completed = min(
-                    state.total,
-                    max(0, state.completed - oldVisibleCompleted + newVisibleCompleted)
-                )
-                state.subtitle = "\(state.completed) of \(state.total) completed"
+            var allItems = LockScreenChecklistStore.setCompleted(
+                noteId: noteId,
+                itemId: itemId,
+                completed: completed
+            )
+            if allItems.isEmpty {
+                allItems = state.items
+                if let index = allItems.firstIndex(where: { $0.id == itemId }) {
+                    allItems[index].isCompleted = completed
+                }
+            }
+            if !allItems.isEmpty {
+                state.items = Array(allItems.filter { !$0.isCompleted }.prefix(4))
+                state.completed = allItems.filter(\.isCompleted).count
+                state.total = allItems.count
+                state.subtitle = state.completed == state.total
+                    ? "All \(state.total) completed"
+                    : "\(state.completed) of \(state.total) completed"
                 await activity.update(
                     ActivityContent(
                         state: state,
