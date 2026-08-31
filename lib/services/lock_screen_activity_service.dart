@@ -44,6 +44,21 @@ class LockScreenActivityService {
     } catch (_) {}
   }
 
+  /// Returns Lock Screen note IDs that must be recreated after iOS replaces
+  /// the app or Live Activity extension. ActivityKit may retain old sessions
+  /// after their render archives have been removed, leaving invisible banners.
+  Future<List<String>> takePostUpdateRecoveryNoteIds() async {
+    if (!Platform.isIOS) return const [];
+    try {
+      final values =
+          await _channel.invokeMethod<List<dynamic>>('recoverAfterAppUpdate') ??
+          const [];
+      return values.whereType<String>().toList(growable: false);
+    } catch (_) {
+      return const [];
+    }
+  }
+
   /// Returns durable checklist changes made from the Lock Screen and clears
   /// the native queue only after it has been transferred to Flutter.
   Future<List<Map<String, dynamic>>> consumeChecklistActions() async {

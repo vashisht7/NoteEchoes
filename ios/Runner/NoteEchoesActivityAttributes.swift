@@ -17,6 +17,14 @@ enum NoteEchoesLockScreenLayout {
 enum LockScreenChecklistStore {
     private static let listsKey = "noteechoes_lock_screen_checklists_v2"
 
+    static func noteIds() -> [String] {
+        guard let defaults = UserDefaults(suiteName: noteEchoesAppGroup),
+              let lists = defaults.dictionary(forKey: listsKey) else {
+            return []
+        }
+        return lists.keys.sorted()
+    }
+
     static func replace(
         noteId: String,
         items: [NoteEchoesActivityAttributes.ChecklistItem]

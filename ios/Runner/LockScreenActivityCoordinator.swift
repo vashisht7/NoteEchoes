@@ -6,6 +6,8 @@ enum LockScreenActivityCoordinator {
     private static let appGroup = "group.com.vashisht.notechoes"
     private static let checklistActionsKey =
         "noteechoes_lock_screen_checklist_actions_v1"
+    private static let recoveredBuildKey =
+        "noteechoes_lock_screen_recovered_build_v1"
 
     static func handle(
         _ call: FlutterMethodCall,
@@ -16,6 +18,11 @@ enum LockScreenActivityCoordinator {
             let actions = defaults?.array(forKey: checklistActionsKey) ?? []
             defaults?.removeObject(forKey: checklistActionsKey)
             result(actions)
+            return
+        }
+
+        if call.method == "recoverAfterAppUpdate" {
+            recoverAfterAppUpdate(result: result)
             return
         }
 
@@ -116,6 +123,35 @@ enum LockScreenActivityCoordinator {
             }
         default:
             result(FlutterMethodNotImplemented)
+        }
+    }
+
+    /// ActivityKit can retain sessions whose rendered widget archives were
+    /// removed when the containing app/extension was replaced. On the first
+    /// launch of each build, end those sessions and return the intended note
+    /// IDs so Flutter can recreate them from its authoritative local notes.
+    private static func recoverAfterAppUpdate(
+        result: @escaping FlutterResult
+    ) {
+        let build = Bundle.main.object(
+            forInfoDictionaryKey: "CFBundleVersion"
+        ) as? String ?? "unknown"
+        guard let defaults = UserDefaults(suiteName: appGroup) else {
+            result([])
+            return
+        }
+        guard defaults.string(forKey: recoveredBuildKey) != build else {
+            result([])
+            return
+        }
+
+        let intendedNoteIds = LockScreenChecklistStore.noteIds()
+        Task {
+            for activity in Activity<NoteEchoesActivityAttributes>.activities {
+                await activity.end(nil, dismissalPolicy: .immediate)
+            }
+            defaults.set(build, forKey: recoveredBuildKey)
+            await MainActor.run { result(intendedNoteIds) }
         }
     }
 

@@ -64,6 +64,7 @@ class NoteService extends ChangeNotifier {
       }
     }
     _isInitialized = true;
+    await _recoverLockScreenActivitiesAfterAppUpdate();
     for (final note in _notes) {
       try {
         await KnowledgeService.instance.indexNote(note);
@@ -72,6 +73,25 @@ class NoteService extends ChangeNotifier {
       }
     }
     notifyListeners();
+  }
+
+  Future<void> _recoverLockScreenActivitiesAfterAppUpdate() async {
+    final noteIds = await LockScreenActivityService.instance
+        .takePostUpdateRecoveryNoteIds();
+    if (noteIds.isEmpty) return;
+
+    for (final noteId in noteIds) {
+      final index = _notes.indexWhere((note) => note.noteId == noteId);
+      if (index == -1) {
+        await LockScreenActivityService.instance.remove(noteId);
+        continue;
+      }
+      try {
+        await LockScreenActivityService.instance.show(_notes[index]);
+      } catch (error) {
+        debugPrint('Could not recover Lock Screen note $noteId: $error');
+      }
+    }
   }
 
   Future<void> reloadRecoveredNotes() async {
